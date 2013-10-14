@@ -1,0 +1,6 @@
+ A repository of code snippets for MaxCompiler (Maxeler DFEs).
+
+ It turns out that plenty of everyday problems for MaxCompiler require
+ coding similar problems again and again. This repository collects
+ examples of such elementary problems as self-contained MaxCompiler
+ projects to allow copy-pasting where necessary.
