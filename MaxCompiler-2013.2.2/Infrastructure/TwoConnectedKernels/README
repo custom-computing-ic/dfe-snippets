@@ -1,0 +1,4 @@
+
+ This project is an example of how to instantiate two kernels
+ and feed one's input with output of another kernel.
+ 
