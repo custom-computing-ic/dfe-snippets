@@ -1,0 +1,4 @@
+
+ This project is an example of how to generate custom memory controller to 
+ to perform memory access not supported by Linear, 2D Strided, and 3D Blocking.
+ 
