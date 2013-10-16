@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>TestSummation_RunRules</name>
+	<comment>Simulation</comment>
+	<manageMaxCompiler>false</manageMaxCompiler>
+	<manageMaxGenFD>false</manageMaxGenFD>
+	<manageMaxBlox>false</manageMaxBlox>
+	<maxelerVersion></maxelerVersion>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>com.maxeler.maxcompiler.core.maxCompilerBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>com.maxeler.maxcompiler.core.maxCompilerNature</nature>
+	</natures>
+</projectDescription>

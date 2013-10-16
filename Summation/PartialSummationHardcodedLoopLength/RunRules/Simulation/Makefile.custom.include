@@ -1,0 +1,3 @@
+# This text will be included verbatim in the build process.
+# It has to be valid Makefile syntax.
+# Set USE_SLIC=0 if your CPUCode uses the deprecated MaxCompilerRT interface.

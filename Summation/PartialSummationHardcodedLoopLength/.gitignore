@@ -1,0 +1,6 @@
+EngineCode/bin/
+RunRules/*/binaries/
+RunRules/*/build.log
+RunRules/*/maxfiles/
+RunRules/*/objects/
+RunRules/*/include/
