@@ -1,0 +1,37 @@
+Wish list for projects to be added (feel free to update!):
+
+Infrastructure:
+ - examples of porting projects from older MaxCompiler to newer versions
+ - examples of makefiles for simplified build or linking DFE code to third party codes
+ - examples of project files targeting various DFEs
+
+Summation:
+ - partial summator with fixed loop length = 16 (16 > 13 = summation latency)
+ - partial summator with fixed loop length = 13 ?
+ - partial summator with variable loop length
+ - full summator with fixed loop length = 16 and total summation of whole summation loop
+ - full summator with fixed loop length = 16 and summation tree (branching out of summation loop)
+ - full summator with variable loop length: how ?
+ - alterations for fixed and floating point?
+
+Linear algebra, BLAS L2-L3 (data in DRAM)
+ - dense n x m matrix-vector multiply: very small ranks (whole matrix multiply fits to chip)
+ - dense n x m matrix-vector multiply: medium ranks (scalar products fit to chip, streaming matrix rows)
+ - dense n x m matrix-vector multiply: large ranks (streaming both scalar products and matrix rows)
+ - dense symmetric matrix-vector multiply
+ - same for matrix-matrix multiply. Tricks for data re-use on-chip.
+ - sparse (CSR) n x m matrix-vector multiply with fixed density per row
+ - sparse (CSR) n x m matrix-vector multiply with variable density per row - dynamic offsets
+ - sparse (CSR) n x m matrix-vector multiply with variable density per row - manual dealing with BRAM buffers for optimal resource re-use
+ - symmetrix CSR matrix-vector multiply with variable density per row and manual BRAM buffers
+ - block-CSR matrix multiply - variable density per row
+ - banded dense matrix
+ - tri-diagonal direct solve
+ - upper-triangular solve
+ - lower-triangular solve
+ - Cholesky for small matrix
+ - determinant of dense matrix: incremental updates (when matrix inverse is known). Sherman-Morrison.
+
+Splines, fitting, bernstein polynomials?
+RNG, distributions
+.....
