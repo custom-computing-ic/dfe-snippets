@@ -1,14 +1,12 @@
+A repository of code snippets for MaxCompiler (Maxeler DFEs).
+=============================================================
 
- A repository of code snippets for MaxCompiler (Maxeler DFEs).
+It turns out that plenty of everyday problems for MaxCompiler require
+coding similar problems again and again. This repository collects
+examples of such elementary problems as self-contained MaxCompiler
+projects to allow copy-pasting where necessary.
 
- It turns out that plenty of everyday problems for MaxCompiler require
- coding similar problems again and again. This repository collects
- examples of such elementary problems as self-contained MaxCompiler
- projects to allow copy-pasting where necessary.
-
-
-
- Short summary of intentions:
+# Short summary of intentions:
 
  - purpose:
    - re-using elementary code pieces to minimise reinvention of a wheel.
@@ -31,8 +29,7 @@
    contribution/usage
 
 
-
- More details:
+# More details:
 
  - we expect user to copy-paste and combine code from several projects into
    his/her own code
@@ -64,8 +61,7 @@
    approved code goes to stable (code review)
 
 
-
- Discussion points:
+# Discussion points:
 
  - alternative branching model: master branch (= stable), each new commit is
    a single feature branch, merge to master implies code review
