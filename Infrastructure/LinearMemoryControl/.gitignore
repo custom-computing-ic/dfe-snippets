@@ -1,3 +1,2 @@
 RunRules/*
-!RunRules/Simulation/Makefile
-!RunRules/DFE/Makefile
+!RunRules/Makefile
