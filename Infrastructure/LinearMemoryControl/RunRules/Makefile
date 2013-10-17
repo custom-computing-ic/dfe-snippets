@@ -4,7 +4,7 @@
 # Tested for MaxCompiler 2013.2.2
 # For SLiC interface only
 # If you are using MaxCompilerRT, 
-# use instead maxfilecompile of sliccompile
+# use maxfilecompile instead of sliccompile
 # and change LFAGS -lslic to -lmaxcompilerrt
 
 # ---- Project settings ----
@@ -111,4 +111,5 @@ distclean: distcleansim distcleandfe
 # ---- Debug ----
 
 debug:
+	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(PRJ)Kernel -d $(USER)a0:$(USER)a $(SIMMAXDIR)/$(PRJ).max
 
