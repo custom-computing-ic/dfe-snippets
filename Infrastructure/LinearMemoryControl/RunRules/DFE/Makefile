@@ -3,6 +3,7 @@
 
 # Project settings
 PRJ=LMemExample
+PKG=lmemexample
 DFEModel=MAX3424A
 enableMPCX=false
 
@@ -11,7 +12,7 @@ MAXDIR=./$(PRJ)_$(DFEModel)_DFE_SIM/results
 MAXELEROSDIR_SIM:=$(MAXCOMPILERDIR)/lib/maxeleros-sim
 
 # Source files
-ENGINEFILES=$(wildcard ../../EngineCode/src/$(PRJ)/*.maxj)
+ENGINEFILES=$(wildcard ../../EngineCode/src/$(PKG)/*.maxj)
 CPUFILES=$(wildcard ../../CPUCode/*.c)
 
 # Command alias
@@ -37,7 +38,7 @@ all: build
 
 $(MAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
-	MAXAPPJCP=. MAXSOURCEDIRS='../../EngineCode/src' MAXAPPPKG=$(PRJ) $(MAXJAVARUN) -m 8192 $(PRJ)Manager DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(enableMPCX) 
+	MAXAPPJCP=. MAXSOURCEDIRS='../../EngineCode/src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -m 8192 $(PRJ)Manager DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(enableMPCX) 
 	cp $(MAXDIR)/$(PRJ).h ./Maxfiles.h
 
 $(PRJ)_dfe.o: $(MAXDIR)/$(PRJ).max
