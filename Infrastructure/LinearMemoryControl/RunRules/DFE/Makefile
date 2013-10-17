@@ -8,7 +8,7 @@ DFEModel=MAX3424A
 enableMPCX=false
 
 # Paths
-MAXDIR=./$(PRJ)_$(DFEModel)_DFE_SIM/results
+MAXDIR=./$(PRJ)_$(DFEModel)_DFE/results
 MAXELEROSDIR_SIM:=$(MAXCOMPILERDIR)/lib/maxeleros-sim
 
 # Source files
