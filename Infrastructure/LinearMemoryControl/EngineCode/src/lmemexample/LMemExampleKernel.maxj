@@ -1,0 +1,25 @@
+/**
+ * Document: Manager Compiler Tutorial (maxcompiler-manager-tutorial.pdf)
+ * Chapter: 2      Example: 1      Name: LMem Example
+ * MaxFile name: LMemExample
+ * Summary:
+ *     Manager design that connects the kernel's input and output streams to
+ *     LMem using a linear access pattern.
+ */
+package lmemexample;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class LMemExampleKernel extends Kernel {
+
+	LMemExampleKernel(KernelParameters parameters) {
+		super(parameters);
+
+		DFEVar inA = io.input("inA", dfeUInt(32));
+		DFEVar inB = io.input("inB", dfeUInt(32));
+
+		io.output("oData", inA+inB, dfeUInt(32));
+	}
+}
