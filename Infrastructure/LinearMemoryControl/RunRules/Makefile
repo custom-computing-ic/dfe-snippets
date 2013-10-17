@@ -5,15 +5,23 @@
 # For SLiC interface only
 # If you are using MaxCompilerRT, 
 # use maxfilecompile instead of sliccompile
-# and change LFAGS -lslic to -lmaxcompilerrt
+# and change LFLAGS -lslic to -lmaxcompilerrt
 
 # ---- Project settings ----
-# maxnode* and maxstation* - DFEModel=MAX3424A and enableMPCX=false
-# maia* - DFEModel=MAIA and enable MPCX=true
+# maxnode* and maxstation* - DFEModel=MAX3424A
+# maia* - DFEModel=MAIA
 PRJ=LMemExample
 PKG=lmemexample
 DFEModel=MAX3424A
-enableMPCX=false
+ifeq ($(DFEModel),MAX3424A)
+MPCX=false
+DEVICENUM=3424
+SLICCONFIG=
+else
+MPCX=true
+DEVICENUM=MAIA
+SLIC_CONF="default_engine_resource = 192.168.0.10"
+endif
 
 # ---- Paths ----
 SIMMAXDIR=$(PRJ)_$(DFEModel)_DFE_SIM/results
@@ -47,8 +55,8 @@ all: runsim build
 
 $(SIMMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
-	MAXAPPJCP=. MAXSOURCEDIRS='../EngineCode/src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(PRJ)Manager DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE_SIM' enableMPCX=$(enableMPCX)
-	cp $(SIMMAXDIR)/$(PRJ).h ./Maxfiles.h
+	MAXAPPJCP=. MAXSOURCEDIRS='../EngineCode/src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(PRJ)Manager DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE_SIM' enableMPCX=$(MPCX)
+	cp $(SIMMAXDIR)/$(PRJ).h Maxfiles.h
 
 $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@  
@@ -60,19 +68,19 @@ $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
 	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS) 
 
 runsim: $(PRJ)_sim
-	$(MAXCOMPILERSIM) -n $(USER)a -c3424 restart
-	SLIC_CONF="use_simulation=$(USER)a" LD_PRELOAD=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so ./$(PRJ)_sim $(USER)a0:$(USER)a
-	$(MAXCOMPILERSIM) -n $(USER)a -c3424 stop
+	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) restart
+	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so ./$(PRJ)_sim $(USER)a0:$(USER)a
+	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
 
 stopsim:
-	$(MAXCOMPILERSIM) -n $(USER)a -c3424 stop
+	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
 
 # ---- DFE ----
 
 $(DFEMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
-	MAXAPPJCP=. MAXSOURCEDIRS='../EngineCode/src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(PRJ)Manager DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(enableMPCX) 
-	cp $(DFEMAXDIR)/$(PRJ).h DFE/Maxfiles.h
+	MAXAPPJCP=. MAXSOURCEDIRS='../EngineCode/src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(PRJ)Manager DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(MPCX) 
+	cp $(DFEMAXDIR)/$(PRJ).h Maxfiles.h
 
 $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@  
