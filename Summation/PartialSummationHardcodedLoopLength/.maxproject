@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<maxCompilerManager>
-<enginePart internalEngineSubproject="TestSummation_EngineCode" isSrcBin="false" isUseDefaultSelected="false" outputLocation="/TestSummation_EngineCode/bin" projectName="TestSummation"/>
-<cpuPart internalCpuSubproject="TestSummation_CPUCode"/>
-<watchedFiles/>
-</maxCompilerManager>

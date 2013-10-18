@@ -25,7 +25,7 @@ int main(void)
     }
 
     printf("Running on DFE.\n");
-    CpuStream(size, in, out);
+    PartialSummation(size, in, out);
 
     // TODO Use result data
     printf("output from DFE: kernel 1: ");
