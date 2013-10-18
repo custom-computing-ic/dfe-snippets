@@ -43,8 +43,8 @@ MAXELEROSDIR_SIM:=$(MAXCOMPILERDIR)/lib/maxeleros-sim
 
 # ---- Source files ----
 # ---- CHANGE ME! ----
-ENGINEFILES=$(wildcard ../EngineCode/src/$(PKG)/*.maxj)
-CPUFILES=$(wildcard ../CPUCode/*.c)
+ENGINEFILES=$(wildcard ../src/*.maxj)
+CPUFILES=$(wildcard ../src/*.c)
 
 # ---- Command alias ----
 CC=icc
@@ -69,7 +69,7 @@ all: runsim build
 
 $(SIMMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
-	MAXAPPJCP=. MAXSOURCEDIRS='../EngineCode/src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE_SIM' enableMPCX=$(MPCX)
+	MAXAPPJCP=. MAXSOURCEDIRS='../src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE_SIM' enableMPCX=$(MPCX)
 	cp $(SIMMAXDIR)/$(PRJ).h $(SIMMAXDIR)/Maxfiles.h
 
 $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
@@ -93,7 +93,7 @@ stopsim:
 
 $(DFEMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
-	MAXAPPJCP=. MAXSOURCEDIRS='../EngineCode/src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(MPCX) 
+	MAXAPPJCP=. MAXSOURCEDIRS='../src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(MPCX) 
 	cp $(DFEMAXDIR)/$(PRJ).h $(DFEMAXDIR)/Maxfiles.h
 
 $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max

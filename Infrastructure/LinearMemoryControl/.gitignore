@@ -1,2 +1,2 @@
-RunRules/*
-!RunRules/Makefile
+build/*
+!build/Makefile
