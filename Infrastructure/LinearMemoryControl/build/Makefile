@@ -1,6 +1,6 @@
 ####################################################
 #       Makefile ------- Thomas Chau 2013          #
-# 		Tested for MaxCompiler 2013.2.2            #
+#       Tested for MaxCompiler 2013.2.2            #
 ####################################################
 # 1)	For SLiC interface only
 # 		If you are using MaxCompilerRT, 
