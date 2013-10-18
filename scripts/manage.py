@@ -18,7 +18,7 @@ CPU_FILE_RE = re.compile(r'.*\.(cpp|c)')
 MAKEFILE_RE = re.compile(r'Makefile')
 BLOCK_COMMENT_LINE_RE = re.compile(r'(\s)*(/\*|\*/|\*|/\*\*)')
 GIT_BRANCH = re.compile(r'\* .*')
-PROJECT_RE = re.compile(r'(?P<project>.*)/(?P<VersionOrImpl>.*)/.*')
+PROJECT_RE = re.compile(r'(?P<concept>.*)/(?P<project>.*)/.*')
 
 # The project  directory (assumes this script lives in ROOT_DIR/scripts/)
 ROOT_DIR = "../"
@@ -30,11 +30,33 @@ NON_PROJECT_DIRS = ['scripts', '.git', 'WISHLIST', 'Readme.md']
 
 STARTING_COMMENT_MAP = {}
 
+
+class Project(object):
+
+    def __init__(self, concept, name, new=False):
+        super(Project, self).__init__()
+        self.concept = concept
+        self.name = name
+        self.new = new
+        self.comments = {}
+
+    def GetFullPathRelativeToTopDir(self):
+        return os.path.join(self.concept, self.name)
+
+    def __str__(self):
+        return 'Project(concept={}, name={})'.format(self.concept, self.name)
+
+    def __hash__(self):
+        return hash(self.concept)
+
+    def __eq__(self, other):
+        return self.concept == other.concept and self.name == other.name
+
 def BlockComment(line):
     return BLOCK_COMMENT_LINE_RE.match(line)
 
 
-def ExtractStartingBlockComment(path):
+def ExtractStartingBlockComment(path, project):
     file = open(path)
     first = True
     blockComment = ''
@@ -49,7 +71,8 @@ def ExtractStartingBlockComment(path):
         first = False
 
     if blockComment:
-        STARTING_COMMENT_MAP[path] = blockComment.strip()
+        filename = os.path.basename(path)
+        project.comments[filename] = blockComment.strip()
     return blockComment
 
 
@@ -57,13 +80,13 @@ def ExtractCheckStatusBlock(path):
     return None
 
 
-def LintJavaFile(path):
-    startComment = ExtractStartingBlockComment(path)
+def LintJavaFile(path, project):
+    startComment = ExtractStartingBlockComment(path, project)
     return startComment
 
 
-def LintCpuFile(path):
-    startComment = ExtractStartingBlockComment(path)
+def LintCpuFile(path, project):
+    startComment = ExtractStartingBlockComment(path, project)
     # TODO: checksReturnStatus = ExtractCheckStatusBlock(path)
     # return startComment and checksReturnStatus
     return startComment
@@ -73,16 +96,19 @@ def LintProjects(projects):
     # represents the number of linted files (Design, CPU, Makefile)
     stats = [0, 0, 0]
     for proj in projects:
-        proj_path = os.path.join(ROOT_DIR, proj)
+        top_rel_path = proj.GetFullPathRelativeToTopDir()
+        proj_path = os.path.join(ROOT_DIR, top_rel_path)
+        print '\tLinting ' + top_rel_path
         for dirpath, dirnames, filenames in os.walk(proj_path):
+            print '\t\tFiles ' + str(filenames)
             for filename in filenames:
                 path = os.path.join(dirpath, filename)
                 lint = True
                 if DESIGN_FILE_RE.match(path):
-                    lint = LintJavaFile(path)
+                    lint = LintJavaFile(path, proj)
                     stats[0] += 1
                 elif CPU_FILE_RE.match(path):
-                    lint = LintCpuFile(path)
+                    lint = LintCpuFile(path, proj)
                     stats[1] += 1
                 if not lint:
                     print 'Linting file ' + path + ' failed'
@@ -92,6 +118,7 @@ def LintProjects(projects):
 
 def GetProjectDirs():   
     return [d for d in os.listdir(ROOT_DIR) if d not in NON_PROJECT_DIRS]
+
 
 def GetCurrentGitBranch():
     gitProc = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE)
@@ -107,10 +134,18 @@ def GetCurrentGitBranch():
         
     return currentGitBranch
 
+
 def GetProjectName(filename):
     match = PROJECT_RE.match(filename)
     if match:
         return match.group('project')
+    return None
+
+
+def GetProjectConcept(filename):
+    match = PROJECT_RE.match(filename)
+    if match:
+        return match.group('concept')
     return None
     
 
@@ -130,11 +165,12 @@ def GetModifiedFilesInBranch(localGitBranch):
         change_type = line[0]
         line = line[2:].strip()
         project_name = GetProjectName(line)
+        concept = GetProjectConcept(line)
         if project_name:
             if change_type == 'M':
-                modifiedProjs.add(project_name)
+                modifiedProjs.add(Project(concept, project_name))
             elif change_type == 'A':
-                newProjs.add(project_name)
+                newProjs.add(Project(concept, project_name, True))
 
     return list(modifiedProjs), list(newProjs)
 
@@ -145,22 +181,12 @@ def GetNewOrRecentlyModifiedProjects():
     return modifiedProjs
 
 
-def RunTests():
-    print 'Running tests.'
+def RunTests(projects):
+    pass
 
 
 def ExtractCommentsFromNewFiles(projects):
-    new_comments = []
-    for f, comment in STARTING_COMMENT_MAP.iteritems(): 
-        # the following is a bit of a hack since it relies on the
-        # location of this script to be in a directory exactly one
-        # level below the root of the project
-        filename_relative_to_top_dir = f[3:] 
-        p = GetProjectName(filename_relative_to_top_dir)
-        if p in projects:
-            new_comments.append(STARTING_COMMENT_MAP[f])
-    return new_comments
-
+    return [proj.comments for proj in projects if proj.new]
 
 def main():
     # TODO: in the long term this should be an interactive shell based
@@ -174,18 +200,17 @@ def main():
     modified_projs, new_projects = GetNewOrRecentlyModifiedProjects()
     changed_projects = new_projects + modified_projs
     print '1. Found {} new or recently modified projects: {}\n'.format(
-        len(changed_projects), changed_projects)
+        len(changed_projects), [str(s) for s in changed_projects])
 
 
     print '2. Linting all changed projects' 
     lintStats = LintProjects(changed_projects)
-    print '\t Linted {} Design file(s), {} CPU file(s) and {} Makefiles\n'.format(
+    print '\tLinted {} Design file(s), {} CPU file(s) and {} Makefiles\n'.format(
         lintStats[0], lintStats[1], lintStats[2])
 
 
     print '3. Testing all changed projects\n'
-    # TODO: only test new or recently modified files
-    # TODO: RunTests()
+    # TODO RunTests(changed_projects)
 
     print '4. Generating wiki comments for new projects only ({})'.format(new_projects)
     comments = ExtractCommentsFromNewFiles(new_projects)
@@ -193,4 +218,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
