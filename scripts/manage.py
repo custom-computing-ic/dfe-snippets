@@ -12,7 +12,7 @@ class LinterException(Exception):
 DESIGN_FILE_RE = re.compile(r'.*\.(maxj|java)')
 CPU_FILE_RE = re.compile(r'.*\.(cpp|c)')
 MAKEFILE_RE = re.compile(r'Makefile')
-BLOCK_COMMENT_LINE_RE = re.compile(r'(\s)*(/\*|\*|\*/|/\*\*)')
+BLOCK_COMMENT_LINE_RE = re.compile(r'(\s)*(/\*|\*/|\*|/\*\*)')
 
 
 # The project  directory (assumes this script lives in ROOT_DIR/scripts/)
@@ -23,12 +23,13 @@ ROOT_DIR = "../"
 NON_PROJECT_DIRS = ['scripts', '.git', 'WISHLIST', 'Readme.md']
 
 
+STARTING_COMMENT_MAP = {}
+
 def BlockComment(line):
     return BLOCK_COMMENT_LINE_RE.match(line)
 
-    
+
 def ExtractStartingBlockComment(path):
-    print 'Extracting block comment'
     file = open(path)
     first = True
     blockComment = ''
@@ -39,9 +40,11 @@ def ExtractStartingBlockComment(path):
                 'Expected file {} to begin with block comment!'.format(path))
         if not BlockComment(line):
             break
-        blockComment += line
+        blockComment += re.sub(BLOCK_COMMENT_LINE_RE, '', line).strip() + ' '
         first = False
-    print 'Start comment is ' + blockComment
+
+    if blockComment:
+        STARTING_COMMENT_MAP[path] = blockComment.strip()
     return blockComment
 
 
@@ -50,13 +53,11 @@ def ExtractCheckStatusBlock(path):
 
 
 def LintJavaFile(path):
-    print 'Linting file ' + path
     startComment = ExtractStartingBlockComment(path)
     return startComment
 
 
 def LintCpuFile(path):
-    print 'Linting file ' + path
     startComment = ExtractStartingBlockComment(path)
     # TODO: checksReturnStatus = ExtractCheckStatusBlock(path)
     # return startComment and checksReturnStatus
@@ -85,12 +86,9 @@ def GetNewOrRecentlyModifiedProjects():
     # TODO: use information from git to find these
     return []
 
+
 def RunTests():
     print 'Running tests.'
-
-
-def UpdateWiki():
-    print 'Extract comments and update wiki'
 
 
 def main():
@@ -101,22 +99,24 @@ def main():
     #   2. testing
     #   3. comment extraction and updates
     #   4. new project creation
+    print '1. Found the following projects {}\n'.format(GetProjectDirs())
 
-    print '1.Found the following projects {}\n'.format(GetProjectDirs())
+    new_projects = GetNewOrRecentlyModifiedProjects()
+    print '2. Found {} new or recently modified projects: {}\n'.format(
+        len(new_projects), new_projects)
 
-    print '2.Found new or recently modified projects {}\n'.format(
-        GetNewOrRecentlyModifiedProjects())
-
-    print 'Linting new projects' 
+    print '3. Linting new projects\n' 
     # TODO: only lint new or recently modified files
     LintAllFiles()
 
-    print 'Testing new files'
+    print '4. Testing new projects\n'
     # TODO: only test new or recently modified files
     # TODO: RunTests()
 
-    print 'Generating wiki pages for new projects'
-    # TODO: UpdateWiki()
+    print '5. Generating wiki pages for new projects'
+    # UpdateWiki()
+    print str(STARTING_COMMENT_MAP) + '\n'
+
 
 if __name__ == "__main__":
     main()
