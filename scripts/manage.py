@@ -59,7 +59,7 @@ def BlockComment(line):
 def ExtractStartingBlockComment(path, project):
     file = open(path)
     first = True
-    blockComment = ''
+    block_comment = ''
     for line in file.readlines():       
         if not BlockComment(line) and first:
             print line
@@ -67,13 +67,13 @@ def ExtractStartingBlockComment(path, project):
                 'Expected file {} to begin with block comment!'.format(path))
         if not BlockComment(line):
             break
-        blockComment += re.sub(BLOCK_COMMENT_LINE_RE, '', line).strip() + ' '
+        block_comment += re.sub(BLOCK_COMMENT_LINE_RE, '', line).strip() + ' '
         first = False
 
-    if blockComment:
+    if block_comment:
         filename = os.path.basename(path)
-        project.comments[filename] = blockComment.strip()
-    return blockComment
+        project.comments[filename] = block_comment.strip()
+    return block_comment
 
 
 def ExtractCheckStatusBlock(path):
@@ -81,15 +81,15 @@ def ExtractCheckStatusBlock(path):
 
 
 def LintJavaFile(path, project):
-    startComment = ExtractStartingBlockComment(path, project)
-    return startComment
+    start_comment = ExtractStartingBlockComment(path, project)
+    return start_comment
 
 
 def LintCpuFile(path, project):
-    startComment = ExtractStartingBlockComment(path, project)
+    start_comment = ExtractStartingBlockComment(path, project)
     # TODO: checksReturnStatus = ExtractCheckStatusBlock(path)
-    # return startComment and checksReturnStatus
-    return startComment
+    # return start_comment and checksReturnStatus
+    return start_comment
 
 
 def LintProjects(projects):
@@ -121,18 +121,18 @@ def GetProjectDirs():
 
 
 def GetCurrentGitBranch():
-    gitProc = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE)
+    git_proc = subprocess.Popen(['git', 'branch'], stdout=subprocess.PIPE)
 
-    currentGitBranch = None
+    current_git_branch = None
     while True:
-        line = gitProc.stdout.readline()        
+        line = git_proc.stdout.readline()        
         if not line:
             break
         if GIT_BRANCH.match(line):
-            currentGitBranch = line[2:].strip()
+            current_git_branch = line[2:].strip()
             break
         
-    return currentGitBranch
+    return current_git_branch
 
 
 def GetProjectName(filename):
@@ -151,15 +151,15 @@ def GetProjectConcept(filename):
 
 def GetModifiedFilesInBranch(localGitBranch):
     """This assumes that the local branch is tracking the same named remote branch."""
-    remoteBranch = 'remotes/origin/' + localGitBranch
-    gitProc = subprocess.Popen(['git', 'diff', '--name-status', 
-                                remoteBranch, localGitBranch, '--'], 
+    remote_branch = 'remotes/origin/' + localGitBranch
+    git_proc = subprocess.Popen(['git', 'diff', '--name-status', 
+                                remote_branch, localGitBranch, '--'], 
                                stdout=subprocess.PIPE)
-    modifiedProjs = set()
-    newProjs = set()
+    modified_projs = set()
+    new_projs = set()
     
     while True:
-        line = gitProc.stdout.readline()
+        line = git_proc.stdout.readline()
         if not line:
             break
         change_type = line[0]
@@ -168,17 +168,17 @@ def GetModifiedFilesInBranch(localGitBranch):
         concept = GetProjectConcept(line)
         if project_name:
             if change_type == 'M':
-                modifiedProjs.add(Project(concept, project_name))
+                modified_projs.add(Project(concept, project_name))
             elif change_type == 'A':
-                newProjs.add(Project(concept, project_name, True))
+                new_projs.add(Project(concept, project_name, True))
 
-    return list(modifiedProjs), list(newProjs)
+    return list(modified_projs), list(new_projs)
 
         
 def GetNewOrRecentlyModifiedProjects():
-    currentGitBranch = GetCurrentGitBranch()
-    modifiedProjs = GetModifiedFilesInBranch(currentGitBranch)
-    return modifiedProjs
+    current_git_branch = GetCurrentGitBranch()
+    modified_projects = GetModifiedFilesInBranch(current_git_branch)
+    return modified_projects
 
 
 def RunTests(projects):
@@ -204,9 +204,9 @@ def main():
 
 
     print '2. Linting all changed projects' 
-    lintStats = LintProjects(changed_projects)
+    lint_stats = LintProjects(changed_projects)
     print '\tLinted {} Design file(s), {} CPU file(s) and {} Makefiles\n'.format(
-        lintStats[0], lintStats[1], lintStats[2])
+        lint_stats[0], lint_stats[1], lint_stats[2])
 
 
     print '3. Testing all changed projects\n'
