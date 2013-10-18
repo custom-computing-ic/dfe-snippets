@@ -1,0 +1,58 @@
+package fullsummation;
+
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class FullSummationManager extends CustomManager{
+
+    private static final String s_kernelName = "FullSummationKernel";
+
+    FullSummationManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel( new FullSummationKernel(makeKernelParameters(s_kernelName)));
+
+        DFELink x = addStreamFromCPU("input");
+        k.getInput("input") <== x;
+
+        DFELink y = addStreamToCPU("output");
+        DFELink z = addStreamToCPU("partial");
+        y <== k.getOutput("output");
+        z <== k.getOutput("partial");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes   type = CPUTypes.FLOAT;
+        int        size = type.sizeInBytes();
+
+        InterfaceParam N              = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam inputInBytes   = N * size;
+
+        // AHTUNG magic constant: hardcoded loop length = 16
+        InterfaceParam partialInBytes = engine_interface.addConstant(16l) * size;
+        InterfaceParam outputInBytes  = engine_interface.addConstant(4l) * size;
+
+        engine_interface.setTicks(s_kernelName, N);
+
+        engine_interface.setScalar(s_kernelName, "N", N);
+        engine_interface.setStream("input",   type, inputInBytes);
+        engine_interface.setStream("output",  type, outputInBytes);
+        engine_interface.setStream("partial", type, partialInBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        FullSummationManager manager =
+            new FullSummationManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}

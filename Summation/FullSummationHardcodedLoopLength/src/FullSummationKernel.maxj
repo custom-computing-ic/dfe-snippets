@@ -1,0 +1,40 @@
+package fullsummation;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class FullSummationKernel extends Kernel {
+
+    private static final int     counterWidth = 32;
+    private static final int     loopLength = 16;
+    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+    private static final DFEType scalarType = dfeUInt(counterWidth);
+
+    protected FullSummationKernel(KernelParameters parameters) {
+        super(parameters);
+
+        DFEVar index = control.count.simpleCounter(counterWidth);
+        DFEVar input = io.input("input", dataType);
+        DFEVar N     = io.scalarInput("N", scalarType);
+
+        DFEVar carriedSum = dataType.newInstance(this); // sourceless stream
+        DFEVar sum    = (index < loopLength) ? 0.0 : carriedSum;
+        DFEVar newSum = input + sum;
+
+        carriedSum <== stream.offset(newSum, -loopLength);
+
+        DFEVar finalSum = constant.var(0);
+        for (int i = 0; i < loopLength; i++)
+        {
+            finalSum += stream.offset(newSum, -i);
+        }
+
+        // streaming partial sums, for comparison and cross-validation only
+        io.output("partial", newSum, dataType, index >= N - 16 );
+        // we cannot output just one value: PCIe stream length must be multiple
+        // of 16 bytes. The last (4th) item in this stream is the total sum.
+        io.output("output", finalSum, dataType, index >= N - 4);
+    }
+}
