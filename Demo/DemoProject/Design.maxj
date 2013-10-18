@@ -1,0 +1,11 @@
+/**
+ * This will also be extracted to be added to the wiki. 
+ */
+
+class Test extends Kernel {
+    public Test() {}
+
+    public doSomething() {
+	System.out.println("Hello world");
+    }
+}
