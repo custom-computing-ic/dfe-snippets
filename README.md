@@ -11,10 +11,12 @@ projects to allow copy-pasting where necessary.
 
 # Short summary of intentions:
 
- - purpose:
-   - re-using elementary code pieces to minimise reinvention of a wheel.
-   - educational: how many possible implementations exists for the same or
-     similar problems
+ - purpose:  
+
+     - re-using elementary code pieces to minimise reinvention of a wheel.
+
+     - educational: how many possible implementations exists for the same or
+          similar problems
 
  - git repository of complete self-contained MaxCompiler projects, independent
    from each other
@@ -31,9 +33,16 @@ projects to allow copy-pasting where necessary.
  - it's good to keep technical entry barrier minimal to encourage wide
    contribution/usage
 
+ - we encourage code contributions and welcome code review (external tools?)
 
 
 # More details:
+
+ - we still need some technical guideline to minimize maintenance and keep it
+   tidy/usable (TODO: workflow explained)
+
+ - branching model: master + feature branches. One project per feature branch.
+   Merging new feature to master is only via pull requests (for code review).
 
  - we expect user to copy-paste and combine code from several projects into
    his/her own code
@@ -46,11 +55,12 @@ projects to allow copy-pasting where necessary.
    (porting to new MaxCompiler)
 
  - if someone updates existing project to new MaxCompiler, we encourage new
-   commit. If one needs keeping older version, it is kept as subdirectory in
-   current project folder.
+   updating commit. We prefer keeping single version in latest syntax, unless
+   implementation details differ. If one needs keeping older version, it is kept
+   as subdirectory in current project folder.
 
- - same time, we need minimal technical guideline to minimize maintenance and
-   keep it tidy/usable
+ - same time, it's good to keep older versions for a year or so back, to
+   support older-but-usable soft- and hardware.
 
  - minimal technical set: git + wiki + script for automated testing.
 
@@ -59,17 +69,9 @@ projects to allow copy-pasting where necessary.
  - it's good to ensure everything is clonable and documented enough to survive
    over the years
 
- - we encourage code contributions and welcome code review (external tools?)
-
- - two branches: stable + development. Everyone commits to development, only
-   approved code goes to stable (code review)
-
 
 
 # Discussion points:
-
- - alternative branching model: master branch (= stable), each new commit is
-   a single feature branch, merge to master implies code review
 
  - full set of technical stuff: git repository + wiki + automatic comments
    gathering for wiki (like javadoc, doxygen...) + a script for testing all
