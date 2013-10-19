@@ -1,6 +1,4 @@
 
- Contributor: Pavel Burovskiy, Oct 2013
-
 
  This project implements partial summation on DFE with fixed length of
  feedback summation loop. The length of this loop is hardcoded so that it
@@ -8,15 +6,6 @@
  adder which has latency 13, for FPGAs used in MAX4). This is
  probably the simpliest way of implementing summation (or whatever
  computation with accumulated state) with minimal hardware costs.
-
- This project is auto-generated with MaxIDE with manual updates in few
- places:
-  - CPU code
-  - Engine code: partial summation kernel, manager
-  - project files are for Maia MAX4, but are not properly set up
-    for hardware build
-  - some leftovers from initial project name in project files are
-    unavoidable
 
  Tested in simulation mode, has NOT been tested on hardware.
 
