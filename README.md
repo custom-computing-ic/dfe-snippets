@@ -11,9 +11,11 @@ projects to allow copy-pasting where necessary.
 
 # Short summary of intentions:
 
- - purpose:
-        - re-using elementary code pieces to minimise reinvention of a wheel.
-        - educational: how many possible implementations exists for the same or
+ - purpose:  
+
+     - re-using elementary code pieces to minimise reinvention of a wheel.
+
+     - educational: how many possible implementations exists for the same or
           similar problems
 
  - git repository of complete self-contained MaxCompiler projects, independent
