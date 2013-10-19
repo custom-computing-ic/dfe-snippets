@@ -1,14 +1,6 @@
 # ---- Available DFE hardware settings ----
-# maxnode* and maxstation* - DFEModel=MAX3424A
-# maia* - DFEModel=MAIA
 DFEModel=MAIA
 
-ifeq ($(DFEModel),MAX3424A)
-MPCX=false
-DEVICENUM=3424
-SLICCONFIG=
-else
 MPCX=true
 DEVICENUM=MAIA
 SLIC_CONF="default_engine_resource = 192.168.0.10"
-endif
