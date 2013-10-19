@@ -1,6 +1,4 @@
 
- Contributor: Pavel Burovskiy, Oct 2013
-
 
  This project implements full summation on DFE with fixed length of
  feedback summation loop. The length of this loop is hardcoded so that it
