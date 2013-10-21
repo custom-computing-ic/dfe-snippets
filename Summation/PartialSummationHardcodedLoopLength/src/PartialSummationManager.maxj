@@ -11,12 +11,15 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 public class PartialSummationManager extends CustomManager{
 
     private static final String s_partialSummationKernelName = "PartialSummationKernel";
+    private static final int    sumLoopLength = 16;
 
     PartialSummationManager(EngineParameters ep)
     {
         super(ep);
 
-        KernelBlock k = addKernel( new PartialSummationKernel(makeKernelParameters(s_partialSummationKernelName)));
+        KernelBlock k = addKernel(
+                     new PartialSummationKernel(makeKernelParameters(s_partialSummationKernelName),
+                                                sumLoopLength));
 
         DFELink x = addStreamFromCPU("input");
         k.getInput("input") <== x;
@@ -32,9 +35,7 @@ public class PartialSummationManager extends CustomManager{
 
         InterfaceParam N             = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam lengthInBytes = N * size;
-        // AHTUNG magic constant: hardcoded loop length = 16
-        int loopLength = 16;
-        InterfaceParam outputInBytes = engine_interface.addConstant(loopLength) * size;
+        InterfaceParam outputInBytes = engine_interface.addConstant(sumLoopLength) * size;
 
         engine_interface.setTicks(s_partialSummationKernelName, N);
 
@@ -49,6 +50,10 @@ public class PartialSummationManager extends CustomManager{
     public static void main(String[] args) {
         PartialSummationManager manager =
             new PartialSummationManager(new EngineParameters(args));
+
+        // this generates C defines in Maxfiles.h so that CPU code
+        // knows the constants
+        manager.addMaxFileConstant("sumLoopLength", sumLoopLength);
         manager.createSLiCinterface(interfaceDefault());
         manager.build();
     }

@@ -8,10 +8,11 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 class PartialSummationKernel extends Kernel {
 
     private static final int   counterWidth = 32;
-    private static final int   loopLength   = 16;
     private static final DFEType dataType   = dfeFloat(8, 24); // C float
 
-    protected PartialSummationKernel(KernelParameters parameters) {
+    protected PartialSummationKernel(KernelParameters parameters,
+                                     int              loopLength)
+    {
         super(parameters);
 
         DFEVar index   = control.count.simpleCounter(counterWidth);
