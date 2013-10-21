@@ -10,13 +10,18 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 
 public class FullSummationBalancedTreeManager extends CustomManager{
 
-    private static final String s_kernelName = "FullSummationBalancedTreeKernel";
+    private static final String s_kernelName  = "FullSummationBalancedTreeKernel";
+    private static final int    sumLoopLength = 16;
+    private static final int    minimalPciStreamLength = 4;
 
     FullSummationBalancedTreeManager(EngineParameters ep)
     {
         super(ep);
 
-        KernelBlock k = addKernel( new FullSummationBalancedTreeKernel(makeKernelParameters(s_kernelName)));
+        KernelBlock k = addKernel(
+            new FullSummationBalancedTreeKernel(makeKernelParameters(s_kernelName),
+                                                sumLoopLength,
+                                                minimalPciStreamLength));
 
         DFELink x = addStreamFromCPU("input");
         k.getInput("input") <== x;
@@ -35,9 +40,8 @@ public class FullSummationBalancedTreeManager extends CustomManager{
         InterfaceParam N              = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam inputInBytes   = N * size;
 
-        // AHTUNG magic constant: hardcoded loop length = 16
-        InterfaceParam partialInBytes = engine_interface.addConstant(16l) * size;
-        InterfaceParam outputInBytes  = engine_interface.addConstant(4l) * size;
+        InterfaceParam partialInBytes = engine_interface.addConstant(sumLoopLength) * size;
+        InterfaceParam outputInBytes  = engine_interface.addConstant(minimalPciStreamLength) * size;
 
         engine_interface.setTicks(s_kernelName, N);
 
@@ -52,6 +56,11 @@ public class FullSummationBalancedTreeManager extends CustomManager{
     public static void main(String[] args) {
         FullSummationBalancedTreeManager manager =
             new FullSummationBalancedTreeManager(new EngineParameters(args));
+
+        // this generates C defines in Maxfiles.h so that CPU code
+        // knows the constants
+        manager.addMaxFileConstant("sumLoopLength", sumLoopLength);
+        manager.addMaxFileConstant("minimalPciStreamLength", minimalPciStreamLength);
         manager.createSLiCinterface(interfaceDefault());
         manager.build();
     }
