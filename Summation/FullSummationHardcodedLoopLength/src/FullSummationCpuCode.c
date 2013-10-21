@@ -1,3 +1,17 @@
+/*
+
+ This project implements full summation on DFE with fixed length of
+ feedback summation loop. The length of this loop is hardcoded so that it
+ exceeds the summator latency (important for floating point arithmetic
+ adder which has latency 13, for FPGAs used in MAX4). Full summation
+ is achieved by summation of all output values using stream offsets.
+
+ This is probably an implementation with maximal hardware costs.
+
+ Tested in simulation mode, has NOT been tested on hardware.
+
+*/
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,11 +22,11 @@
 int main(void)
 {
     const int inSize = 384;
-    const int loopLength = 16;
     const int minimalPCIeStreamLength = 4;
     float *in       = malloc(sizeof(float)*inSize);
     float *full     = malloc(sizeof(float)*minimalPCIeStreamLength);
-    float *partial  = malloc(sizeof(float)*loopLength);
+    // FullSummation_sumLoopLength is defined in Maxfiles.h
+    float *partial  = malloc(sizeof(float)*FullSummation_sumLoopLength);
 
     float sum = 0;
     for(int i = 0; i < inSize; ++i) {
@@ -31,7 +45,7 @@ int main(void)
         printf(" %f", full[i]);
     }
     printf("\noutput from DFE: partial sums: ");
-    for(int i = 0; i < loopLength; ++i)
+    for(int i = 0; i < FullSummation_sumLoopLength; ++i)
     {
         dfeSum += partial[i];
         printf(" %f", partial[i]);

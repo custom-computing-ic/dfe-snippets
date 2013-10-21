@@ -8,11 +8,13 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 class FullSummationKernel extends Kernel {
 
     private static final int     counterWidth = 32;
-    private static final int     loopLength = 16;
     private static final DFEType dataType   = dfeFloat(8, 24); // C float
     private static final DFEType scalarType = dfeUInt(counterWidth);
 
-    protected FullSummationKernel(KernelParameters parameters) {
+    protected FullSummationKernel(KernelParameters parameters,
+                                  int              loopLength,
+                                  int              minStreamLength)
+    {
         super(parameters);
 
         DFEVar index = control.count.simpleCounter(counterWidth);
@@ -32,9 +34,9 @@ class FullSummationKernel extends Kernel {
         }
 
         // streaming partial sums, for comparison and cross-validation only
-        io.output("partial", newSum, dataType, index >= N - 16 );
+        io.output("partial", newSum, dataType, index >= N - loopLength );
         // we cannot output just one value: PCIe stream length must be multiple
         // of 16 bytes. The last (4th) item in this stream is the total sum.
-        io.output("output", finalSum, dataType, index >= N - 4);
+        io.output("output", finalSum, dataType, index >= N - minStreamLength);
     }
 }

@@ -10,13 +10,18 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 
 public class FullSummationManager extends CustomManager{
 
-    private static final String s_kernelName = "FullSummationKernel";
+    private static final String s_kernelName  = "FullSummationKernel";
+    private static final int    sumLoopLength = 16;
+    private static final int    minimalStreamLength = 4;
 
     FullSummationManager(EngineParameters ep)
     {
         super(ep);
 
-        KernelBlock k = addKernel( new FullSummationKernel(makeKernelParameters(s_kernelName)));
+        KernelBlock k = addKernel(
+            new FullSummationKernel(makeKernelParameters(s_kernelName),
+                                    sumLoopLength,
+                                    minimalStreamLength));
 
         DFELink x = addStreamFromCPU("input");
         k.getInput("input") <== x;
@@ -35,9 +40,8 @@ public class FullSummationManager extends CustomManager{
         InterfaceParam N              = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam inputInBytes   = N * size;
 
-        // AHTUNG magic constant: hardcoded loop length = 16
-        InterfaceParam partialInBytes = engine_interface.addConstant(16l) * size;
-        InterfaceParam outputInBytes  = engine_interface.addConstant(4l) * size;
+        InterfaceParam partialInBytes = engine_interface.addConstant(sumLoopLength) * size;
+        InterfaceParam outputInBytes  = engine_interface.addConstant(minimalStreamLength) * size;
 
         engine_interface.setTicks(s_kernelName, N);
 
@@ -52,6 +56,10 @@ public class FullSummationManager extends CustomManager{
     public static void main(String[] args) {
         FullSummationManager manager =
             new FullSummationManager(new EngineParameters(args));
+
+        // this generates a C define in Maxfiles.h so that CPU code
+        // knows the constant
+        manager.addMaxFileConstant("sumLoopLength", sumLoopLength);
         manager.createSLiCinterface(interfaceDefault());
         manager.build();
     }
