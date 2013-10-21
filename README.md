@@ -23,6 +23,4 @@ Feel free to contact us directly or raise an issue.
    gathering for wiki (like javadoc, doxygen...) + a script for testing all
    projects at once, code style checker, anything else?
 
- - making it public (github?), local web/git/wiki installation (gitlab)
-
  - conversion to KernelLib compatible code as separate activity
