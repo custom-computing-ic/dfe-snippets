@@ -11,7 +11,6 @@
  Tested in simulation mode, has NOT been tested on hardware.
 
 */
-
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,12 +20,13 @@
 
 int main(void)
 {
+
     const int inSize = 384;
-    const int minimalPCIeStreamLength = 4;
-    float *in       = malloc(sizeof(float)*inSize);
-    float *full     = malloc(sizeof(float)*minimalPCIeStreamLength);
-    // FullSummation_sumLoopLength is defined in Maxfiles.h
-    float *partial  = malloc(sizeof(float)*FullSummation_sumLoopLength);
+    float *in        = malloc(sizeof(float)*inSize);
+
+    // these two constants are defined in Maxfiles.h
+    float *full      = malloc(sizeof(float)*FullSummation_minimalPciStreamLength);
+    float *partial   = malloc(sizeof(float)*FullSummation_sumLoopLength);
 
     float sum = 0;
     for(int i = 0; i < inSize; ++i) {
@@ -38,9 +38,9 @@ int main(void)
     FullSummation(inSize, in, full, partial);
 
     printf("output from DFE, full summation (stream): ");
-    float dfeTotalSum = full[minimalPCIeStreamLength-1];
+    float dfeTotalSum = full[FullSummation_minimalPciStreamLength-1];
     float dfeSum = 0;
-    for(int i = 0; i < minimalPCIeStreamLength; ++i)
+    for(int i = 0; i < FullSummation_minimalPciStreamLength; ++i)
     {
         printf(" %f", full[i]);
     }

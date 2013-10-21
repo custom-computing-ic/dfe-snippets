@@ -12,7 +12,7 @@ public class FullSummationManager extends CustomManager{
 
     private static final String s_kernelName  = "FullSummationKernel";
     private static final int    sumLoopLength = 16;
-    private static final int    minimalStreamLength = 4;
+    private static final int    minimalPciStreamLength = 4;
 
     FullSummationManager(EngineParameters ep)
     {
@@ -21,7 +21,7 @@ public class FullSummationManager extends CustomManager{
         KernelBlock k = addKernel(
             new FullSummationKernel(makeKernelParameters(s_kernelName),
                                     sumLoopLength,
-                                    minimalStreamLength));
+                                    minimalPciStreamLength));
 
         DFELink x = addStreamFromCPU("input");
         k.getInput("input") <== x;
@@ -41,7 +41,7 @@ public class FullSummationManager extends CustomManager{
         InterfaceParam inputInBytes   = N * size;
 
         InterfaceParam partialInBytes = engine_interface.addConstant(sumLoopLength) * size;
-        InterfaceParam outputInBytes  = engine_interface.addConstant(minimalStreamLength) * size;
+        InterfaceParam outputInBytes  = engine_interface.addConstant(minimalPciStreamLength) * size;
 
         engine_interface.setTicks(s_kernelName, N);
 
@@ -57,9 +57,11 @@ public class FullSummationManager extends CustomManager{
         FullSummationManager manager =
             new FullSummationManager(new EngineParameters(args));
 
-        // this generates a C define in Maxfiles.h so that CPU code
-        // knows the constant
+        // this generates C defines in Maxfiles.h so that CPU code
+        // knows the constants
         manager.addMaxFileConstant("sumLoopLength", sumLoopLength);
+        manager.addMaxFileConstant("minimalPciStreamLength", minimalPciStreamLength);
+
         manager.createSLiCinterface(interfaceDefault());
         manager.build();
     }
