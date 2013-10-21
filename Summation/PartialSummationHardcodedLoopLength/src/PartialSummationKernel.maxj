@@ -1,0 +1,31 @@
+package partialsummation;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class PartialSummationKernel extends Kernel {
+
+    private static final int   counterWidth = 32;
+    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+
+    protected PartialSummationKernel(KernelParameters parameters,
+                                     int              loopLength)
+    {
+        super(parameters);
+
+        DFEVar index   = control.count.simpleCounter(counterWidth);
+        DFEVar input   = io.input("input", dataType);
+        DFEVar N       = io.scalarInput("N", dfeUInt(32));
+
+        DFEVar carriedSum = dataType.newInstance(this); // sourceless stream
+        DFEVar sum = (index < loopLength) ? 0.0 : carriedSum;
+        DFEVar newSum = input + sum;
+
+        carriedSum <== stream.offset(newSum, -loopLength);
+
+        io.output("output", newSum, dataType, ( index >= (N - loopLength) ) );
+    }
+
+}
