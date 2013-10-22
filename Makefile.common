@@ -10,19 +10,19 @@
 #       settings defined in project's Makefile
 # 3)    Usage: use project's makefile (navigate
 #       to project's directory and use makefile there)
+#
 
 
-
-# # ---- Paths ----
+# ---- Paths ----
 SIMMAXDIR=$(PRJ)_$(DFEModel)_DFE_SIM/results
 DFEMAXDIR=$(PRJ)_$(DFEModel)_DFE/results
 MAXELEROSDIR_SIM:=$(MAXCOMPILERDIR)/lib/maxeleros-sim
 
-# # ---- Source files ----
+# ---- Source files ----
 ENGINEFILES=$(wildcard ../src/*.maxj)
 CPUFILES=$(wildcard ../src/*.c)
 
-# # ---- Command alias ----
+# ---- Command alias ----
 CC=icc
 MAXFILECOMPILE=maxfilecompile
 SLICCOMPILE=sliccompile
@@ -34,12 +34,12 @@ MAXDEBUG=maxdebug
 MAXRENDERGRAPHS=maxRenderGraphs
 MAXCOMPILERSIM=maxcompilersim
 
-# # ---- Compiler settings ----
+# ---- Compiler settings ----
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar -1.6 -d .
 CFLAGS=-std=c99 -openmp -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
 LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread -openmp
 
-# all: runsim build
+all: runsim build
 
 # ---- Simulation ----
 
