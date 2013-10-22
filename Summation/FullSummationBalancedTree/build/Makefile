@@ -24,9 +24,6 @@
 WHEREISROOT=../../..
 
 
-# Name of maxj package
-PKG=fullsummationbalancedtree
-
 # Assuming Kernel and Manager class names follow the pattern below:
 PRJ=FullSummationBalancedTree
 KERNEL=$(PRJ)Kernel
