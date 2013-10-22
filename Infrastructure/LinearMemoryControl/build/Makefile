@@ -24,12 +24,9 @@
 WHEREISROOT=../../..
 
 
-# Name of maxj package
-PKG=lmemexample
-
 # Assuming Kernel and Manager class names follow the pattern below:
-PRJ=LMemExample
-KERNEL=$(PRJ)Kernel 
+PRJ=LMem
+KERNEL=$(PRJ)Kernel
 MANAGER=$(PRJ)Manager
 
 
