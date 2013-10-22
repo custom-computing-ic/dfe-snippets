@@ -108,7 +108,7 @@ class LMemManager extends CustomManager {
 
 		BuildConfig c = new BuildConfig(BuildConfig.Level.FULL_BUILD);
 		c.setBuildEffort(BuildConfig.Effort.HIGH);
-    	c.setMPPRCostTableSearchRange(1, 1);        // set to enable MPPR
+		c.setMPPRCostTableSearchRange(1, 1);        // set to enable MPPR
 		c.setMPPRParallelism(1);                    // use 6 CPU threads
 
 		LMemManager m = new LMemManager(engineParams);
