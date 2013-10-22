@@ -1,0 +1,60 @@
+package partialsummation;
+
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class PartialSummationManager extends CustomManager{
+
+    private static final String s_partialSummationKernelName = "PartialSummationKernel";
+    private static final int    sumLoopLength = 16;
+
+    PartialSummationManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel(
+                     new PartialSummationKernel(makeKernelParameters(s_partialSummationKernelName),
+                                                sumLoopLength));
+
+        DFELink x = addStreamFromCPU("input");
+        k.getInput("input") <== x;
+
+        DFELink y = addStreamToCPU("output");
+        y <== k.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes   type = CPUTypes.FLOAT;
+        int        size = type.sizeInBytes();
+
+        InterfaceParam N             = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam lengthInBytes = N * size;
+        InterfaceParam outputInBytes = engine_interface.addConstant(sumLoopLength) * size;
+
+        engine_interface.setTicks(s_partialSummationKernelName, N);
+
+        engine_interface.setScalar(s_partialSummationKernelName, "N", N);
+        engine_interface.setStream("input",  type, lengthInBytes);
+        engine_interface.setStream("output", type, outputInBytes);
+
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        PartialSummationManager manager =
+            new PartialSummationManager(new EngineParameters(args));
+
+        // this generates C defines in Maxfiles.h so that CPU code
+        // knows the constants
+        manager.addMaxFileConstant("sumLoopLength", sumLoopLength);
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}
