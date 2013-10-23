@@ -22,7 +22,7 @@ int main(void)
     const int size = 384;
     float *in  = malloc(sizeof(float)*size);
     // this constant is defined in Maxfiles.h
-    float *out = malloc(sizeof(float)*PartialSummation_sumLoopLength);
+    float *out = malloc(sizeof(float)*size);//PartialSummation_sumLoopLength);
 
     float sum = 0;
     for(int i = 0; i < size; ++i) {
@@ -48,6 +48,7 @@ int main(void)
     }
     printf("\nSum of values from DFE = %f", dfeSum);
     printf("\nCPU calculated sum     = %f\nDone.\n",sum);
+
     free(in);
     free(out);
 

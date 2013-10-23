@@ -45,7 +45,7 @@ all: runsim build
 
 $(SIMMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
-	MAXAPPJCP=. MAXSOURCEDIRS='../src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE_SIM' enableMPCX=$(MPCX)
+	MAXAPPJCP=. MAXSOURCEDIRS='../src' $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE_SIM' enableMPCX=$(MPCX)
 	cp $(SIMMAXDIR)/$(PRJ).h $(SIMMAXDIR)/Maxfiles.h
 
 $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
@@ -69,7 +69,7 @@ stopsim:
 
 $(DFEMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
-	MAXAPPJCP=. MAXSOURCEDIRS='../src' MAXAPPPKG=$(PKG) $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(MPCX) 
+	MAXAPPJCP=. MAXSOURCEDIRS='../src' $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(MPCX)
 	cp $(DFEMAXDIR)/$(PRJ).h $(DFEMAXDIR)/Maxfiles.h
 
 $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
@@ -84,24 +84,24 @@ $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
 build: $(PRJ)_dfe
 
 run:
-	LD_PRELOAD=/opt/maxeler/maxeleros/lib/libmaxeleros.so ./${PRJ}_dfe
+	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=/opt/maxeler/maxeleros/lib/libmaxeleros.so ./${PRJ}_dfe
 
 # ---- Clean ----
 
 cleansim:
-	rm -f $(PRJ)_sim *~
+	rm -f $(PRJ)_sim *~ ../src/*~
 
 cleandfe:
-	rm -f $(PRJ)_dfe *~
+	rm -f $(PRJ)_dfe *~ ../src/*~
 
 clean: cleansim cleandfe
 
 distcleansim: cleansim
-	rm -rf $(PKG) Maxfiles.h *.o
+	rm -f Maxfiles.h *.class *.o
 	rm -rf $(PRJ)_$(DFEModel)_DFE_SIM
 
 distcleandfe: cleandfe
-	rm -rf $(PKG) Maxfiles.h *.o
+	rm -f Maxfiles.h *.class *.o
 	rm -rf $(PRJ)_$(DFEModel)_DFE
 
 distclean: distcleansim distcleandfe
@@ -110,4 +110,3 @@ distclean: distcleansim distcleandfe
 
 debug:
 	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(USER)a0:$(USER)a $(SIMMAXDIR)/$(PRJ).max
-
