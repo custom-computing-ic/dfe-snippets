@@ -1,0 +1,53 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class NestedCounterVariableBoundaryManager extends CustomManager{
+
+    private static final String s_kernelName  = "NestedCounterVariableBoundaryKernel";
+
+    NestedCounterVariableBoundaryManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel(
+            new NestedCounterVariableBoundaryKernel(makeKernelParameters(s_kernelName)));
+
+        DFELink x = addStreamFromCPU("input");
+        k.getInput("input") <== x;
+
+        DFELink y = addStreamToCPU("outer");
+        DFELink z = addStreamToCPU("nested");
+        y <== k.getOutput("outer");
+        z <== k.getOutput("nested");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes   type = CPUTypes.INT32;
+        int        size = type.sizeInBytes();
+
+        InterfaceParam N              = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam inputInBytes   = N * size;
+
+        engine_interface.setTicks(s_kernelName, N);
+
+        engine_interface.setStream("input",   type, inputInBytes);
+        engine_interface.setStream("outer",  type, inputInBytes);
+        engine_interface.setStream("nested", type, inputInBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        NestedCounterVariableBoundaryManager manager =
+            new NestedCounterVariableBoundaryManager(new EngineParameters(args));
+
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}

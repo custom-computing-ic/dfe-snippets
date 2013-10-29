@@ -1,0 +1,52 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+
+class NestedCounterVariableBoundaryKernel extends Kernel {
+
+    private static final int     counterWidth = 32;
+    private static final DFEType scalarType = dfeUInt(counterWidth);
+
+    protected NestedCounterVariableBoundaryKernel(KernelParameters parameters)
+    {
+        super(parameters);
+
+        /* CPU equivalent:
+         *
+         *   for (int outer = 0; ; outer++)
+         *   {
+         *       for (int nested = 0; nested < input[outer]; nested++)
+         *       {
+         *           // do something
+         *       }
+         *   }
+         */
+
+        // example of input: (each value equals the number of times it repeats)
+        //   2,2,
+        //   3,3,3,
+        //   5,5,5,5,5,
+        //   1,
+        //   2,2
+        // etc.
+        DFEVar input = io.input("input", scalarType);
+
+        Params params = control.count.makeParams(counterWidth)
+                        .withEnable(input !== stream.offset(input, +1))
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        Counter outer = control.count.makeCounter(params);
+
+        Params params2 = control.count.makeParams(counterWidth)
+                        .withReset(input !== stream.offset(input, -1))
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        Counter nested = control.count.makeCounter(params2);
+
+        io.output("outer", outer.getCount(), scalarType );
+        io.output("nested", nested.getCount(), scalarType );
+    }
+
+}
