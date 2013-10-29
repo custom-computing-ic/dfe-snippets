@@ -19,19 +19,26 @@ class FullSummationBalancedTreeKernel extends Kernel {
         DFEVar input = io.input("input", dataType);
         DFEVar N     = io.scalarInput("N", scalarType);
 
-        DFEVar carriedSum = dataType.newInstance(this); // sourceless stream
-        DFEVar sum    = (index < loopLength) ? 0.0 : carriedSum;
-        DFEVar newSum = input + sum;
+        DFEVar finalSum = summation(input, index, N, loopLength);
 
-        carriedSum <== stream.offset(newSum, -loopLength);
-
-        DFEVar finalSum = summationTree(newSum, 0, loopLength-1);
-
-        // streaming partial sums, for comparison and cross-validation only
-        io.output("partial", newSum, dataType, index >= N - loopLength );
         // we cannot output just one value: PCIe stream length must be multiple
         // of 16 bytes. The last (4th) item in this stream is the total sum.
         io.output("output", finalSum, dataType, index >= N - minStreamLength);
+    }
+
+    private DFEVar summation(DFEVar newTerm, DFEVar termNum, DFEVar totalTerms,  int loopLength)
+    {
+        DFEVar carriedSum = dataType.newInstance(this); // sourceless stream
+        DFEVar sum    = (termNum < loopLength) ? 0.0 : carriedSum;
+        DFEVar newSum = newTerm + sum;
+
+        carriedSum <== stream.offset(newSum, -loopLength);
+
+        // streaming partial sums, for comparison and cross-validation only
+        io.output("partial", newSum, dataType, termNum >= totalTerms - loopLength );
+
+        DFEVar finalSum = summationTree(newSum, 0, loopLength-1);
+        return finalSum;
     }
 
 
