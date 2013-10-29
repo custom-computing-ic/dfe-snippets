@@ -1,0 +1,66 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+
+class SparseDotProductKernel extends Kernel {
+
+    private static final int     dataSize   = 256;
+    private static final int     counterWidth = 32;
+    private static final int     indexWidth = 8;
+    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+    private static final DFEType scalarType = dfeUInt(counterWidth);
+
+    protected SparseDotProductKernel(KernelParameters parameters,
+                                     int              loopLength,
+                                     int              minStreamLength)
+    {
+        super(parameters);
+
+        // data storage initialised from CPU
+        Memory<DFEVar> mappedRom = mem.alloc(dataType, dataSize);
+        mappedRom.mapToCPU("mappedRom");
+
+        DFEVar nonZeroNum    = control.count.simpleCounter(counterWidth);
+        DFEVar sparseIndex   = io.input("sparseIndex", dfeUInt(indexWidth));
+        DFEVar totalNonZeros = io.scalarInput("totalNonZeros", scalarType);
+
+        // retrieve only indexed elements from vector storage
+        DFEVar elmFromVector = mappedRom.read(sparseIndex);
+
+
+        DFEVar finalSum = summation(elmFromVector*elmFromVector, totalNonZeros, nonZeroNum, loopLength);
+
+
+        // we cannot output just one value: PCIe stream length must be multiple
+        // of 16 bytes. The last (4th) item in this stream is the total sum.
+        io.output("output", finalSum, dataType, nonZeroNum >= totalNonZeros - minStreamLength);
+    }
+
+
+    private DFEVar summation(DFEVar newTerm, DFEVar totalSeqSize, DFEVar termNum, int loopLength)
+    {
+        DFEVar carriedSum = dataType.newInstance(this); // sourceless stream
+        DFEVar sum    = (termNum < loopLength) ? 0.0 : carriedSum;
+        DFEVar newSum = newTerm + sum;
+
+        carriedSum <== stream.offset(newSum, -loopLength);
+
+        DFEVar finalSum = summationTree(newSum, 0, loopLength-1);
+        return finalSum;
+    }
+
+
+    // Recursively produce binary tree of additions. Leaf nodes are
+    // offsets to source stream.
+    private DFEVar summationTree(DFEVar src, int left, int right)
+    {
+        if (left == right)
+        {
+            return stream.offset(src, -left);
+        }
+        int middle = left + (right - left)/2;
+        return summationTree(src, left, middle) + summationTree(src, middle + 1, right);
+    }
+}
