@@ -1,10 +1,25 @@
 /*
 
- This project demonstrates performing dot product computation
- with sparse vector (fully fits to on-chip BRAM) and sparse
- index streamed via PCIe.
+ This project demonstrates performing sparse dot product
+ computation on vector that fully fits to on-chip BRAM.
 
- Tested in simulation mode, has NOT been tested on hardware.
+ CPU C++ equivalent:
+
+ double sum = 0.0;
+ vector<double> v(VectorSize);
+ vector<int>    index(N);
+ // NB: N <= VectorSize, index[i] < VectorSize
+ for (int i = 0; i < N; i++)
+ {
+    double elm = v[index[i]];
+    sum += elm*elm;
+ }
+
+ Here full vector is mapped to BRAM before kernel starts, and
+ sparse index is streamed via PCIe.
+
+ Use case: multiplying a row of sparse matrix to a dense vector
+           requires to indirectly reference dense vector entries.
 
 */
 #include <math.h>
