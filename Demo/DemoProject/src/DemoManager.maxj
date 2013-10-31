@@ -16,8 +16,8 @@ public class DemoManager extends CustomManager{
         KernelBlock k = addKernel(new DemoKernel(makeKernelParameters(s_kernelName)));
 
         k.getInput("a") <== addStreamFromCPU("a");
-	k.getInput("b") <== addStreamFromCPU("b");
-	addStreamToCPU("output") <== k.getOutput("output");
+        k.getInput("b") <== addStreamFromCPU("b");
+        addStreamToCPU("output") <== k.getOutput("output");
     }
 
     private static EngineInterface interfaceDefault() {

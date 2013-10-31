@@ -38,7 +38,7 @@ int main(void)
   for (int i = 0; i < inSize; i++)
     if (out[i] != expected[i]) {
       printf("Output from DFE did not match CPU: %d : %d != %d\n",
-	     i, out[i], expected[i]);
+        i, out[i], expected[i]);
       return 1;
     }
 
