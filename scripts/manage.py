@@ -365,7 +365,7 @@ def main():
     print '4. Generating wiki page for changed projects ({})'.format(
        [str(s) for s in changed_projects])
 
-    wiki_path = '../../maxdge-snippets-wiki2'
+    wiki_path = '../../maxdge-snippets-wiki'
     wiki_url = 'git@bitbucket.org:burchanie/maxdge-snippets.git/wiki'
     if not os.path.isdir(wiki_path):
         print 'Error: Could not find wiki directory {}.'.format(wiki_path)
