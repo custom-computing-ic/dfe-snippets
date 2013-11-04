@@ -1,0 +1,121 @@
+/*** Linear memory control with support of quarter rate mode */
+
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControllerConfig;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.Direction;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.DFEModel;
+
+class LMemManager extends CustomManager {
+
+	private static final String KERNEL_NAME = "LMemKernel";
+	private static final CPUTypes TYPE = CPUTypes.INT32;
+
+	LMemManager(EngineParameters engineParameters) {
+		super(engineParameters);
+
+		/*** To use quarter rate mode in Maia, setMAx4qMode(true) before creating any streams / engine interfaces */
+
+		MemoryControllerConfig memCfg = new MemoryControllerConfig();
+		if (engineParameters.getDFEModel()==DFEModel.MAIA){
+			memCfg.setMAX4qMode(true);
+			memCfg.setEnableParityMode(true, true, 72, false);
+			memCfg.setDataReadFIFOExtraPipelineRegInFabric(true);  // for easier meeting LMem timing
+		}
+		config.setMemoryControllerConfig(memCfg);
+		
+		// Set Lmem clock frequency
+		// MAX3: MAX3_300, MAX3_333, MAX3_350, MAX3_400
+		// MAIA: MAX4_333, MAX4_400, MAX4_533, MAX4MAIA_400, MAX4MAIA_533, MAX4MAIA_666, MAX4MAIA_733, MAX4MAIA_800
+		config.setOnCardMemoryFrequency(LMemFrequency.MAX4MAIA_733);
+		
+		// Set clock frequency
+		config.setDefaultStreamClockFrequency(200);
+
+		KernelBlock k = addKernel(new LMemKernel(makeKernelParameters(KERNEL_NAME)));
+
+		DFELink cpu2lmem = addStreamToOnCardMemory("cpu2lmem", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+		DFELink lmem2cpu = addStreamFromOnCardMemory("lmem2cpu", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+
+		DFELink fromcpu = addStreamFromCPU("fromcpu");
+		DFELink tocpu = addStreamToCPU("tocpu");
+
+		cpu2lmem <== fromcpu;
+		tocpu <== lmem2cpu;
+
+		DFELink inA = addStreamFromOnCardMemory("inA", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+		DFELink inB = addStreamFromOnCardMemory("inB", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+
+		k.getInput("inA") <== inA;
+		k.getInput("inB") <== inB;
+
+		DFELink oData = addStreamToOnCardMemory("oData",MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+		oData <== k.getOutput("oData");
+
+	}
+
+	private static EngineInterface interfaceWrite(String name) {
+		EngineInterface ei = new EngineInterface(name);
+
+		InterfaceParam size  = ei.addParam("size", TYPE);
+		InterfaceParam start = ei.addParam("start", TYPE);
+		InterfaceParam sizeInBytes = size * TYPE.sizeInBytes();
+
+		ei.setStream("fromcpu", TYPE, sizeInBytes );
+		ei.setLMemLinear("cpu2lmem", start * TYPE.sizeInBytes(), sizeInBytes);
+		ei.ignoreAll(Direction.IN_OUT);
+		return ei;
+	}
+
+	private static EngineInterface interfaceRead(String name) {
+		EngineInterface ei = new EngineInterface(name);
+
+		InterfaceParam size  = ei.addParam("size", TYPE);
+		InterfaceParam start = ei.addParam("start", TYPE);
+		InterfaceParam sizeInBytes = size * TYPE.sizeInBytes();
+
+		ei.setLMemLinear("lmem2cpu", start * TYPE.sizeInBytes(), sizeInBytes);
+		ei.setStream("tocpu", TYPE, sizeInBytes);
+		ei.ignoreAll(Direction.IN_OUT);
+		return ei;
+	}
+
+	private static EngineInterface interfaceDefault() {
+		EngineInterface ei = new EngineInterface();
+
+		InterfaceParam N    = ei.addParam("N", TYPE);
+		ei.setTicks(KERNEL_NAME, N);
+		InterfaceParam sizeInBytes = N * TYPE.sizeInBytes();
+
+		InterfaceParam zero = ei.addConstant(0l);
+		ei.setLMemLinear("inA", zero, sizeInBytes);
+		ei.setLMemLinear("inB", sizeInBytes, sizeInBytes);
+		ei.setLMemLinear("oData", 2 * sizeInBytes, sizeInBytes);
+		ei.ignoreAll(Direction.IN_OUT);
+		return ei;
+	}
+
+	public static void main(String[] args) {
+
+		EngineParameters engineParams = new EngineParameters(args);
+
+		BuildConfig c = new BuildConfig(BuildConfig.Level.FULL_BUILD);
+		c.setBuildEffort(BuildConfig.Effort.HIGH);
+		c.setMPPRCostTableSearchRange(1, 1);        // set to enable MPPR
+		c.setMPPRParallelism(1);                    // use 6 CPU threads
+
+		LMemManager m = new LMemManager(engineParams);
+		m.createSLiCinterface(interfaceWrite("writeLMem"));
+		m.createSLiCinterface(interfaceRead("readLMem"));
+		m.createSLiCinterface(interfaceDefault());
+		m.setBuildConfig(c);
+		m.build();
+	}
+}

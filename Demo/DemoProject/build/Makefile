@@ -25,13 +25,13 @@ WHEREISROOT=../../..
 
 
 # Assuming Kernel and Manager class names follow the pattern below:
-PRJ=FullSummation
+PRJ=Demo
 KERNEL=$(PRJ)Kernel
 MANAGER=$(PRJ)Manager
 
 
 # Using known hardware settings
-include $(WHEREISROOT)/Makefile.Maia.hardware
+include $(WHEREISROOT)/Makefile.Max3.hardware
 
 
 # Using common compillation targets and compiler settings

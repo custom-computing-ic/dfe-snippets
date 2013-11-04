@@ -6,28 +6,26 @@ import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
 import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
 
-public class FullSummationManager extends CustomManager{
+public class SparseDotProductManager extends CustomManager{
 
-    private static final String s_kernelName  = "FullSummationKernel";
+    private static final String s_kernelName  = "SparseDotProductKernel";
     private static final int    sumLoopLength = 16;
     private static final int    minimalPciStreamLength = 4;
 
-    FullSummationManager(EngineParameters ep)
+    SparseDotProductManager(EngineParameters ep)
     {
         super(ep);
 
         KernelBlock k = addKernel(
-            new FullSummationKernel(makeKernelParameters(s_kernelName),
-                                    sumLoopLength,
-                                    minimalPciStreamLength));
+            new SparseDotProductKernel(makeKernelParameters(s_kernelName),
+                                                sumLoopLength,
+                                                minimalPciStreamLength));
 
-        DFELink x = addStreamFromCPU("input");
-        k.getInput("input") <== x;
+        DFELink x = addStreamFromCPU("sparseIndex");
+        k.getInput("sparseIndex") <== x;
 
         DFELink y = addStreamToCPU("output");
-        DFELink z = addStreamToCPU("partial");
         y <== k.getOutput("output");
-        z <== k.getOutput("partial");
     }
 
     private static EngineInterface interfaceDefault() {
@@ -43,23 +41,21 @@ public class FullSummationManager extends CustomManager{
 
         engine_interface.setTicks(s_kernelName, N);
 
-        engine_interface.setScalar(s_kernelName, "N", N);
-        engine_interface.setStream("input",   type, inputInBytes);
+        engine_interface.setScalar(s_kernelName, "totalNonZeros", N);
+        engine_interface.setStream("sparseIndex",   CPUTypes.UINT8, inputInBytes);
         engine_interface.setStream("output",  type, outputInBytes);
-        engine_interface.setStream("partial", type, partialInBytes);
         return engine_interface;
     }
 
 
     public static void main(String[] args) {
-        FullSummationManager manager =
-            new FullSummationManager(new EngineParameters(args));
+        SparseDotProductManager manager =
+            new SparseDotProductManager(new EngineParameters(args));
 
         // this generates C defines in Maxfiles.h so that CPU code
         // knows the constants
         manager.addMaxFileConstant("sumLoopLength", sumLoopLength);
         manager.addMaxFileConstant("minimalPciStreamLength", minimalPciStreamLength);
-
         manager.createSLiCinterface(interfaceDefault());
         manager.build();
     }

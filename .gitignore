@@ -1,0 +1,20 @@
+# We want to exclude build junk from project directories.
+# I would expect the following to work correctly:
+# build/*         -- ignore everything under build (but not build itself)
+# !build/Makefile -- unignore makefile
+# This doesn't seem to work correctly for git 1.7.1...
+
+# The solution below is not ideal since it depends on the
+# naming format, but it does the job:
+
+# 1. Ignore DFE/DFE_SIM build directories
+*_DFE_SIM
+*_DFE
+
+# 2. Ignore DFE/DFE_SIM executables
+*_sim
+*_dfe
+
+# 3. Ignore other compiled objects
+*.class
+*.o
