@@ -24,7 +24,7 @@ START_COMMENT_RE = re.compile(r'(\s)*/\*\*\*') # start comments with /***
 END_COMMENT_RE = re.compile(r'(\s)*\*/') # end comments with */
 
 GIT_BRANCH = re.compile(r'\* .*')
-PROJECT_RE = re.compile(r'(?P<concept>.*)/(?P<project>.*)/src/.*')
+PROJECT_RE = re.compile(r'../(?P<concept>.*)/(?P<project>.*)/src/.*')
 
 # The project  directory (assumes this script lives in ROOT_DIR/scripts/)
 ROOT_DIR = "../"
@@ -32,18 +32,25 @@ ROOT_DIR = "../"
 
 # Projects that should be excluded from linting / testing / post-processing
 NON_PROJECT_DIRS = ['scripts', '.git', 'WISHLIST', 'Readme.md']
+NON_IMPL_FILES = ['README']
 
 
 STARTING_COMMENT_MAP = {}
 
 class WikiPage(object):
     
-    def __init__(self, project, contents):
-        self.project = project
+    def __init__(self, contents, project=None):
         self.contents = contents
+        self.project = project
 
-    def WriteToFile(self, wiki_path):
-        f = open(os.path.join(wiki_path, self.project.name + '.md'), 'w')
+    def WriteToFile(self, wiki_path, name=None):
+        if not name and not self.project:
+            print "Can't generate project names"
+            return
+        filename = self.project.concept + '-'  if self.project else ''
+        filename += name if name else self.project.name
+        filename += '.md'
+        f = open(os.path.join(wiki_path, filename), 'w')
         f.write(self.contents)
         f.close()
 
@@ -294,7 +301,7 @@ def GenerateWikiPage(project):
                 contents += c.snippet
             contents += '```\n'
         contents += '\n'
-    return WikiPage(project, contents)
+    return WikiPage(contents, project)
 
 
 def GenerateWikiPages(projects):
@@ -302,6 +309,31 @@ def GenerateWikiPages(projects):
     for project in projects:
         wiki_pages.append(GenerateWikiPage(project))
     return wiki_pages
+
+def GenerateContentsPage():
+    projects = []
+    concepts = os.listdir(ROOT_DIR)
+
+    for c in concepts:
+        c_path = os.path.join(ROOT_DIR, c)
+        if not os.path.isdir(c_path) or c in NON_PROJECT_DIRS:
+            continue
+
+        impls = os.listdir(c_path)
+        for impl in impls:
+            if impl not in NON_IMPL_FILES:
+                projects.append(c + '-' + impl)
+
+    contents = 'Projects\n===\n'
+    contents += 'This is a list of all projects.'
+    contents += ' NOTE! This page and all project pages are generated!'
+    contents += ' Do not edit manually!\n\n'
+
+    for (i, p) in enumerate(projects):
+        contents += '{}. [{}]({})\n'.format(
+            str(i), p, '/burchanie/maxdge-snippets/wiki/' + p)
+
+    return WikiPage(contents)
 
 
 def main():
@@ -335,7 +367,7 @@ def main():
     wiki_path = '../../maxdge-snippets-wiki'
     for page in GenerateWikiPages(changed_projects):
         page.WriteToFile(wiki_path)
-#    GenerateContentsPage().WriteToFile(wiki_path)
+    GenerateContentsPage().WriteToFile(wiki_path, name='Projects')
 
 if __name__ == "__main__":
     main()
