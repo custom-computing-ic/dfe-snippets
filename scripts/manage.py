@@ -20,11 +20,11 @@ DESIGN_FILE_RE = re.compile(r'.*\.(maxj|java)')
 CPU_FILE_RE = re.compile(r'.*\.(cpp|c)')
 MAKEFILE_RE = re.compile(r'Makefile')
 
-START_COMMENT_RE = re.compile(r'/\*\*\*') # start comments with /***
+START_COMMENT_RE = re.compile(r'(\s)*/\*\*\*') # start comments with /***
 END_COMMENT_RE = re.compile(r'(\s)*\*/') # end comments with */
 
 GIT_BRANCH = re.compile(r'\* .*')
-PROJECT_RE = re.compile(r'(?P<concept>.*)/(?P<project>.*)/.*')
+PROJECT_RE = re.compile(r'(?P<concept>.*)/(?P<project>.*)/src/.*')
 
 # The project  directory (assumes this script lives in ROOT_DIR/scripts/)
 ROOT_DIR = "../"
@@ -35,6 +35,18 @@ NON_PROJECT_DIRS = ['scripts', '.git', 'WISHLIST', 'Readme.md']
 
 
 STARTING_COMMENT_MAP = {}
+
+class WikiPage(object):
+    
+    def __init__(self, project, contents):
+        self.project = project
+        self.contents = contents
+
+    def WriteToFile(self, wiki_path):
+        f = open(os.path.join(wiki_path, self.project.name + '.md'), 'w')
+        f.write(self.contents)
+        f.close()
+
 
 class Comment(object):
     
@@ -82,42 +94,47 @@ class Project(object):
 
 
 def ExtractCommentsFromFile(path, project):
+    class State(object):
+        NONE = 0
+        PARSING_COMMENT = 1
+        PARSING_SNIPPET = 2
+        
     file = open(path)
     first = True
-    block_comment = ''
-
-    parsing_comment = False
-    parsing_following_snipet = False
     first_comment = True
     parsed_code = False
     comment = ""
     snippet = ""
 
-    comments = []
+    s = State.NONE
+
     starting_comment = None
     in_line_comments = []
-    
 
     for line in file.readlines():
+        if s == State.PARSING_SNIPPET:
+            if line.strip():
+                snippet += line
+                continue
 
-        if parsing_comment:
-
-            if re.match(END_COMMENT_RE, line):
-
-                filename = os.path.basename(path)
-                c = Comment(comment, snippet)
-                if first_comment and not parsed_code:
-                    starting_comment = c
-                    first_comment = False
-                else:
-                    in_line_comments.append(c)
-                parsing_comment = False
+            filename = os.path.basename(path)
+            c = Comment(comment, snippet)
+            if first_comment and not parsed_code:
+                starting_comment = c
+                first_comment = False
             else:
-                comment += line
-
-        elif not parsing_comment:
+                in_line_comments.append(c)
+            comment = ''
+            snippet = ''
+            s = State.NONE
+        elif s == State.PARSING_COMMENT:
+            if re.match(END_COMMENT_RE, line):
+                s = State.PARSING_SNIPPET
+                continue
+            comment += line
+        else:
             if re.match(START_COMMENT_RE, line):
-                parsing_comment = True
+                s = State.PARSING_COMMENT
             elif line.strip():
                 parsed_code = True
 
@@ -262,19 +279,22 @@ def RunTests(projects):
 
 
 def GenerateWikiPage(project):
-    wiki_page = ""
+    contents = ""
     for f in project.GetFiles():
         comments = project.GetComments(f)
         if not comments[0]:
             continue
-        wiki_page += "File " + f
-        wiki_page += comments[0].comment
-        wiki_page += "Snippets"
-        for in_line_comments in comments[1]:
-            wiki_page += comment.comment
-            if comment.snippet:
-                wiki_page += comment.snippet
-    return wiki_page
+        contents += f + '\n====\n'
+        contents += comments[0].comment.strip() + '\n'
+        if comments[1]:
+            contents += "##Snippets\n"
+        for c in comments[1]:
+            contents += c.comment.strip()+ '\n```\n'
+            if c.snippet:
+                contents += c.snippet
+            contents += '```\n'
+        contents += '\n'
+    return WikiPage(project, contents)
 
 
 def GenerateWikiPages(projects):
@@ -312,8 +332,10 @@ def main():
 
     print '4. Generating wiki page for changed projects ({})'.format(
        [str(s) for s in changed_projects])
-    wiki_pages = GenerateWikiPages(changed_projects)
-    print wiki_pages
+    wiki_path = '../../maxdge-snippets-wiki'
+    for page in GenerateWikiPages(changed_projects):
+        page.WriteToFile(wiki_path)
+#    GenerateContentsPage().WriteToFile(wiki_path)
 
 if __name__ == "__main__":
     main()
