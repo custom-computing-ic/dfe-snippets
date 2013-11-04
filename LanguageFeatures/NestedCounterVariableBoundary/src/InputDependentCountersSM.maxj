@@ -1,0 +1,134 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+import com.maxeler.maxcompiler.v2.kernelcompiler.SMIO;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core._KernelCore;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.KernelObject;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.KernelType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFETypeFactory;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.statemachine.DFEsmInput;
+import com.maxeler.maxcompiler.v2.statemachine.DFEsmOutput;
+import com.maxeler.maxcompiler.v2.statemachine.DFEsmStateValue;
+import com.maxeler.maxcompiler.v2.statemachine.DFEsmValue;
+import com.maxeler.maxcompiler.v2.statemachine.kernel.KernelStateMachine;
+import com.maxeler.maxcompiler.v2.statemachine.types.DFEsmValueType;
+import com.maxeler.maxcompiler.v2.utils.MathUtils;
+
+public class InputDependentCountersSM extends KernelStateMachine
+{
+    /**
+     * This state machine implements two nested counters where the inner
+     * counter counts up to the input stream value (repeat) and the outer
+     * increments when the inner counter wraps.
+     *
+     * CPU equivalent:
+     *
+     *   for (int outer = 0; ; outer++)
+     *   {
+     *       for (int nested = 0; nested < input[outer]; nested++)
+     *       {
+     *           // do something
+     *       }
+     *   }
+     *
+     *
+     * example of input: (each value equals the number of times it repeats)
+     *   2,2,
+     *   3,3,3,
+     *   5,5,5,5,5,
+     *   1,
+     *   2,2
+     * etc.
+     *
+     * 
+     *
+     *
+     *
+     */
+
+    private final DFEsmInput  m_dataIn;
+    private final DFEsmOutput m_innerOut;
+    private final DFEsmOutput m_outerOut;
+
+    private final DFEsmStateValue m_inner;
+    private final DFEsmStateValue m_outer;
+    private final DFEsmStateValue m_prevDataIn;
+    private final DFEsmStateValue m_firstIn;
+    private final DFEsmValueType  m_counterType;
+
+//    protected final DFEsmStateValue   m_size;
+//    protected final DFEsmStateValue[] m_data;
+
+    public InputDependentCountersSM(KernelLib owner, String name, int counterWidth)
+    {
+        super(owner);
+
+        m_counterType = dfeUInt(counterWidth);
+
+        m_dataIn    = io.input(name, m_counterType);
+        m_innerOut  = io.output("inner", m_counterType);
+        m_outerOut  = io.output("outer", m_counterType);
+
+        m_inner     = state.value(m_counterType, 0);
+        m_outer     = state.value(m_counterType, 0);
+        // require first input stream element != 0
+        m_prevDataIn = state.value(m_counterType, 0);
+        m_firstIn   = state.value(dfeBool(), true);
+
+//      m_size = state.value(dfeUInt(MathUtils.bitsToRepresent(capacity)), 0);
+//      m_data = new DFEsmStateValue[capacity];
+//      for (int n = 0; n < capacity; ++n)
+//          m_data[n] = state.value(type, 0);
+    }
+
+    @Override
+    public void nextState()
+    {
+/*
+     *  dataIn:    2,2,3,3,3,5,5,5,5,5,...
+     *  dataPrev:  2,2,2,3,3,3,5,5,5,5,...
+
+     *  inner:     0,1,2,1,2,3,1,2,3,4,...
+     *  inner.next:1,2,1,2,3,1,2,3,4,5,...
+     *  innerOut:  0,1,0,1,2,0,1,2,3,4,...
+
+     *  outer:     0,0,0,1,1,1,2,2,2,2....
+     *  outer.next:0,0,1,1,1,2,2,2,2,2,...
+     *  outerOut:  0,0,1,1,1,2,2,2,2,2,...
+*/
+
+        IF ((m_prevDataIn === m_dataIn) | m_firstIn)
+        {
+            m_inner.next <== m_inner + 1;
+            m_outer.next <== m_outer;
+        }
+        ELSE
+        {
+            // for this m_dataIn value m_inner should equal 0,
+            // but we already missed that (we're not looking
+            // into the future of this stream). So carrying
+            // on as this value of m_inner WAS 0 (0+1 = 1)
+            m_inner.next <== 1;
+            m_outer.next <== m_outer + 1;
+        }
+
+        m_prevDataIn.next <== m_dataIn;
+        m_firstIn.next <== false;
+    }
+
+    @Override
+    public void outputFunction()
+    {
+        IF ((m_prevDataIn === m_dataIn) | m_firstIn)
+        {
+            m_innerOut <== m_inner;
+            m_outerOut <== m_outer;
+        } ELSE
+        {
+            m_innerOut <== 0;
+            m_outerOut <== m_outer + 1;
+        }
+    }
+}

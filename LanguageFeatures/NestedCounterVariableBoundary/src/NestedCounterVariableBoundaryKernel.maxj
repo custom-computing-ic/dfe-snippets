@@ -5,6 +5,7 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.SMIO;
 
 class NestedCounterVariableBoundaryKernel extends Kernel {
 
@@ -35,18 +36,12 @@ class NestedCounterVariableBoundaryKernel extends Kernel {
         // etc.
         DFEVar input = io.input("input", scalarType);
 
-        Params params = control.count.makeParams(counterWidth)
-                        .withEnable(input !== stream.offset(input, +1))
-                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
-        Counter outer = control.count.makeCounter(params);
+        SMIO sm = addStateMachine("InputDependentCounters",
+                new InputDependentCountersSM(this, "input", counterWidth));
+		sm.connectInput("input", input);
 
-        Params params2 = control.count.makeParams(counterWidth)
-                        .withReset(input !== stream.offset(input, -1))
-                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
-        Counter nested = control.count.makeCounter(params2);
-
-        io.output("outer", outer.getCount(), scalarType );
-        io.output("nested", nested.getCount(), scalarType );
+        io.output("outer",  sm.getOutput("outer"), scalarType );
+        io.output("nested", sm.getOutput("inner"), scalarType );
     }
 
 }
