@@ -364,7 +364,14 @@ def main():
 
     print '4. Generating wiki page for changed projects ({})'.format(
        [str(s) for s in changed_projects])
-    wiki_path = '../../maxdge-snippets-wiki'
+
+    wiki_path = '../../maxdge-snippets-wiki2'
+    wiki_url = 'git@bitbucket.org:burchanie/maxdge-snippets.git/wiki'
+    if not os.path.isdir(wiki_path):
+        print 'Error: Could not find wiki directory {}.'.format(wiki_path)
+        print '\tPlease do a git checkout of the wiki from {}'.format(wiki_url)
+        return 1
+
     for page in GenerateWikiPages(changed_projects):
         page.WriteToFile(wiki_path)
     GenerateContentsPage().WriteToFile(wiki_path, name='Projects')
