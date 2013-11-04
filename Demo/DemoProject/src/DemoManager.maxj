@@ -1,3 +1,6 @@
+/***
+  The manager for this design just streams data from CPU to DFE and back via PCI-E.
+*/
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;

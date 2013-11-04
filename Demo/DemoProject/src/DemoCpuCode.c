@@ -33,7 +33,7 @@ int main(void)
 
   /***
       Note that you should always test the output of your DFE
-      design against a CPU version.
+      design against a CPU version to ensure correctness.
   */
   for (int i = 0; i < inSize; i++)
     if (out[i] != expected[i]) {
