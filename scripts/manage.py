@@ -1,4 +1,7 @@
 """Simple script to manage the creation and verification of projects."""
+# TODO Update to work with projects that have maultiple maxcompiler implementations
+# At the moment, the assumed dir structure is Concept/Implementation/*.*
+
 import os
 import re
 import subprocess
@@ -16,7 +19,10 @@ class LinterException(Exception):
 DESIGN_FILE_RE = re.compile(r'.*\.(maxj|java)')
 CPU_FILE_RE = re.compile(r'.*\.(cpp|c)')
 MAKEFILE_RE = re.compile(r'Makefile')
-BLOCK_COMMENT_LINE_RE = re.compile(r'(\s)*(/\*|\*/|\*|/\*\*)')
+
+START_COMMENT_RE = re.compile(r'/\*\*\*') # start comments with /***
+END_COMMENT_RE = re.compile(r'(\s)*\*/') # end comments with */
+
 GIT_BRANCH = re.compile(r'\* .*')
 PROJECT_RE = re.compile(r'(?P<concept>.*)/(?P<project>.*)/.*')
 
@@ -30,21 +36,43 @@ NON_PROJECT_DIRS = ['scripts', '.git', 'WISHLIST', 'Readme.md']
 
 STARTING_COMMENT_MAP = {}
 
+class Comment(object):
+    
+    def __init__(self, comment, snippet):
+        self.comment = comment
+        self.snippet = snippet
+
+    def __str__(self):
+        return 'Comment(c={}, s={})'.format(self.comment, self.snippet)
+
 
 class Project(object):
 
-    def __init__(self, concept, name, new=False):
+    def __init__(self, concept, name, path, new=False):
         super(Project, self).__init__()
         self.concept = concept
         self.name = name
+        self.path = path
         self.new = new
-        self.comments = {}
+        self.starting_comments = {}
+        self.in_line_comments = {}
 
     def GetFullPathRelativeToTopDir(self):
         return os.path.join(self.concept, self.name)
 
+    def InterestingFile(path):
+        return DESIGN_FILE_RE.match(path) or CPU_FILE_RE.match(path) or MAKEFILE_RE.match(path)
+
+    def GetFiles(self):
+        return os.listdir(self.path)
+
+    def GetComments(self, file_name):
+        abs_path = os.path.join(self.path, file_name)
+        return ExtractCommentsFromFile(abs_path, self)
+
     def __str__(self):
-        return 'Project(concept={}, name={})'.format(self.concept, self.name)
+        return 'Project(concept={}, name={}, path={}, files={})'.format(
+            self.concept, self.name, self.path, [str(f) for f in self.GetFiles()])
 
     def __hash__(self):
         return hash(self.concept)
@@ -52,40 +80,60 @@ class Project(object):
     def __eq__(self, other):
         return self.concept == other.concept and self.name == other.name
 
-def BlockComment(line):
-    return BLOCK_COMMENT_LINE_RE.match(line)
 
-
-def ExtractStartingBlockComment(path, project):
+def ExtractCommentsFromFile(path, project):
     file = open(path)
     first = True
     block_comment = ''
-    for line in file.readlines():       
-        if not BlockComment(line) and first:
-            print line
-            raise LinterException(
-                'Expected file {} to begin with block comment!'.format(path))
-        if not BlockComment(line):
-            break
-        block_comment += re.sub(BLOCK_COMMENT_LINE_RE, '', line).strip() + ' '
-        first = False
 
-    if block_comment:
-        filename = os.path.basename(path)
-        project.comments[filename] = block_comment.strip()
-    return block_comment
+    parsing_comment = False
+    parsing_following_snipet = False
+    first_comment = True
+    parsed_code = False
+    comment = ""
+    snippet = ""
+
+    comments = []
+    starting_comment = None
+    in_line_comments = []
+    
+
+    for line in file.readlines():
+
+        if parsing_comment:
+
+            if re.match(END_COMMENT_RE, line):
+
+                filename = os.path.basename(path)
+                c = Comment(comment, snippet)
+                if first_comment and not parsed_code:
+                    starting_comment = c
+                    first_comment = False
+                else:
+                    in_line_comments.append(c)
+                parsing_comment = False
+            else:
+                comment += line
+
+        elif not parsing_comment:
+            if re.match(START_COMMENT_RE, line):
+                parsing_comment = True
+            elif line.strip():
+                parsed_code = True
+
+
+    return starting_comment, in_line_comments
 
 
 def ExtractCheckStatusBlock(path):
     return None
 
-
 def LintJavaFile(path, project):
-    start_comment = ExtractStartingBlockComment(path, project)
-    return start_comment
-
+   ExtractComments(path, project)
+   return start_comment
 
 def LintCpuFile(path, project):
+    ExtracOmments(path, projects)
     start_comment = ExtractStartingBlockComment(path, project)
     # TODO: checksReturnStatus = ExtractCheckStatusBlock(path)
     # return start_comment and checksReturnStatus
@@ -149,35 +197,63 @@ def GetProjectConcept(filename):
     return None
     
 
+def LoadGitProjectData(git_process):
+
+    modified_projs = set()
+    new_projs = set()
+    
+    while True:
+        line = git_process.stdout.readline()
+        if not line: 
+            break
+
+        # git status returns ' M <file>', diff returns 'M <file>'
+        line = line.strip() 
+        change_type = line[0]
+
+        line = line[2:].strip()
+        project_name = GetProjectName(line)
+        project_path = os.path.dirname(line)
+        concept = GetProjectConcept(line)
+        if project_name:
+            if change_type == 'M':
+                modified_projs.add(Project(concept, project_name, project_path))
+            elif change_type == 'A':
+                new_projs.add(Project(concept, project_name, project_path, True))
+
+    return modified_projs, new_projs
+
+
+def GetLocallyModifiedFiles():
+    git_proc = subprocess.Popen(['git', 'status', '-s'], stdout=subprocess.PIPE)
+    a, b =  LoadGitProjectData(git_proc)
+    return a, b
+
+    
 def GetModifiedFilesInBranch(localGitBranch):
     """This assumes that the local branch is tracking the same named remote branch."""
     remote_branch = 'remotes/origin/' + localGitBranch
     git_proc = subprocess.Popen(['git', 'diff', '--name-status', 
                                 remote_branch, localGitBranch, '--'], 
                                stdout=subprocess.PIPE)
-    modified_projs = set()
-    new_projs = set()
+    return LoadGitProjectData(git_proc)
+
+
+
+def GetAllModifiedOrNewFiles(localGitBranch):
+    # get changes committed locally that differ from remote branch
+    modified_projs, new_projs = GetLocallyModifiedFiles()
+
+    # get un-commited local changes
+    local_modified_projs, local_new_projs = GetModifiedFilesInBranch(localGitBranch)
+
     
-    while True:
-        line = git_proc.stdout.readline()
-        if not line:
-            break
-        change_type = line[0]
-        line = line[2:].strip()
-        project_name = GetProjectName(line)
-        concept = GetProjectConcept(line)
-        if project_name:
-            if change_type == 'M':
-                modified_projs.add(Project(concept, project_name))
-            elif change_type == 'A':
-                new_projs.add(Project(concept, project_name, True))
-
-    return list(modified_projs), list(new_projs)
-
+    return list(modified_projs | local_modified_projs), list(new_projs | local_new_projs)
+    
         
 def GetNewOrRecentlyModifiedProjects():
     current_git_branch = GetCurrentGitBranch()
-    modified_projects = GetModifiedFilesInBranch(current_git_branch)
+    modified_projects = GetAllModifiedOrNewFiles(current_git_branch)
     return modified_projects
 
 
@@ -185,8 +261,28 @@ def RunTests(projects):
     pass
 
 
-def ExtractCommentsFromNewFiles(projects):
-    return [proj.comments for proj in projects if proj.new]
+def GenerateWikiPage(project):
+    wiki_page = ""
+    for f in project.GetFiles():
+        comments = project.GetComments(f)
+        if not comments[0]:
+            continue
+        wiki_page += "File " + f
+        wiki_page += comments[0].comment
+        wiki_page += "Snippets"
+        for in_line_comments in comments[1]:
+            wiki_page += comment.comment
+            if comment.snippet:
+                wiki_page += comment.snippet
+    return wiki_page
+
+
+def GenerateWikiPages(projects):
+    wiki_pages = []
+    for project in projects:
+        wiki_pages.append(GenerateWikiPage(project))
+    return wiki_pages
+
 
 def main():
     # TODO: in the long term this should be an interactive shell based
@@ -199,22 +295,25 @@ def main():
 
     modified_projs, new_projects = GetNewOrRecentlyModifiedProjects()
     changed_projects = new_projects + modified_projs
-    print '1. Found {} new or recently modified projects: {}\n'.format(
-        len(changed_projects), [str(s) for s in changed_projects])
+    print '1. Found {} new or recently modified projects:'.format(
+        len(changed_projects))
+    for proj in changed_projects:
+        print '\t' + str(proj) + '\n'
 
 
     print '2. Linting all changed projects' 
-    lint_stats = LintProjects(changed_projects)
-    print '\tLinted {} Design file(s), {} CPU file(s) and {} Makefiles\n'.format(
-        lint_stats[0], lint_stats[1], lint_stats[2])
+#    lint_stats = LintProjects(changed_projects)
+#    print '\tLinted {} Design file(s), {} CPU file(s) and {} Makefiles\n'.format(
+#        lint_stats[0], lint_stats[1], lint_stats[2])
 
 
     print '3. Testing all changed projects\n'
     # TODO RunTests(changed_projects)
 
-    print '4. Generating wiki comments for new projects only ({})'.format(new_projects)
-    comments = ExtractCommentsFromNewFiles(new_projects)
-    print comments
+    print '4. Generating wiki page for changed projects ({})'.format(
+       [str(s) for s in changed_projects])
+    wiki_pages = GenerateWikiPages(changed_projects)
+    print wiki_pages
 
 if __name__ == "__main__":
     main()
