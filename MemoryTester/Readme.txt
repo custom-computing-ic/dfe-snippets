@@ -14,7 +14,8 @@ Stop:  make stop-sim (for simulation) / make stop-dfe (for hardware)
 Target folder: "mem_test_Sim" or "mem_test_DFE" + <BUILD TAG> (a Makefile parameter, see parameter section)
 Host program / Makefile will look at the host name and automatically determine whether to run MAX3 or MAX4 for hardware.
 
-NOTE: If the simulation process / hardware command is stopped before completion (ctrl-c), process may build up in the host / hardware system will be locked up and other users cannot use it.
+NOTE: If the simulation process / hardware command is stopped before completion (ctrl-c), process may build up in the
+host / hardware system will be locked up and other users cannot use it.
 SO REMEMBER TO STOP PROCESS AFTER RUNNING SIMULATION / HARDWARE.
 
 
