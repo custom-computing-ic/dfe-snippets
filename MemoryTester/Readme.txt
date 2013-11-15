@@ -1,5 +1,5 @@
 << Readme >>
-This is a set suite for evaluation of memory access speed using custom memorycommands and linear access patterns.
+This is a set suite for evaluation of memory access speed using custom memory commands and linear access patterns.
 The code fetches parallel data streams from LMEM and then routes to LMEM and/or host which can be set by user.
 The code parameterizes the major configuration users will change when using custom memory command
 (e.g. burst per command, size of memory to access, width of memory interface, number of parallel LMEM streams)
