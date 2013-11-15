@@ -1,0 +1,44 @@
+/* MAXELER MEMORY TESTER
+ *
+ * < Engine Parameters >
+ * For catching configuration options from Make. User can define BUILD_TAG in Makefile
+ * to build or run different configurations in different target folders.
+ *
+ * Written by Kit Cheung, Imperial College London */
+
+
+package mem_test;
+
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class EngineParams extends EngineParameters {
+	protected EngineParams(String[] args) {
+		super(args);
+	}
+	@Override
+		protected void declarations() {
+			// Add custom declarations here
+			declareParam("buildTag", DataType.STRING, "");
+		}
+
+	@Override
+		protected void deriveParameters() {
+			// Define your parameters
+		}
+
+	@Override
+		public String getBuildName() {
+			if (getTarget() == Target.DFE_SIM){
+				return getMaxFileName() + "_Sim" + getParam("buildTag");
+			}
+			else {
+				return getMaxFileName() + "_" + getTarget() + getParam("buildTag");
+			}
+		}
+
+	@Override
+		protected void validate() {
+			// Add your validation logic here
+		}
+
+}
