@@ -1,0 +1,18 @@
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager.IOType;
+
+class TrainingExerciseManager {
+  public static void main(String[] args) {
+    EngineParameters params = new EngineParameters(args);
+    Manager manager = new Manager(params);
+
+    Kernel kernel = new TrainingExerciseKernel(manager.makeKernelParameters());
+
+    manager.setKernel(kernel);
+    manager.setIO(IOType.ALL_CPU);
+    manager.createSLiCinterface();
+    manager.build();
+  }
+}
