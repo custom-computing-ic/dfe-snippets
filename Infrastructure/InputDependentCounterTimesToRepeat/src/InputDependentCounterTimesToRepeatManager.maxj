@@ -10,16 +10,20 @@ import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
 
-public class InputDependentCounterManager extends CustomManager {
+public class InputDependentCounterTimesToRepeatManager extends CustomManager {
 
-    private static final String s_kernelName = "InputDependentCounterKernel";
-    private static final int bufferSize = 4;
+    private static final String s_kernelName = "InputDependentCounterTimesToRepeatKernel";
+    private static final int bufferSize   = 4;
+    private static final int counterWidth = 4;
 
-    public InputDependentCounterManager(EngineParameters engineParameters) {
+    public InputDependentCounterTimesToRepeatManager(EngineParameters engineParameters) {
         super(engineParameters);
 
         KernelBlock k = addKernel(
-            new InputDependentCounterKernel(makeKernelParameters(s_kernelName), bufferSize));
+            new InputDependentCounterTimesToRepeatKernel(
+                    makeKernelParameters(s_kernelName),
+                    bufferSize,
+                    counterWidth));
 
         DFELink currentBound = addStreamToCPU("currentBound");
         DFELink innerCounter = addStreamToCPU("innerCounter");
@@ -60,8 +64,8 @@ public class InputDependentCounterManager extends CustomManager {
     }
 
     public static void main(String[] args) {
-        InputDependentCounterManager manager =
-            new InputDependentCounterManager(new EngineParameters(args));
+        InputDependentCounterTimesToRepeatManager manager =
+            new InputDependentCounterTimesToRepeatManager(new EngineParameters(args));
         manager.createSLiCinterface(modeDefault());
         manager.build();
     }
