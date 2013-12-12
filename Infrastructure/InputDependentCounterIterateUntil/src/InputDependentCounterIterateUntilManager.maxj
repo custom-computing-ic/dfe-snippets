@@ -14,20 +14,24 @@ public class InputDependentCounterIterateUntilManager extends CustomManager {
 
     private static final String s_kernelName = "InputDependentCounterIterateUntilKernel";
     private static final int bufferSize = 4;
+    private static final int counterWidth = 32;
 
     public InputDependentCounterIterateUntilManager(EngineParameters engineParameters) {
         super(engineParameters);
 
         KernelBlock k = addKernel(
-            new InputDependentCounterIterateUntilKernel(makeKernelParameters(s_kernelName), bufferSize));
+            new InputDependentCounterIterateUntilKernel(
+                    makeKernelParameters(s_kernelName),
+                    bufferSize,
+                    counterWidth));
 
-        DFELink sparseIndex  = addStreamToCPU("sparseIndex");
-        DFELink currentBound = addStreamToCPU("currentBound");
-        DFELink innerCounter = addStreamToCPU("innerCounter");
-        DFELink outerCounter = addStreamToCPU("outerCounter");
-        DFELink input        = addStreamFromCPU("input");
+        DFELink positionIndex  = addStreamToCPU("positionIndex");
+        DFELink currentBound   = addStreamToCPU("currentBound");
+        DFELink innerCounter   = addStreamToCPU("innerCounter");
+        DFELink outerCounter   = addStreamToCPU("outerCounter");
+        DFELink input          = addStreamFromCPU("input");
 
-        sparseIndex  <== k.getOutput("sparseIndex");
+        positionIndex  <== k.getOutput("positionIndex");
         currentBound <== k.getOutput("currentBound");
         innerCounter <== k.getOutput("innerCounter");
         outerCounter <== k.getOutput("outerCounter");
@@ -57,7 +61,7 @@ public class InputDependentCounterIterateUntilManager extends CustomManager {
         engine_interface.setStream("innerCounter",  dataType, outN * size);
         engine_interface.setStream("outerCounter",  dataType, outN * size);
         engine_interface.setStream("currentBound",  dataType, outN * size);
-        engine_interface.setStream("sparseIndex",  dataType, outN * size);
+        engine_interface.setStream("positionIndex",  dataType, outN * size);
 
         return engine_interface;
     }

@@ -8,7 +8,7 @@
      for (int j = 0; position < input[i]; j++, position++) {...}
 
  Example input stream and corresponding counter values:
- index:                   0,1,2,3,4,5,6,7,8,9, 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32
+ cycle:                   0,1,2,3,4,5,6,7,8,9, 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32
  sparseIndex   (8 items): 0,1,8,            15,                  19,         21,   25,         32
  count times:               1,7,7,7,7,7,7,7, 7, 7, 7, 7, 7, 7, 7, 4, 4, 4, 4, 2, 2, 4, 4, 4, 4, 7, 7, 7, 7, 7, 7, 7
  innerCounter (32 items):   0,0,1,2,3,4,5,6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6 
@@ -18,12 +18,12 @@
  Implementation strategy: io.input has it's own latency, so we cannot 
  put simple feedback loop to control the input. Here, we buffer the 
  input with a FIFO shift register to hide input latency. Each value read 
- from a buffer sets up a counter counting up to that value (interpret
- this value as a number of cycles to hold for the next data retrieval).
- The wrap point of a counter triggers reading next value from FIFO 
- buffer, as well as getting new value from an input (if any). First
- bufferSize cycles the kernel stalls but prefetches io.input values to
- fill the FIFO.
+ from a buffer sets up a counter counting up to a difference between
+ that and previous value (interpret this difference as a number of cycles to
+ hold for the next data retrieval). The wrap point of a counter triggers
+ reading next value from FIFO  buffer, as well as getting new value from
+ an input (if any). First bufferSize cycles the kernel stalls but
+ prefetches io.input values to fill the FIFO.
 
 */
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
@@ -40,12 +40,11 @@ import com.maxeler.maxcompiler.v2.utils.MathUtils;
 class InputDependentCounterIterateUntilKernel extends Kernel
 {
 
-    private static final int dataWidth = 32;
-    private static final DFEType dataType  = dfeUInt(dataWidth);
-
-    protected InputDependentCounterIterateUntilKernel(KernelParameters parameters, int bufferSize)
+    protected InputDependentCounterIterateUntilKernel(KernelParameters parameters, int bufferSize, int counterWidth)
     {
         super(parameters);
+
+        DFEType dataType  = dfeUInt(counterWidth);
 
         DFEVar prefetchEnable     = control.count.pulse(bufferSize);
         DFEVar outputEnable       = control.count.pulse(bufferSize+1, false);
@@ -54,28 +53,26 @@ class InputDependentCounterIterateUntilKernel extends Kernel
         // value of nextEnableLoopBack is undefined at 1st cycle
         DFEVar thisEnable =  stream.offset(nextEnableLoopBack, -1);
 
-        DFEVar sparseIndex = dataType.newInstance(this);
-        sparseIndex <== io.input("input", dataType, thisEnable);
+        DFEVar positionIndex = dataType.newInstance(this);
+        positionIndex <== io.input("input", dataType, thisEnable);
 
+        // Upper bound to an inner loop counter: what to count up to
         optimization.pushPipeliningFactor(0.0);
-            DFEVar upperBound = control.count.pulse(1)? 1 : (sparseIndex - stream.offset(sparseIndex,-1));
+            DFEVar upperBound = control.count.pulse(1)? 1 : (positionIndex - stream.offset(positionIndex,-1));
         optimization.popPipeliningFactor();
 
         // Store input value in a FIFO buffer to hide latency of io.input.
         DFEVar storedUpperBound = fifoBufferPushPop(thisEnable, upperBound, bufferSize, dataType);
 
-        // Store input value in a FIFO buffer to hide latency of io.input.
-        DFEVar storedSparseIndex = fifoBufferPushPop(thisEnable, sparseIndex, bufferSize, dataType);
-
         // start counting up until currently retrieved value
         // (and hold for the first few pre-fetch cycles)
-        Params repeatParam = control.count.makeParams(dataWidth)
+        Params repeatParam = control.count.makeParams(counterWidth)
                         .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP)
                         .withEnable( ~prefetchEnable )
                         .withMax( storedUpperBound );
         Counter innerCounter = control.count.makeCounter(repeatParam);
 
-        Params param = control.count.makeParams(dataWidth)
+        Params param = control.count.makeParams(counterWidth)
                             .withEnable( innerCounter.getWrap() & outputEnable );
         Counter outerCounter = control.count.makeCounter(param);
 
@@ -87,10 +84,16 @@ class InputDependentCounterIterateUntilKernel extends Kernel
         /**************************************************
         */
 
+        // Since counters stall for initial few (FIFO buffer size) cycles, we need
+        // to buffer positionIndex as well if we need it for later usage.
+        DFEVar storedPositionIndex = fifoBufferPushPop(thisEnable, positionIndex, bufferSize, dataType);
+
+
+
         io.output("currentBound", storedUpperBound,  dataType, outputEnable);
-        io.output("sparseIndex",  storedSparseIndex, dataType, outputEnable);
-        io.output("innerCounter", innerCounter.getCount(), dataType, outputEnable); //~prefetchEnable);
-        io.output("outerCounter", outerCounter.getCount(), dataType, outputEnable); //~prefetchEnable);
+        io.output("positionIndex",  storedPositionIndex, dataType, outputEnable);
+        io.output("innerCounter", innerCounter.getCount(), dataType, outputEnable);
+        io.output("outerCounter", outerCounter.getCount(), dataType, outputEnable);
 
     }
 
