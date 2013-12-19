@@ -12,7 +12,7 @@ class DemoKernel extends Kernel {
         super(parameters);
 
         DFEVar a = io.input("a", dfeInt(32));
-        FEVar b = io.input("b", dfeInt(32));
+        DFEVar b = io.input("b", dfeInt(32));
         io.output("output", a + b, dfeInt(32));
     }
 
