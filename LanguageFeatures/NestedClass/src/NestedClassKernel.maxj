@@ -1,0 +1,46 @@
+/***
+    This kernel demonstates using subclasses in maxj kernel code.
+    As tutorials show very simple fortran-style code style it's
+    unclear for a novice that procedural and OOP styles are not
+    contradictory to writing maxj code and using DFEVars.
+
+    If subclass needs an access to objects like memory, streams
+    etc it must extend KernelLib, otherwise it's completely
+    unnecessary.
+
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class NestedClassKernel extends Kernel {
+
+    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+
+    public static class SimpleNestedClass
+    {
+        private DFEVar property;
+
+        public SimpleNestedClass(DFEVar input)
+        {
+            property = 2*input;
+        }
+
+        DFEVar getProperty()
+        {
+            return property;
+        }
+    }
+
+    protected NestedClassKernel(KernelParameters parameters)
+    {
+        super(parameters);
+
+        DFEVar input   = io.input("input", dataType);
+
+        SimpleNestedClass foo = new SimpleNestedClass(input);
+
+        io.output("output", foo.getProperty(), dataType);
+    }
+}
