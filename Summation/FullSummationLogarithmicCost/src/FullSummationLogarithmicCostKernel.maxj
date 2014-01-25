@@ -1,0 +1,47 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+//import com.maxeler.maxcompiler.v2.kernelcompiler.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.utils.MathUtils;
+
+class FullSummationLogarithmicCostKernel extends Kernel {
+
+    private static final int     counterWidth = 32;
+    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+    private static final DFEType scalarType = dfeUInt(counterWidth);
+
+    protected FullSummationLogarithmicCostKernel(KernelParameters parameters,
+                                  int              schemeLatency,
+                                  int              minStreamLength)
+    {
+        super(parameters);
+
+        DFEVar index = control.count.simpleCounter(counterWidth);
+
+        Params nnzBufferWriteParam = control.count.makeParams(1)
+                        .withMax( schemeLatency+1 )
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        Counter freq = control.count.makeCounter(nnzBufferWriteParam);
+
+        DFEVar input = io.input("input", dataType);
+        DFEVar N     = io.scalarInput("N", scalarType);
+
+        DFEVar previous = freq.getCount().eq(1) ? 0.0 :  stream.offset(input, 1);
+        DFEVar sum = input + previous;
+/*
+        for (int i = 0; i < schemeLatency; i++)
+        {
+            sum += stream.offset(input, 2 << i ); // 2 << 0 == 2, at least in C++
+        }
+*/
+        // streaming partial sums, for comparison and cross-validation only
+        io.output("partial", sum, dataType);//, index >= N - schemeLatency );
+        // we cannot output just one value: PCIe stream length must be multiple
+        // of 16 bytes. The last (4th) item in this stream is the total sum.
+//        io.output("output", sum, dataType, index >= N - minStreamLength);
+    }
+}
