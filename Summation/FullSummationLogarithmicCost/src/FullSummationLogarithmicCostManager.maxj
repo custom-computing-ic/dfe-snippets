@@ -9,7 +9,7 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 public class FullSummationLogarithmicCostManager extends CustomManager{
 
     private static final String s_kernelName  = "FullSummationLogarithmicCostKernel";
-    private static final int    schemeLatency = 1;
+    private static final int    numPartialSums = 16;
     private static final int    minimalPciStreamLength = 4;
 
     FullSummationLogarithmicCostManager(EngineParameters ep)
@@ -18,34 +18,34 @@ public class FullSummationLogarithmicCostManager extends CustomManager{
 
         KernelBlock k = addKernel(
             new FullSummationLogarithmicCostKernel(makeKernelParameters(s_kernelName),
-                                    schemeLatency,
+                                    numPartialSums,
                                     minimalPciStreamLength));
 
         DFELink x = addStreamFromCPU("input");
         k.getInput("input") <== x;
 
-//        DFELink y = addStreamToCPU("output");
+        DFELink y = addStreamToCPU("output");
         DFELink z = addStreamToCPU("partial");
-//        y <== k.getOutput("output");
+        y <== k.getOutput("output");
         z <== k.getOutput("partial");
     }
 
     private static EngineInterface interfaceDefault() {
         EngineInterface engine_interface = new EngineInterface();
-        CPUTypes   type = CPUTypes.FLOAT;
+        CPUTypes   type = CPUTypes.DOUBLE;
         int        size = type.sizeInBytes();
 
         InterfaceParam N              = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam inputInBytes   = N * size;
 
-        InterfaceParam partialInBytes = engine_interface.addConstant(schemeLatency) * size;
+        InterfaceParam partialInBytes = engine_interface.addConstant(numPartialSums) * size;
         InterfaceParam outputInBytes  = engine_interface.addConstant(minimalPciStreamLength) * size;
 
         engine_interface.setTicks(s_kernelName, N);
 
         engine_interface.setScalar(s_kernelName, "N", N);
         engine_interface.setStream("input",   type, inputInBytes);
-//        engine_interface.setStream("output",  type, outputInBytes);
+        engine_interface.setStream("output",  type, outputInBytes);
         engine_interface.setStream("partial", type, inputInBytes);
         return engine_interface;
     }
@@ -57,7 +57,7 @@ public class FullSummationLogarithmicCostManager extends CustomManager{
 
         // this generates C defines in Maxfiles.h so that CPU code
         // knows the constants
-        manager.addMaxFileConstant("schemeLatency", schemeLatency);
+        manager.addMaxFileConstant("numPartialSums", numPartialSums);
         manager.addMaxFileConstant("minimalPciStreamLength", minimalPciStreamLength);
 
         manager.createSLiCinterface(interfaceDefault());

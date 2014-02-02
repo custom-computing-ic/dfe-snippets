@@ -1,47 +1,65 @@
+/***
+    This kernel demonstrates how to build an accumulator with just
+    logarithmic number of adders (wrt to the summator latency and/or
+    latency of accumulation feedback loop).
+
+    Once input stream is accumulated into a number of partial sums,
+    these partial sums are sum-reduced to a single value via feed-forward
+    chain of adders. Instead of building a balanced tree of adders
+    that are simultaneously fed with all partial sums (calculating all
+    sum-reductions in parallel), we pipeline these sum-reductions,
+    effictively implementing Polish notation calculator. The key is to
+    wait for enough cycles until all arguments of next adder are ready.
+
+    NB: works well for number of inputs greater than latency of partial
+    accumulator.
+
+    Compiling in hardware: kernel frequency 300Mhz is fine, 350Mhz is
+    challenging (more cost tables or very high effort)
+*/
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
-//import com.maxeler.maxcompiler.v2.kernelcompiler.KernelMath;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
-import com.maxeler.maxcompiler.v2.utils.MathUtils;
 
 class FullSummationLogarithmicCostKernel extends Kernel {
 
     private static final int     counterWidth = 32;
-    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+    private static final DFEType dataType   = dfeFloat(11, 53); // C double
     private static final DFEType scalarType = dfeUInt(counterWidth);
 
     protected FullSummationLogarithmicCostKernel(KernelParameters parameters,
-                                  int              schemeLatency,
+                                  int              numPartialSums,
                                   int              minStreamLength)
     {
         super(parameters);
 
         DFEVar index = control.count.simpleCounter(counterWidth);
-
-        Params nnzBufferWriteParam = control.count.makeParams(1)
-                        .withMax( schemeLatency+1 )
-                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
-        Counter freq = control.count.makeCounter(nnzBufferWriteParam);
-
         DFEVar input = io.input("input", dataType);
         DFEVar N     = io.scalarInput("N", scalarType);
 
-        DFEVar previous = freq.getCount().eq(1) ? 0.0 :  stream.offset(input, 1);
-        DFEVar sum = input + previous;
-/*
-        for (int i = 0; i < schemeLatency; i++)
-        {
-            sum += stream.offset(input, 2 << i ); // 2 << 0 == 2, at least in C++
-        }
-*/
+
+        // accumulating into partial sums
+        DFEVar carriedSum    = dataType.newInstance(this);
+        DFEVar partialSum    = (index < numPartialSums) ? 0.0 : carriedSum;
+        DFEVar newPartialSum = input + partialSum;
+        carriedSum <== stream.offset(newPartialSum, -numPartialSums);
+
+
+        // sum-reducing partial sums with logarithmic number of adders:
+        DFEVar sum2 = newPartialSum + stream.offset(newPartialSum, 1);
+        DFEVar sum4 = sum2 + stream.offset(sum2, 2);
+        DFEVar sum8 = sum4 + stream.offset(sum4, 4);
+        DFEVar sum16 = sum8 + stream.offset(sum8, 8);
+
         // streaming partial sums, for comparison and cross-validation only
-        io.output("partial", sum, dataType);//, index >= N - schemeLatency );
+        io.output("partial", newPartialSum, dataType);
+
+        DFEVar outputEnable = (index >= N - numPartialSums)
+                            & (index <  N - numPartialSums + minStreamLength);
+
         // we cannot output just one value: PCIe stream length must be multiple
         // of 16 bytes. The last (4th) item in this stream is the total sum.
-//        io.output("output", sum, dataType, index >= N - minStreamLength);
+        io.output("output", sum16, dataType, outputEnable);
     }
 }
