@@ -1,0 +1,33 @@
+/***
+    This is a simple kernel that adds two numbers.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.CounterChain;
+
+
+class MatrixMultiplyKernel extends Kernel {
+
+    protected MatrixMultiplyKernel(KernelParameters parameters, int matrixSize) {
+        super(parameters);
+
+        DFEType type = dfeInt(32);
+
+        CounterChain chain = control.count.makeCounterChain();
+        DFEVar cycleCount = chain.addCounter(matrixSize, 1);
+
+        DFEVar a = io.input("a", type);
+        DFEVar b = io.input("b", type);
+
+        DFEVar carriedSum = type.newInstance(this);
+        optimization.pushPipeliningFactor(0);
+        DFEVar sum = (cycleCount.eq(0) ? 0 : carriedSum);
+        DFEVar newSum = sum + a * b;
+        carriedSum <== stream.offset(newSum, -1);
+        optimization.pushPipeliningFactor(1);
+
+        io.output("output", newSum, dfeInt(32), cycleCount.eq(matrixSize - 1));
+    }
+}
