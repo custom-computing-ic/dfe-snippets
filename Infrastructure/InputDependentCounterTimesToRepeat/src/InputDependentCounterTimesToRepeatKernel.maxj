@@ -1,7 +1,8 @@
 /***
  This kernel implements
    - input that controls itself via feedback loop,
-   - counter that counts up to every new value that comes from input stream,
+   - counter that counts up to every new value that comes from input stream
+     (so that input stream says the number of times to repeat),
    - small FIFO buffer as shift register.
  Assuming input is integer > 0.
 
@@ -36,15 +37,16 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
 import com.maxeler.maxcompiler.v2.utils.MathUtils;
 
-class InputDependentCounterKernel extends Kernel
+class InputDependentCounterTimesToRepeatKernel extends Kernel
 {
 
-    private static final int dataWidth = 32;
-    private static final DFEType dataType  = dfeUInt(dataWidth);
-
-    protected InputDependentCounterKernel(KernelParameters parameters, int bufferSize)
+    protected InputDependentCounterTimesToRepeatKernel(KernelParameters parameters,
+                                                       int bufferSize,
+                                                       int dataWidth)
     {
         super(parameters);
+
+        DFEType dataType  = dfeUInt(dataWidth);
 
         DFEVar prefetchEnable     = control.count.pulse(bufferSize);
         DFEVar nextEnableLoopBack = dfeBool().newInstance(this);
@@ -55,7 +57,8 @@ class InputDependentCounterKernel extends Kernel
         DFEVar upperBound = io.input("input", dataType, thisEnable);
 
         // Store input value in a FIFO buffer to hide latency of io.input.
-        DFEVar storedUpperBound = fifoBufferPushPop(thisEnable, upperBound, bufferSize, dataType);
+        DFEVar storedUpperBound =
+                fifoBufferPushPop(thisEnable, upperBound, bufferSize, dataType);
 
         // start counting up until currently retrieved value
         // (and hold for the first few pre-fetch cycles)
@@ -71,7 +74,7 @@ class InputDependentCounterKernel extends Kernel
 
 
         optimization.pushPipeliningFactor(0.0);
-        nextEnableLoopBack <== prefetchEnable | innerCounter.getWrap();
+            nextEnableLoopBack <== prefetchEnable | innerCounter.getWrap();
         optimization.popPipeliningFactor();
 
 

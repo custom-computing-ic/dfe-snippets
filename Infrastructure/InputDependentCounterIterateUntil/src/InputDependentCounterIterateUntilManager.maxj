@@ -10,22 +10,28 @@ import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
 
-public class InputDependentCounterManager extends CustomManager {
+public class InputDependentCounterIterateUntilManager extends CustomManager {
 
-    private static final String s_kernelName = "InputDependentCounterKernel";
+    private static final String s_kernelName = "InputDependentCounterIterateUntilKernel";
     private static final int bufferSize = 4;
+    private static final int counterWidth = 32;
 
-    public InputDependentCounterManager(EngineParameters engineParameters) {
+    public InputDependentCounterIterateUntilManager(EngineParameters engineParameters) {
         super(engineParameters);
 
         KernelBlock k = addKernel(
-            new InputDependentCounterKernel(makeKernelParameters(s_kernelName), bufferSize));
+            new InputDependentCounterIterateUntilKernel(
+                    makeKernelParameters(s_kernelName),
+                    bufferSize,
+                    counterWidth));
 
-        DFELink currentBound = addStreamToCPU("currentBound");
-        DFELink innerCounter = addStreamToCPU("innerCounter");
-        DFELink outerCounter = addStreamToCPU("outerCounter");
-        DFELink input        = addStreamFromCPU("input");
+        DFELink positionIndex  = addStreamToCPU("positionIndex");
+        DFELink currentBound   = addStreamToCPU("currentBound");
+        DFELink innerCounter   = addStreamToCPU("innerCounter");
+        DFELink outerCounter   = addStreamToCPU("outerCounter");
+        DFELink input          = addStreamFromCPU("input");
 
+        positionIndex  <== k.getOutput("positionIndex");
         currentBound <== k.getOutput("currentBound");
         innerCounter <== k.getOutput("innerCounter");
         outerCounter <== k.getOutput("outerCounter");
@@ -50,18 +56,19 @@ public class InputDependentCounterManager extends CustomManager {
             to pass inN to the kernel as a parameter. This design makes
             the kernel completely agnostic of the input stream length.
         */
-        engine_interface.setTicks(s_kernelName, outN + bufferSize);
+        engine_interface.setTicks(s_kernelName, outN + bufferSize + 1);
         engine_interface.setStream("input",         dataType, (inN + bufferSize)* size);
         engine_interface.setStream("innerCounter",  dataType, outN * size);
         engine_interface.setStream("outerCounter",  dataType, outN * size);
         engine_interface.setStream("currentBound",  dataType, outN * size);
+        engine_interface.setStream("positionIndex",  dataType, outN * size);
 
         return engine_interface;
     }
 
     public static void main(String[] args) {
-        InputDependentCounterManager manager =
-            new InputDependentCounterManager(new EngineParameters(args));
+        InputDependentCounterIterateUntilManager manager =
+            new InputDependentCounterIterateUntilManager(new EngineParameters(args));
         manager.createSLiCinterface(modeDefault());
         manager.build();
     }

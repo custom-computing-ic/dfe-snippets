@@ -24,7 +24,7 @@ int main(void)
 
 
     printf("Running on DFE.\n");
-    InputDependentCounter(size, length, control, innerCounter, outerCounter, delays);
+    InputDependentCounterTimesToRepeat(size, length, control, innerCounter, outerCounter, delays);
 
     printf(" index:        ");
     for(int i = 0; i < length; ++i)
