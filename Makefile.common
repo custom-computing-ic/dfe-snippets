@@ -43,7 +43,12 @@ LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpt
 # Useful for debug/optimization flags
 EXTRA_CFLAGS?=
 
+# ---- Default DFE ----
+DFEID=/dev/maxeler0
+
 all: runsim build
+
+.PHONY: stopsim run cleansim cleandfe debug debughw
 
 # ---- Simulation ----
 
@@ -114,3 +119,6 @@ distclean: distcleansim distcleandfe
 
 debug:
 	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(USER)a0:$(USER)a $(SIMMAXDIR)/$(PRJ).max
+
+debughw:
+	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(DFEID) $(DFEMAXDIR)/$(PRJ).max
