@@ -12,7 +12,11 @@
     wait for enough cycles until all arguments of next adder are ready.
 
     NB: works well for number of inputs greater than latency of partial
-    accumulator.
+    accumulator. This caused by synchronization that is due to presence
+    of feedback loop. Once the number of inputs exceeds feedback latency,
+    the results are correct, even if the number of meaningful values to
+    be accumulated is less than that latency. Otherwise, the results is
+    random.
 
     Compiling in hardware: kernel frequency 300Mhz is fine, 350Mhz is
     challenging (more cost tables or very high effort)
@@ -55,8 +59,11 @@ class FullSummationLogarithmicCostKernel extends Kernel {
         // streaming partial sums, for comparison and cross-validation only
         io.output("partial", newPartialSum, dataType);
 
-        DFEVar outputEnable = (index >= N - numPartialSums)
-                            & (index <  N - numPartialSums + minStreamLength);
+        DFEVar lowerBound = (N >= numPartialSums)?
+                                (N - numPartialSums) :
+                                (N - minStreamLength);
+        DFEVar outputEnable = (index >= lowerBound)
+                            & (index <  lowerBound + minStreamLength);
 
         // we cannot output just one value: PCIe stream length must be multiple
         // of 16 bytes. The last (4th) item in this stream is the total sum.

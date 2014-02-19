@@ -11,17 +11,27 @@
 int main(void)
 {
 
-    const int inSize = 32;
+    const int inSize  = 8; //24;
     double *in        = malloc(sizeof(double)*inSize);
 
     // these two constants are defined in Maxfiles.h
     double *full      = malloc(sizeof(double)*FullSummationLogarithmicCost_minimalPciStreamLength);
     double *partial   = malloc(sizeof(double)*inSize);
 
+    // showing that scheme works for 24 values, 20 of which represent padding.
+    // (i.e. it works for accumulating 4 values).
     double sum = 0;
-    for(int i = 0; i < inSize; ++i) {
+    for(int i = 0; i < inSize; ++i)
+    {
         in[i]  = i+1;
-        sum   += i+1;
+    }
+    for(int i = 0; i < 4; ++i)
+    {
+        in[i]  = 0;
+    }
+    for(int i = 0; i < inSize; ++i)
+    {
+        sum   += in[i];
     }
 
     printf("Running on DFE.\n");
