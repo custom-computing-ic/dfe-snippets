@@ -11,7 +11,7 @@
 int main(void)
 {
 
-    const int inSize  = 8; //24;
+    const int inSize  = 24;
     double *in        = malloc(sizeof(double)*inSize);
 
     // these two constants are defined in Maxfiles.h
@@ -21,23 +21,16 @@ int main(void)
     // showing that scheme works for 24 values, 20 of which represent padding.
     // (i.e. it works for accumulating 4 values).
     double sum = 0;
-    for(int i = 0; i < inSize; ++i)
-    {
-        in[i]  = i+1;
-    }
-    for(int i = 0; i < 4; ++i)
-    {
-        in[i]  = 0;
-    }
-    for(int i = 0; i < inSize; ++i)
-    {
-        sum   += in[i];
-    }
+    const int padding = 20;
+    for(int i = 0;       i < padding; ++i) in[i] = 0;
+    for(int i = padding; i < inSize;  ++i) in[i] = i+1;
+    for(int i = 0;       i < inSize;  ++i) sum  += in[i];
 
     printf("Running on DFE.\n");
-    FullSummationLogarithmicCost(inSize, in, full,partial);
+    FullSummationLogarithmicCost(inSize, in, full, partial);
 
     printf("output from DFE, full summation (stream): ");
+    // first value represents correct total sum, others are padding rubbish.
     double dfeTotalSum = full[0];
     double dfeSum = 0;
     for(int i = 0; i < FullSummationLogarithmicCost_minimalPciStreamLength; ++i)
