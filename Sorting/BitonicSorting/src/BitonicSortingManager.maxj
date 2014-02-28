@@ -1,0 +1,49 @@
+/***
+    Manager for the bitonic sorting kenrel.
+*/
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class BitonicSortingManager extends CustomManager{
+
+    private static final String s_kernelName  = "BitonicSortingKernel";
+    private static final int networkWidth = 16;
+
+    BitonicSortingManager(EngineParameters ep) {
+        super(ep);
+
+        KernelBlock k = addKernel(new BitonicSortingKernel(makeKernelParameters(s_kernelName),
+                                                           networkWidth));
+
+        k.getInput("in_array") <== addStreamFromCPU("in_array");
+        addStreamToCPU("out_array") <== k.getOutput("out_array");
+
+        addMaxFileConstant("networkWidth", networkWidth);
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.FLOAT;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam sizeBytes = N * networkWidth * size;
+
+        engine_interface.setTicks(s_kernelName, N);
+
+        engine_interface.setStream("in_array", type, sizeBytes);
+        engine_interface.setStream("out_array", type, sizeBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        BitonicSortingManager manager = new BitonicSortingManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}
