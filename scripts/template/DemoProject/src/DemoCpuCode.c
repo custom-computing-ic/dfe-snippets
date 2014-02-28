@@ -1,7 +1,5 @@
 /***
-    This is a simple demo project that you can copy to get started.
-    Comments blocks starting with '***' and subsequent non-empty lines
-    are automatically added to this project's wiki page.
+    TODO: Add a descriptive comment!
 */
 
 #include <stdio.h>

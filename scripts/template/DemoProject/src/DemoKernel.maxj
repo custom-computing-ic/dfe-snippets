@@ -1,5 +1,5 @@
 /***
-   This is a simple kernel that adds two numbers.
+	TODO: Add a descriptive comment!
 */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
