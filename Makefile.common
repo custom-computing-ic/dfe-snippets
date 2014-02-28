@@ -43,7 +43,12 @@ LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpt
 # Useful for debug/optimization flags
 EXTRA_CFLAGS?=
 
+# ---- Default DFE ----
+DFEID=/dev/maxeler0
+
 all: runsim build
+
+.PHONY: stopsim run cleansim cleandfe debug debughw
 
 # ---- Simulation ----
 
@@ -52,7 +57,7 @@ $(SIMMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	MAXAPPJCP=. MAXSOURCEDIRS='../src' $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE_SIM' enableMPCX=$(MPCX)
 	cp $(SIMMAXDIR)/$(PRJ).h $(SIMMAXDIR)/Maxfiles.h
 
-$(PRJ)_sim.o: $(SIMMAXDIR)/(PRJ).max
+$(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_simc.o: $(CPUFILES)
@@ -114,3 +119,6 @@ distclean: distcleansim distcleandfe
 
 debug:
 	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(USER)a0:$(USER)a $(SIMMAXDIR)/$(PRJ).max
+
+debughw:
+	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(DFEID) $(DFEMAXDIR)/$(PRJ).max
