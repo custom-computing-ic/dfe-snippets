@@ -15,7 +15,9 @@ For a detailed description see this
 
 # Example:
   For networkWidth = 4, nVectors = 2:
+
   Input could be:
     in  = {{4, 7, 6, 5}, {3, 2, 1, 4}}
+
   Output should be:
     out = {{4, 5, 6, 7}, {1, 2, 3, 4}}
