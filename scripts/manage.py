@@ -5,6 +5,7 @@
 import os
 import re
 import subprocess
+from optparse import OptionParser
 
 
 from os.path import join
@@ -24,7 +25,7 @@ START_COMMENT_RE = re.compile(r'(\s)*/\*\*\*') # start comments with /***
 END_COMMENT_RE = re.compile(r'(\s)*\*/') # end comments with */
 
 GIT_BRANCH = re.compile(r'\* .*')
-PROJECT_RE = re.compile(r'../(?P<concept>.*)/(?P<project>.*)/src/.*')
+PROJECT_RE = re.compile(r'../(?P<concept>.*)/(?P<project>.*)')
 
 # The project  directory (assumes this script lives in ROOT_DIR/scripts/)
 ROOT_DIR = "../"
@@ -38,7 +39,8 @@ NON_IMPL_FILES = ['README']
 STARTING_COMMENT_MAP = {}
 
 class WikiPage(object):
-    
+    """Represents the wiki page corresponding to a project."""
+
     def __init__(self, contents, project=None):
         self.contents = contents
         self.project = project
@@ -56,7 +58,8 @@ class WikiPage(object):
 
 
 class Comment(object):
-    
+    """A comment extracted from a source file."""
+
     def __init__(self, comment, snippet):
         self.comment = comment
         self.snippet = snippet
@@ -66,9 +69,11 @@ class Comment(object):
 
 
 class Project(object):
+    """Represents a project in the snippets repository."""
 
     def __init__(self, concept, name, path, new=False):
         super(Project, self).__init__()
+        print 'Creating project ' + str(concept) + ' ' + str(name)
         self.concept = concept
         self.name = name
         self.path = path
@@ -82,16 +87,22 @@ class Project(object):
     def InterestingFile(path):
         return DESIGN_FILE_RE.match(path) or CPU_FILE_RE.match(path) or MAKEFILE_RE.match(path)
 
-    def GetFiles(self):
-        return os.listdir(self.path)
+    def GetSourceFiles(self):
+        return os.listdir(self.GetSourceDir())
 
     def GetComments(self, file_name):
-        abs_path = os.path.join(self.path, file_name)
+        abs_path = os.path.join(self.GetSourceDir(), file_name)
         return ExtractCommentsFromFile(abs_path, self)
+
+    def GetSourceDir(self):
+        return os.path.join(self.path, 'src')
+
+    def IsValid(self):
+        return os.path.exists(self.GetSourceDir())
 
     def __str__(self):
         return 'Project(concept={}, name={}, path={}, files={})'.format(
-            self.concept, self.name, self.path, [str(f) for f in self.GetFiles()])
+            self.concept, self.name, self.path, [str(f) for f in self.GetSourceFiles()])
 
     def __hash__(self):
         return hash(self.concept)
@@ -105,8 +116,13 @@ def ExtractCommentsFromFile(path, project):
         NONE = 0
         PARSING_COMMENT = 1
         PARSING_SNIPPET = 2
-        
-    file = open(path)
+
+    try:
+        file = open(path)
+    except:
+        print "Could not open file " + path
+        return ([], [])
+
     first = True
     first_comment = True
     parsed_code = False
@@ -153,8 +169,8 @@ def ExtractCheckStatusBlock(path):
     return None
 
 def LintJavaFile(path, project):
-   ExtractComments(path, project)
-   return start_comment
+    ExtractComments(path, project)
+    return start_comment
 
 def LintCpuFile(path, project):
     ExtracOmments(path, projects)
@@ -188,7 +204,7 @@ def LintProjects(projects):
     return stats
 
 
-def GetProjectDirs():   
+def GetProjectDirs():
     return [d for d in os.listdir(ROOT_DIR) if d not in NON_PROJECT_DIRS]
 
 
@@ -197,13 +213,13 @@ def GetCurrentGitBranch():
 
     current_git_branch = None
     while True:
-        line = git_proc.stdout.readline()        
+        line = git_proc.stdout.readline()
         if not line:
             break
         if GIT_BRANCH.match(line):
             current_git_branch = line[2:].strip()
             break
-        
+
     return current_git_branch
 
 
@@ -215,30 +231,32 @@ def GetProjectName(filename):
 
 
 def GetProjectConcept(filename):
+    print 'concept filename: ' + filename
     match = PROJECT_RE.match(filename)
     if match:
         return match.group('concept')
     return None
-    
+
 
 def LoadGitProjectData(git_process):
 
     modified_projs = set()
     new_projs = set()
-    
+
     while True:
         line = git_process.stdout.readline()
-        if not line: 
+        if not line:
             break
 
         # git status returns ' M <file>', diff returns 'M <file>'
-        line = line.strip() 
+        line = line.strip()
         change_type = line[0]
 
         line = line[2:].strip()
         project_name = GetProjectName(line)
         project_path = os.path.dirname(line)
         concept = GetProjectConcept(line)
+        print 'concept {}' % (concept, )
         if project_name:
             if change_type == 'M':
                 modified_projs.add(Project(concept, project_name, project_path))
@@ -253,13 +271,13 @@ def GetLocallyModifiedFiles():
     a, b =  LoadGitProjectData(git_proc)
     return a, b
 
-    
+
 def GetModifiedFilesInBranch(localGitBranch):
     """This assumes that the local branch is tracking the same named remote branch."""
     remote_branch = 'remotes/origin/' + localGitBranch
-    git_proc = subprocess.Popen(['git', 'diff', '--name-status', 
-                                remote_branch, localGitBranch, '--'], 
-                               stdout=subprocess.PIPE)
+    git_proc = subprocess.Popen(['git', 'diff', '--name-status',
+                                 remote_branch, localGitBranch, '--'],
+                                stdout=subprocess.PIPE)
     return LoadGitProjectData(git_proc)
 
 
@@ -271,10 +289,10 @@ def GetAllModifiedOrNewFiles(localGitBranch):
     # get un-commited local changes
     local_modified_projs, local_new_projs = GetModifiedFilesInBranch(localGitBranch)
 
-    
+
     return list(modified_projs | local_modified_projs), list(new_projs | local_new_projs)
-    
-        
+
+
 def GetNewOrRecentlyModifiedProjects():
     current_git_branch = GetCurrentGitBranch()
     modified_projects = GetAllModifiedOrNewFiles(current_git_branch)
@@ -287,7 +305,7 @@ def RunTests(projects):
 
 def GenerateWikiPage(project):
     contents = ""
-    for f in project.GetFiles():
+    for f in project.GetSourceFiles():
         comments = project.GetComments(f)
         if not comments[0]:
             continue
@@ -310,7 +328,7 @@ def GenerateWikiPages(projects):
         wiki_pages.append(GenerateWikiPage(project))
     return wiki_pages
 
-def GenerateContentsPage():
+def GetProjectPaths():
     projects = []
     concepts = os.listdir(ROOT_DIR)
 
@@ -322,7 +340,14 @@ def GenerateContentsPage():
         impls = os.listdir(c_path)
         for impl in impls:
             if impl not in NON_IMPL_FILES:
-                projects.append(c + '-' + impl)
+                projects.append(os.path.join(c_path, impl))
+
+    return projects
+
+
+def GenerateContentsPage():
+    projects = GetProjectPaths()
+    print projects
 
     contents = 'Projects\n===\n'
     contents += 'This is a list of all projects.'
@@ -330,40 +355,81 @@ def GenerateContentsPage():
     contents += ' Do not edit manually!\n\n'
 
     for (i, p) in enumerate(projects):
+        print p
+        concept = GetProjectConcept(p)
+        impl = GetProjectName(p)
+        print concept
+        print impl
+        wiki_page = concept + '-' + impl
         contents += '{}. [{}]({})\n'.format(
-            str(i), p, '/burchanie/maxdge-snippets/wiki/' + p)
+            str(i), wiki_page,
+            '/burchanie/maxdge-snippets/wiki/' + wiki_page)
 
     return WikiPage(contents)
+
+
+def GetAllProjects():
+    """Returns a list of all projects contained in the repository."""
+
+    project_paths = GetProjectPaths()
+    projects = []
+
+    for p in project_paths:
+        concept = GetProjectConcept(p)
+        impl = GetProjectName(p)
+        print 'concept {}'.format(concept)
+        projects.append(Project(concept, impl, p))
+
+    return projects
 
 
 def main():
     # TODO: in the long term this should be an interactive shell based
     # program or at the very least take some command line args to
-    # support selective: 
+    # support selective:
     #   1. linting
     #   2. testing
-    #   3. comment extraction and updates
     #   4. new project creation
 
-    modified_projs, new_projects = GetNewOrRecentlyModifiedProjects()
-    changed_projects = new_projects + modified_projs
-    print '1. Found {} new or recently modified projects:'.format(
-        len(changed_projects))
-    for proj in changed_projects:
-        print '\t' + str(proj) + '\n'
+
+    parser = OptionParser()
+    parser.add_option('-a', '--all', default=False, action='store_true',
+                      help='re-generate wiki for all projects')
+    (options, args) = parser.parse_args()
 
 
-    print '2. Linting all changed projects' 
+    projects_to_analyze = []
+
+    if options.all:
+        print '1. Re-generating wiki for all projects, this might take a while'
+        projects_to_analyze = GetAllProjects()
+        print '\tFound {} projects to analyze'.format(len(projects_to_analyze))
+    else:
+        modified_projs, new_projects = GetNewOrRecentlyModifiedProjects()
+        changed_projects = new_projects + modified_projs
+        print '1. Found {} new or recently modified projects:'.format(
+            len(changed_projects))
+        for proj in changed_projects:
+            print '\t' + str(proj) + '\n'
+        projects_to_analyze = changed_projects
+
+
+    for p in projects_to_analyze:
+        if not p.IsValid():
+            print 'Warning! project: ' + p.name + ' is not a valid project!'
+            projects_to_analyze.remove(p)
+
+    print '2. Linting all changed projects'
 #    lint_stats = LintProjects(changed_projects)
 #    print '\tLinted {} Design file(s), {} CPU file(s) and {} Makefiles\n'.format(
 #        lint_stats[0], lint_stats[1], lint_stats[2])
 
 
     print '3. Testing all changed projects\n'
-    # TODO RunTests(changed_projects)
+# TODO RunTests(changed_projects)
 
     print '4. Generating wiki page for changed projects ({})'.format(
-       [str(s) for s in changed_projects])
+        [str(s) for s in projects_to_analyze])
 
     wiki_path = '../../maxdge-snippets-wiki'
     wiki_url = 'git@bitbucket.org:burchanie/maxdge-snippets.git/wiki'
@@ -372,7 +438,7 @@ def main():
         print '\tPlease do a git checkout of the wiki from {}'.format(wiki_url)
         return 1
 
-    for page in GenerateWikiPages(changed_projects):
+    for page in GenerateWikiPages(projects_to_analyze):
         page.WriteToFile(wiki_path)
     GenerateContentsPage().WriteToFile(wiki_path, name='Projects')
 
