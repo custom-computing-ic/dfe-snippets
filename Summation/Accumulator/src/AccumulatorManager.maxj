@@ -1,5 +1,5 @@
 /***
-	TODO Add a descriptive comment!
+    Simple manager design for the accumulator benchmark.
 */
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
@@ -19,22 +19,27 @@ public class AccumulatorManager extends CustomManager{
         KernelBlock k = addKernel(new AccumulatorKernel(makeKernelParameters(s_kernelName)));
 
         k.getInput("int_in") <== addStreamFromCPU("int_in");
+        k.getInput("fixed_in") <== addStreamFromCPU("fixed_in");
         addStreamToCPU("int_out") <== k.getOutput("int_out");
+        addStreamToCPU("fixed_out") <== k.getOutput("fixed_out");
     }
 
     private static EngineInterface interfaceDefault() {
         EngineInterface engine_interface = new EngineInterface();
         CPUTypes type = CPUTypes.INT32;
+        CPUTypes typeFix = CPUTypes.FLOAT;
         int size = type.sizeInBytes();
 
         InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam sizeBytes = N * size;
+        InterfaceParam sizeBytesFix = N * typeFix.sizeInBytes();
 
         engine_interface.setTicks(s_kernelName, N);
 
         engine_interface.setStream("int_in", type, sizeBytes);
-//        engine_interface.setStream("b", type, sizeBytes);
+        engine_interface.setStream("fixed_in", typeFix, sizeBytesFix);
         engine_interface.setStream("int_out", type, sizeBytes);
+        engine_interface.setStream("fixed_out", typeFix, sizeBytesFix);
         return engine_interface;
     }
 
