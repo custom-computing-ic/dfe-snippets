@@ -7,7 +7,8 @@ For a detailed description of the bitonic sorting network see this
 ["Sorting networks and their applications", K.E. Batcher](http://dl.acm.org/citation.cfm?id=1468121).
 
 # Parameters
-  * networkWidth - number of inputs to the bitonic network
+  * networkWidth - number of inputs to the bitonic network; this
+    must be a __power of 2__.
   * nVectors - number of vectors to sort
 
 # Input
