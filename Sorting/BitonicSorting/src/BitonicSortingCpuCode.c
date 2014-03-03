@@ -1,5 +1,5 @@
 /***
-    This program sorts n batches of networkWidth size each.
+    Sorts nVectors vectors of networkWidth size each.
 */
 
 #include <stdio.h>
@@ -8,9 +8,6 @@
 
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
-
-const int networkWidth = BitonicSorting_networkWidth;
-
 
 int cmp(const void *e1, const void *e2) {
   float f1 = *((float *)e1);
@@ -28,8 +25,9 @@ void print_vec(float *vec, int size) {
 
 int main(void) {
 
-  int n = 1;
-  const int inSize = networkWidth * n;
+  int networkWidth = BitonicSorting_networkWidth;
+  int nVectors = 1;
+  int inSize = networkWidth * nVectors;
 
   float *in_array = malloc(sizeof(float) * inSize);
   float *expected = malloc(sizeof(float) * inSize);
@@ -38,11 +36,11 @@ int main(void) {
   for(int i = 0; i < inSize; ++i)
     expected[i] = in_array[i] = (float)rand() / (float)rand();
 
-  for (int  i = 0; i < n; i++)
+  for (int  i = 0; i < nVectors; i++)
     qsort(expected + i * networkWidth, networkWidth, sizeof(float), cmp);
 
   printf("\nRunning on DFE.\n");
-  BitonicSorting(n, in_array, out_array);
+  BitonicSorting(nVectors, in_array, out_array);
 
   printf("Input:\n\t");
   print_vec(in_array, inSize);
@@ -56,7 +54,7 @@ int main(void) {
   for (int i = 0; i < inSize; i++)
     if (out_array[i] != expected[i]) {
       printf("Output from DFE did not match CPU: %i : %f != %f\n",
-        i, out_array[i], expected[i]);
+             i, out_array[i], expected[i]);
       return 1;
     }
 

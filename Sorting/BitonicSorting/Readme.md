@@ -1,17 +1,20 @@
 # About
-This design is a scalable (up to 128 inputs) bitonic sorting network.
+The kernel is a scalable (up to 128 inputs) bitonic sorting network.
+This is used to sort nVectors vectors of size networkWidth each.
 
-For a detailed description see this
-[article](http://en.wikipedia.org/wiki/Bitonic_sorter).
+For a detailed description of the bitonic sorting network see this
+[article](http://en.wikipedia.org/wiki/Bitonic_sorter) and
+["Sorting networks and their applications", K.E. Batcher](http://dl.acm.org/citation.cfm?id=1468121).
 
 # Parameters
   networkWidth - number of inputs to the bitonic network
+  nVectors - number of vectors to sort
 
 # Input
-  The input is a number of vectors of size networkWidth.
+  The input is nVectors floating point vectors of size networkWidth.
 
 # Output
-  Each vector is sorted in increasing order.
+  Each of the input vectors sorted in increasing order.
 
 # Example:
 
@@ -19,7 +22,7 @@ For a detailed description see this
     * networkWidth = 4, nVectors = 2:
 
  * Input:
-    *  in  = {{4, 7, 6, 5}, {3, 2, 1, 4}}
+    *  in  = {{4.0, 7.0, 6.0, 5.0}, {3.0, 2.0, 1.0, 4.0}}
 
  * Output:
-    * out = {{4, 5, 6, 7}, {1, 2, 3, 4}}
+    * out = {{4.0, 5.0, 6.0, 7.0}, {1.0, 2.0, 3.0, 4.0}}
