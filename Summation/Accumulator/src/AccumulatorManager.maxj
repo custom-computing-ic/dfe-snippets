@@ -18,9 +18,8 @@ public class AccumulatorManager extends CustomManager{
 
         KernelBlock k = addKernel(new AccumulatorKernel(makeKernelParameters(s_kernelName)));
 
-        k.getInput("a") <== addStreamFromCPU("a");
-        k.getInput("b") <== addStreamFromCPU("b");
-        addStreamToCPU("output") <== k.getOutput("output");
+        k.getInput("int_in") <== addStreamFromCPU("int_in");
+        addStreamToCPU("int_out") <== k.getOutput("int_out");
     }
 
     private static EngineInterface interfaceDefault() {
@@ -33,9 +32,9 @@ public class AccumulatorManager extends CustomManager{
 
         engine_interface.setTicks(s_kernelName, N);
 
-        engine_interface.setStream("a", type, sizeBytes);
-        engine_interface.setStream("b", type, sizeBytes);
-        engine_interface.setStream("output", type, sizeBytes);
+        engine_interface.setStream("int_in", type, sizeBytes);
+//        engine_interface.setStream("b", type, sizeBytes);
+        engine_interface.setStream("int_out", type, sizeBytes);
         return engine_interface;
     }
 

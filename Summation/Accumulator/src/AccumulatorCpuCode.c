@@ -1,5 +1,5 @@
 /***
-    TODO: Add a descriptive comment!
+    CPU code for a minimal benchmark of the Maxeler Accumulator API.
 */
 
 #include <stdio.h>
@@ -16,27 +16,25 @@ int main(void)
 
   int *a = malloc(sizeof(int) * inSize);
   int *b = malloc(sizeof(int) * inSize);
-  int *expected = malloc(sizeof(int) * inSize);
+  int *expected_int = malloc(sizeof(int) * inSize);
   int *out = malloc(sizeof(int) * inSize);
+
   memset(out, 0, sizeof(int) * inSize);
+  memset(expected_int, 0, sizeof(int) * inSize);
   for(int i = 0; i < inSize; ++i) {
     a[i] = i + 1;
     b[i] = i - 1;
-    expected[i] = 2 * i;
+    expected_int[i] = a[i] + (i > 0 ? expected_int[i - 1] : 0);
   }
 
   printf("Running on DFE.\n");
-  Accumulator(inSize, a, b, out);
+  Accumulator(inSize, a, out);
 
 
-  /***
-      Note that you should always test the output of your DFE
-      design against a CPU version to ensure correctness.
-  */
   for (int i = 0; i < inSize; i++)
-    if (out[i] != expected[i]) {
+    if (out[i] != expected_int[i]) {
       printf("Output from DFE did not match CPU: %d : %d != %d\n",
-        i, out[i], expected[i]);
+        i, out[i], expected_int[i]);
       return 1;
     }
 
