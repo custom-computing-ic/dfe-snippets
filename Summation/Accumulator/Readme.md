@@ -18,9 +18,9 @@ these do not support floating point (only fixed point types).
 # Example:
 
  * Input:
-   * int_in = {1, 2, 3}
-   * fixed_in = {1.5, 2.5, 3.5}
+    * int_in = {1, 2, 3}
+    * fixed_in = {1.5, 2.5, 3.5}
 
  * Output:
-   * int_out = {1, 3, 6}
-   * fixed_out = {1.5, 4, 7, 5}
+    * int_out = {1, 3, 6}
+    * fixed_out = {1.5, 4, 7, 5}
