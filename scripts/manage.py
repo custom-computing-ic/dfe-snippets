@@ -88,11 +88,10 @@ class Project(object):
         return DESIGN_FILE_RE.match(path) or CPU_FILE_RE.match(path) or MAKEFILE_RE.match(path)
 
     def GetSourceFiles(self):
-        return os.listdir(self.GetSourceDir())
+        return [os.path.join(self.GetSourceDir(), p) for p in os.listdir(self.GetSourceDir())]
 
     def GetComments(self, file_name):
-        abs_path = os.path.join(self.GetSourceDir(), file_name)
-        return ExtractCommentsFromFile(abs_path, self)
+        return ExtractCommentsFromFile(file_name, self)
 
     def GetSourceDir(self):
         return os.path.join(self.path, 'src')
@@ -154,14 +153,19 @@ def ExtractCommentsFromFile(path, project):
             if re.match(END_COMMENT_RE, line):
                 s = State.PARSING_SNIPPET
                 continue
-            comment += line
+            comment += line.lstrip()
+            if not line.lstrip():
+                comment += '\n'
         else:
             if re.match(START_COMMENT_RE, line):
                 s = State.PARSING_COMMENT
             elif line.strip():
                 parsed_code = True
 
-
+    print file
+    print "Starting comment."
+    print starting_comment
+    print in_line_comments
     return starting_comment, in_line_comments
 
 
@@ -302,23 +306,38 @@ def GetNewOrRecentlyModifiedProjects():
 def RunTests(projects):
     pass
 
+def ReadWholeFile(file):
+    if os.path.isfile(file):
+        f = open(file)
+        return f.read()
+    return ""
 
 def GenerateWikiPage(project):
     contents = ""
+    comment = (None, None)
     for f in project.GetSourceFiles():
-        comments = project.GetComments(f)
+        if project.IsValid():
+            comments = project.GetComments(f)
+        print "comments"
+        print comments
+        contents += os.path.basename(f) + '\n====\n'
         if not comments[0]:
+            contents += '\n```\n'
+            contents += ReadWholeFile(f)
+            contents += '\n```\n'
+            contents += '\n\n'
             continue
-        contents += f + '\n====\n'
         contents += comments[0].comment.strip() + '\n'
         if comments[1]:
             contents += "##Snippets\n"
         for c in comments[1]:
-            contents += c.comment.strip()+ '\n```\n'
+            contents += c.comment.strip()
             if c.snippet:
+                contents += '\n```\n'
                 contents += c.snippet
-            contents += '```\n'
+                contents += '\n```\n'
         contents += '\n'
+
     return WikiPage(contents, project)
 
 
