@@ -3,9 +3,9 @@ dfe-snippets
 
 _Collecting DFE snippets and scripts since... 2013!_
 
-Please checkout out our wiki to:
+Please check our wiki to:
 
-1. __Get started__ [here](Users)
+1. [Get started](Users)
 
 2. See a list of [projects](Projects)
 
