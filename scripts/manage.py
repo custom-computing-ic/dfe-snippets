@@ -29,10 +29,12 @@ PROJECT_RE = re.compile(r'../(?P<concept>.*)/(?P<project>.*)')
 
 # The project  directory (assumes this script lives in ROOT_DIR/scripts/)
 ROOT_DIR = "../"
-
+REPO_NAME = "dfe-snippets"
+WIKI_PATH = '../wiki'
+WIKI_URL = 'git@bitbucket.org:customcomputing/' + REPO_NAME + '.git/wiki'
 
 # Projects that should be excluded from linting / testing / post-processing
-NON_PROJECT_DIRS = ['scripts', '.git', 'WISHLIST', 'Readme.md']
+NON_PROJECT_DIRS = ['scripts', '.git', 'WISHLIST', 'Readme.md', 'wiki']
 NON_IMPL_FILES = ['README']
 
 
@@ -381,8 +383,7 @@ def GenerateContentsPage():
         print impl
         wiki_page = concept + '-' + impl
         contents += '{}. [{}]({})\n'.format(
-            str(i), wiki_page,
-            '/burchanie/maxdge-snippets/wiki/' + wiki_page)
+            str(i), wiki_page, wiki_page)
 
     return WikiPage(contents)
 
@@ -450,16 +451,15 @@ def main():
     print '4. Generating wiki page for changed projects ({})'.format(
         [str(s) for s in projects_to_analyze])
 
-    wiki_path = '../../maxdge-snippets-wiki'
-    wiki_url = 'git@bitbucket.org:burchanie/maxdge-snippets.git/wiki'
-    if not os.path.isdir(wiki_path):
-        print 'Error: Could not find wiki directory {}.'.format(wiki_path)
-        print '\tPlease do a git checkout of the wiki from {}'.format(wiki_url)
+
+    if not os.path.isdir(WIKI_PATH):
+        print 'Error: Could not find wiki directory {}.'.format(WIKI_PATH)
+        print '\tPlease do a git checkout of the wiki from {}'.format(WIKI_URL)
         return 1
 
     for page in GenerateWikiPages(projects_to_analyze):
-        page.WriteToFile(wiki_path)
-    GenerateContentsPage().WriteToFile(wiki_path, name='Projects')
+        page.WriteToFile(WIKI_PATH)
+    GenerateContentsPage().WriteToFile(WIKI_PATH, name='Projects')
 
 if __name__ == "__main__":
     main()
