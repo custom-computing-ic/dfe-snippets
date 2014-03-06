@@ -9,14 +9,14 @@ projects to allow re-use where necessary.
 # Use
 
 For more information on how to use this project please see the 
-[Users](https://bitbucket.org/burchanie/maxdge-snippets/wiki/Users), 
-[Projects](https://bitbucket.org/burchanie/maxdge-snippets/wiki/Projects) and
-[FAQ](https://bitbucket.org/burchanie/maxdge-snippets/wiki/FAQ) pages on our wiki.
+[Users](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Users), 
+[Projects](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Projects) and
+[FAQ](https://bitbucket.org/customcomputing/dfe-snippets/wiki/FAQ) pages on our wiki.
 
 # Contribute
 
 We actively encourage contributions! Please see the 
-[Contributing](https://bitbucket.org/burchanie/maxdge-snippets/wiki/Contributing) 
+[Contributing](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Contributing) 
 page on our wiki to find out how to contribute.
 
 # Contact
