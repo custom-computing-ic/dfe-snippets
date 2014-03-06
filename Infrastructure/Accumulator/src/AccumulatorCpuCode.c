@@ -1,5 +1,5 @@
 /***
-    CPU code for a minimal benchmark of the Maxeler Accumulator API.
+    CPU code for a minimal example of the Maxeler Accumulator API.
 */
 
 #include <stdio.h>

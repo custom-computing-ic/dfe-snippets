@@ -1,6 +1,6 @@
 # About
 
-This is a simple benchmark of the Maxeler Accumulators. Unfortunately
+This is a simple example of the Maxeler Accumulators. Unfortunately
 these do not support floating point (only fixed point types).
 
 # Input

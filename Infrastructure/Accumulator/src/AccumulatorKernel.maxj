@@ -1,5 +1,5 @@
 /***
-    A simple benchmark of the Maxeler Accumulator API.
+    A simple example of the Maxeler Accumulator API.
 */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
