@@ -1,24 +1,14 @@
-A repository of code snippets for MaxCompiler (Maxeler DFEs).
-==============================================================
+dfe-snippets
+============
 
-It turns out that plenty of everyday problems for MaxCompiler require
-coding similar problems again and again. This repository collects
-examples of such elementary problems as self-contained MaxCompiler
-projects to allow re-use where necessary.
+_Collecting DFE snippets and scripts since... 2013!_
 
-# Use
+Please checkout out our wiki to:
 
-For more information on how to use this project please see the 
-[Users](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Users), 
-[Projects](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Projects) and
-[FAQ](https://bitbucket.org/customcomputing/dfe-snippets/wiki/FAQ) pages on our wiki.
+1. __Get started__ [here](Users)
 
-# Contribute
+2. See a list of [projects](Projects)
 
-We actively encourage contributions! Please see the 
-[Contributing](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Contributing) 
-page on our wiki to find out how to contribute.
+3. See [Frequently Asked Questions](FAQ)
 
-# Contact
-
-Feel free to contact us directly or raise an issue.
+4. [Contribute!](Contributing)
