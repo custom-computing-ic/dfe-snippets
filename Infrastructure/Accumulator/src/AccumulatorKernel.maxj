@@ -1,0 +1,52 @@
+/***
+    A simple example of the Maxeler Accumulator API.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Accumulator;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Reductions;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix;
+import static com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Accumulator.*;
+
+class AccumulatorKernel extends Kernel {
+
+    protected AccumulatorKernel(KernelParameters parameters) {
+        super(parameters);
+
+        /***
+            Create an accumulator for the integer stream 'int_in' and
+            output its value every cycle.
+        */
+        DFEVar a = io.input("int_in", dfeInt(32));
+        Accumulator acc = Reductions.accumulator;
+        Params paramsInt = acc.makeAccumulatorConfig(dfeInt(32));
+        DFEVar accumulatorInt = acc.makeAccumulator(a, paramsInt);
+        io.output("int_out", accumulatorInt, dfeInt(32));
+
+        /***
+            Create an accumulator for the fixed stream 'fixed_in' and
+            output its value every cycle.
+        */
+        DFEType fixedType = dfeFixMax(32, 1024.0 * 1024.0, DFEFix.SignMode.TWOSCOMPLEMENT);
+        DFEVar b = io.input("fixed_in", dfeFloat(8, 24)).cast(fixedType);
+        Params paramsFixed = acc.makeAccumulatorConfig(fixedType);
+        DFEVar accumulatorFixed = acc.makeAccumulator(b, paramsFixed);
+        io.output("fixed_out", accumulatorFixed.cast(dfeFloat(8, 24)), dfeFloat(8, 24));
+
+        /***
+            Creating a floating point accumulator fails (due to
+            latency of floating point addition).
+
+            Exception in thread "main":
+              AccumulatorFactory does not support floating-point types.
+        */
+        // DFEVar c = io.input("float_in", dfeFloat(8, 24));
+        // Params paramsFloat = acc.makeAccumulatorConfig(dfeFloat(8, 24));
+        // DFEVar accumulatorFloat = acc.makeAccumulator(c, paramsFloat);
+        // io.output("float_out", accumulatorInt, dfeInt(32));
+    }
+
+}
