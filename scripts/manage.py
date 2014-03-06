@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """Simple script to manage the creation and verification of projects."""
 # TODO Update to work with projects that have maultiple maxcompiler implementations
 # At the moment, the assumed dir structure is Concept/Implementation/*.*

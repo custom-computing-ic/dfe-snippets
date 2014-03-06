@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import os
 import sys
 import shutil
@@ -58,12 +60,17 @@ def main():
     else:
         projectRoot = "../../.."
         dest = projectConcept + "/" + projectName
-    shutil.copytree("scripts/template/DemoProject", dest)
+
+    d = os.path.dirname(__file__)
+    templates_path=os.path.join(d, 'template')
+    demo_project_path=os.path.join(templates_path, 'DemoProject')
+    shutil.copytree(demo_project_path, dest)
 
     macro_dict = {
         PROJECT_NAME_MACRO: projectName,
         PROJECT_ROOT_MACRO: projectRoot,
         }
+
 
     # replace macros with project name
     # just hardcode this for now, perhaps make it more flexible in the future
@@ -74,10 +81,10 @@ def main():
 
     if options.standalone:
         # For standalone projects, copy makefiles
-        prefix = 'scripts/template/'
         for f in ['.common', '.Maia.hardware', '.Max3.hardware']:
             makefile = 'Makefile' + f
-            shutil.copyfile(prefix + makefile, dest + '/' + makefile)
+            shutil.copyfile(os.path.join(templates_path, makefile),
+                            os.path.join(dest, makefile))
 
 if __name__ == '__main__':
     main()
