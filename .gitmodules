@@ -1,0 +1,3 @@
+[submodule "wiki"]
+	path = wiki
+	url = git@bitbucket.org:customcomputing/dfe-snippets.git/wiki
