@@ -5,7 +5,7 @@ _Collecting DFE snippets and scripts since... 2013!_
 
 Please check our wiki to:
 
-1. [Get started](dfe-snippets/wiki/Users)
+1. [Get started](wiki/Users)
 
 2. See a list of [projects](wiki/Projects)
 
