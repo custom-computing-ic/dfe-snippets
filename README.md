@@ -5,10 +5,10 @@ _Collecting DFE snippets and scripts since... 2013!_
 
 Please check our wiki to:
 
-1. [Get started](wiki/Users)
+1. [Get started](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Users)
 
-2. See a list of [projects](wiki/Projects)
+2. See a list of [projects](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Projects)
 
-3. See [Frequently Asked Questions](wiki/FAQ)
+3. See [Frequently Asked Questions](https://bitbucket.org/customcomputing/dfe-snippets/wiki/FAQ)
 
-4. [Contribute!](wiki/Contributing)
+4. [Contribute!](https://bitbucket.org/customcomputing/dfe-snippets/wiki/Contributing)
