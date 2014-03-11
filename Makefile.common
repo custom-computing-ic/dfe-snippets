@@ -46,6 +46,22 @@ EXTRA_CFLAGS?=
 # ---- Default DFE ----
 DFEID=/dev/maxeler0
 
+# Files to remove on clean
+TRASH=*~ ../src/*~
+DIST_TRASH=Maxfiles.h *.class *.o debug*
+
+help:
+	@ echo "Available targets: "
+	@ echo "   runsim   -- build and run design in simulation (requires MaxCompiler license)"
+	@ echo "   stopsim  -- stop the currently running simulated device"
+	@ echo "   build    -- build the design in hardware (requires MaxCompiler license)"
+	@ echo "   run      -- run design in hardware (requires local access to a DFE)"
+	@ echo "   debug    -- debug a simulation design using MaxDebug"
+	@ echo "   debughw  -- debug a hardware design using MaxDebug (requries local access to DFE)"
+	@ echo "   help     -- print this help message"
+	@ echo "   cleansim, cleandfe, clean -- clean executables for simulation, hardware or both"
+	@ echo "   distcleansim, distcleanhw, distclean -- delete the entire sim, hw or both directories"
+
 all: runsim build
 
 .PHONY: stopsim run cleansim cleandfe debug debughw
@@ -82,13 +98,13 @@ $(DFEMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	cp $(DFEMAXDIR)/$(PRJ).h $(DFEMAXDIR)/Maxfiles.h
 
 $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
-	$(SLICCOMPILE) $< $@  
+	$(SLICCOMPILE) $< $@
 
 $(PRJ)_dfec.o: $(CPUFILES)
 	$(CC) $< $(CFLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS) 
+	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS)
 
 build: $(PRJ)_dfe
 
@@ -98,20 +114,18 @@ run:
 # ---- Clean ----
 
 cleansim:
-	rm -f $(PRJ)_sim *~ ../src/*~
+	rm -f $(PRJ)_sim $(TRASH)
 
 cleandfe:
-	rm -f $(PRJ)_dfe *~ ../src/*~
+	rm -f $(PRJ)_dfe $(TRASH)
 
 clean: cleansim cleandfe
 
 distcleansim: cleansim
-	rm -f Maxfiles.h *.class *.o
-	rm -rf $(PRJ)_$(DFEModel)_DFE_SIM
+	rm -rf $(DIST_TRASH) $(PRJ)_$(DFEModel)_DFE_SIM
 
 distcleandfe: cleandfe
-	rm -f Maxfiles.h *.class *.o
-	rm -rf $(PRJ)_$(DFEModel)_DFE
+	rm -rf $(DIST_TRASH) $(PRJ)_$(DFEModel)_DFE
 
 distclean: distcleansim distcleandfe
 
