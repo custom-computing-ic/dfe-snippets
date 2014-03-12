@@ -1,5 +1,6 @@
 /***
-    TODO: Add a descriptive comment!
+    Sends two 32 bit integer streams and checks int, float and double
+    results from FPGA.
 */
 
 #include <stdio.h>

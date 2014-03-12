@@ -10,9 +10,9 @@
     to MaxCompiler or to the backend Xilinx tools. However, the
     figures should serve as a reasonable estimate.
 
-    TODO it would be good to also include __all__ functions in
-    KernelMath and all operations supported on streams.
-*/
+    TODO it would be good to include __all__ functions in KernelMath
+    and __all__ operations supported on streams.
+ */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
@@ -28,7 +28,7 @@ class ResourceUsageKernel extends Kernel {
     protected ResourceUsageKernel(KernelParameters parameters) {
         super(parameters);
 
-        // ---- 32 bit integer operations ----
+        /*** 32 bit integer operations */
         DFEVar a = io.input("a", int32);
         DFEVar b = io.input("b", int32);
         DFEVar sum = a + b;
@@ -38,7 +38,7 @@ class ResourceUsageKernel extends Kernel {
         DFEVar intResult = sum + sub + prod;
         io.output("intResult", intResult, int32);
 
-        // ---- Single Precision Floating point operations ----
+        /*** Single Precision Floating point operations */
         DFEVar spA = a.cast(spfloat);
         DFEVar spB = b.cast(spfloat);
         DFEVar sumsp = spA + spB;
@@ -48,7 +48,7 @@ class ResourceUsageKernel extends Kernel {
         DFEVar spResult = sumsp + subsp + prodsp;
         io.output("spResult", spResult, spfloat);
 
-        // ---- Double Precision Floating point operations ----
+        /*** Double Precision Floating point operations */
         DFEVar dpA = a.cast(dpfloat);
         DFEVar dpB = b.cast(dpfloat);
         DFEVar sumdp = dpA + dpB;

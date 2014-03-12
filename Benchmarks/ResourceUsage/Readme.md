@@ -1,32 +1,17 @@
 # About
 
-TODO describe the design and provide links to useful resources
+This design is used to benchmark the resource usage of basic
+operations on various Maxeler boards.
 
-# Parameters
-
-  TODO describe the design parameters (e.g. number of pipes)
+You can find the annotated resource usage for each kernel (using
+__MaxCompiler 2013.2.2__) in `src/ResourceUsageKernel.<DFEModel>`.
 
 # Input
 
-  TODO specify the design inputs (e.g. 'in is a stream of floating
-  point numbers representing ...')
+  * a, b - a stream of 32 bit signed (two's complement) integer values
 
 # Output
 
-  TODO specify the design inputs (e.g. 'out is a stream of floating
-  point numbers representing ...')
-
-# Example:
-
-
-  TODO give a very small example run of your design with concrete
-  values for parameters, input and output
-
- * Parameters:
-  TODO add parameter values
-
- * Input:
-  TODO add input values
-
- * Output:
-  TODO add output values
+  * intResult, spResult, dpResult - 32 bit int, single and double
+    precision results of performing (the same operations) on the input
+    streams a and b;
