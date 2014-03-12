@@ -1,0 +1,68 @@
+    LUTs     FFs   BRAMs    DSPs : ResourceUsageKernel.maxj
+    6857    9099      28       7 : resources used by this file
+   1.31%   0.87%   1.09%   0.36% : % of available
+  44.15%  46.97%  23.14% 100.00% : % of total used
+  95.47%  91.36%  96.55% 100.00% : % of user resources
+
+                                 : /***
+                                 :     This benchmark performs a number of floating point, integer and
+                                 :     control operations, in order to get an estimate for the resource
+                                 :     usage per operation.
+                                 : 
+                                 :     Since this is most easily done using the annotated resource usage
+                                 :     report, each operation is on a line of its own.
+                                 : 
+                                 :     Note! There may be inaccuracies (e.g. stray resources) either due
+                                 :     to MaxCompiler or to the backend Xilinx tools. However, the
+                                 :     figures should serve as a reasonable estimate.
+                                 : 
+                                 :     TODO it would be good to also include __all__ functions in
+                                 :     KernelMath and all operations supported on streams.
+                                 : */
+                                 : 
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.*;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.*;
+                                 : 
+                                 : class ResourceUsageKernel extends Kernel {
+                                 : 
+                                 : 
+                                 :     DFEType int32 = dfeInt(32);
+                                 :     DFEType spfloat = dfeFloat(8, 24);
+                                 :     DFEType dpfloat = dfeFloat(11, 53);
+                                 : 
+                                 :     protected ResourceUsageKernel(KernelParameters parameters) {
+                                 :         super(parameters);
+                                 : 
+                                 :         // ---- 32 bit integer operations ----
+       1      32       0       0 :         DFEVar a = io.input("a", int32);
+       1      40       0       0 :         DFEVar b = io.input("b", int32);
+      64      64       0       0 :         DFEVar sum = a + b;
+      32      32       0       0 :         DFEVar sub = a - b;
+       0      60       0       2 :         DFEVar prod = a * b;
+                                 : 
+                                 :         DFEVar intResult = sum + sub + prod;
+       0       1       0       0 :         io.output("intResult", intResult, int32);
+                                 : 
+                                 :         // ---- Single Precision Floating point operations ----
+      42      83       0       0 :         DFEVar spA = a.cast(spfloat);
+      41      83       0       0 :         DFEVar spB = b.cast(spfloat);
+     586     631       4       0 :         DFEVar sumsp = spA + spB;
+     317     389       0       0 :         DFEVar subsp = spA - spB;
+     161     332       3       1 :         DFEVar prodsp = spA * spB;
+                                 : 
+    1181    1301       8       0 :         DFEVar spResult = sumsp + subsp + prodsp;
+                                 :         io.output("spResult", spResult, spfloat);
+                                 : 
+                                 :         // ---- Double Precision Floating point operations ----
+     156     204       1       0 :         DFEVar dpA = a.cast(dpfloat);
+     157     204       1       0 :         DFEVar dpB = b.cast(dpfloat);
+    1046    1202       2       0 :         DFEVar sumdp = dpA + dpB;
+     645     772       0       0 :         DFEVar subdp = dpA - dpB;
+     352     649       5       4 :         DFEVar proddp = dpA * dpB;
+                                 : 
+    2075    3020       4       0 :         DFEVar dpResult = sumdp + subdp + proddp;
+                                 :         io.output("dpResult", dpResult, dpfloat);
+                                 :     }
+                                 : 
+                                 : }
