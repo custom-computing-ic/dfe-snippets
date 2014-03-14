@@ -1,0 +1,62 @@
+/***
+    This benchmark performs a number of floating point, integer and
+    control operations, in order to get an estimate for the resource
+    usage per operation.
+
+    Since this is most easily done using the annotated resource usage
+    report, each operation is on a line of its own.
+
+    Note! There may be inaccuracies (e.g. stray resources) either due
+    to MaxCompiler or to the backend Xilinx tools. However, the
+    figures should serve as a reasonable estimate.
+
+    TODO it would be good to include __all__ functions in KernelMath
+    and __all__ operations supported on streams.
+ */
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.*;
+
+class ResourceUsageKernel extends Kernel {
+
+
+    DFEType int32 = dfeInt(32);
+    DFEType spfloat = dfeFloat(8, 24);
+    DFEType dpfloat = dfeFloat(11, 53);
+
+    protected ResourceUsageKernel(KernelParameters parameters) {
+        super(parameters);
+
+        /*** 32 bit integer operations */
+        DFEVar a = io.input("a", int32);
+        DFEVar b = io.input("b", int32);
+        DFEVar sum = a + b;
+        DFEVar sub = a - b;
+        DFEVar prod = a * b;
+
+        DFEVar intResult = sum + sub + prod;
+        io.output("intResult", intResult, int32);
+
+        /*** Single Precision Floating point operations */
+        DFEVar spA = a.cast(spfloat);
+        DFEVar spB = b.cast(spfloat);
+        DFEVar sumsp = spA + spB;
+        DFEVar subsp = spA - spB;
+        DFEVar prodsp = spA * spB;
+
+        DFEVar spResult = sumsp + subsp + prodsp;
+        io.output("spResult", spResult, spfloat);
+
+        /*** Double Precision Floating point operations */
+        DFEVar dpA = a.cast(dpfloat);
+        DFEVar dpB = b.cast(dpfloat);
+        DFEVar sumdp = dpA + dpB;
+        DFEVar subdp = dpA - dpB;
+        DFEVar proddp = dpA * dpB;
+
+        DFEVar dpResult = sumdp + subdp + proddp;
+        io.output("dpResult", dpResult, dpfloat);
+    }
+
+}
