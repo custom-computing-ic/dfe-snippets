@@ -1,9 +1,7 @@
 /***
     Manager for the resource usage benchmark design.
 */
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.*;
 import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
 import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
@@ -18,11 +16,11 @@ public class ResourceUsageManager extends CustomManager{
 
         KernelBlock k = addKernel(new ResourceUsageKernel(makeKernelParameters(s_kernelName)));
 
-	for (String s : k.getAllInputs())
-	    k.getInput(s) <== addStreamFromCPU(s);
+        for (String s : k.getAllInputs())
+            k.getInput(s) <== addStreamFromCPU(s);
 
-	for (String s : k.getAllOutputs())
-	    addStreamToCPU(s) <== k.getOutput(s);
+        for (String s : k.getAllOutputs())
+            addStreamToCPU(s) <== k.getOutput(s);
     }
 
     private static EngineInterface interfaceDefault() {
@@ -38,7 +36,7 @@ public class ResourceUsageManager extends CustomManager{
         engine_interface.setTicks(s_kernelName, N);
 
         engine_interface.setStream("a", type, sizeBytes);
-	engine_interface.setStream("b", type, sizeBytes);
+        engine_interface.setStream("b", type, sizeBytes);
         engine_interface.setStream("intResult", type, sizeBytes);
         engine_interface.setStream("spResult", CPUTypes.FLOAT, spSizeBytes);
         engine_interface.setStream("dpResult", CPUTypes.DOUBLE, dpSizeBytes);
