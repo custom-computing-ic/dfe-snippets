@@ -37,6 +37,9 @@ MAXDEBUG=maxdebug
 MAXRENDERGRAPHS=maxRenderGraphs
 MAXCOMPILERSIM=maxcompilersim
 
+MAXOS_HW=/opt/maxeler/maxeleros/lib/libmaxeleros.so
+MAXOS_SIM=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so
+
 # ---- Compiler settings ----
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar -1.6 -d .
 OPT_FLAGS=-xHost -O3
@@ -99,14 +102,15 @@ $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
 
 runsim: $(PRJ)_sim
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) restart
-	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so ./$(PRJ)_sim $(USER)a0:$(USER)a
+	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXOS_SIM) ./$(PRJ)_sim $(USER)a0:$(USER)a
 	make stopsim
 
 stopsim:
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
 
 gdbsim:
-	DEBUG_FLAGS="-g" make runsim
+	DEBUG_FLAGS="-g" make $(PRJ)_sim
+	LD_PRELOAD=$(MAXOS_SIM) gdb $(PRJ)_sim
 
 # ---- DFE ----
 
@@ -127,11 +131,11 @@ $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
 build: $(PRJ)_dfe
 
 run:
-	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=/opt/maxeler/maxeleros/lib/libmaxeleros.so ./${PRJ}_dfe
+	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=$(MAXOS_HW) ./${PRJ}_dfe
 
 gdbdfe:
 	DEBUG_FLAGS="-g" make build
-
+	LD_PRELOAD=$(MAXOS_HW) gdb $(PRJ)_dfe
 
 # ---- Clean ----
 
