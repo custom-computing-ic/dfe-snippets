@@ -50,7 +50,7 @@ DEBUG_FLAGS?=
 DFEID=/dev/maxeler0
 
 # Files to remove on clean
-TRASH=*~ ../src/*~
+TRASH=*~ ../src/*~ *.o
 DIST_TRASH=Maxfiles.h *.class *.o debug*
 
 help:
