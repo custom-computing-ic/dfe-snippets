@@ -107,15 +107,19 @@ $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_dfec.o: $(CPUFILES)
-	$(CC) $< $(CFLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CC) $< $(CFLAGS) $(DEBUG_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS)
+	$(CC) $(CFLAGS) $(DEBUG_FLAGS) -o $@ $^ $(LFLAGS)
 
 build: $(PRJ)_dfe
 
 run:
 	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=/opt/maxeler/maxeleros/lib/libmaxeleros.so ./${PRJ}_dfe
+
+gdbdfe:
+	DEBUG_FLAGS="-g" make build
+
 
 # ---- Clean ----
 
