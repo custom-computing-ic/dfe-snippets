@@ -50,6 +50,7 @@ EXTRA_CFLAGS?=
 # This varible is set in the gdbsim target
 DEBUG_FLAGS?=
 
+ALL_FLAGS = $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS)
 # ---- Default DFE ----
 DFEID=/dev/maxeler0
 
@@ -58,16 +59,23 @@ TRASH=*~ ../src/*~ *.o
 DIST_TRASH=Maxfiles.h *.class *.o debug*
 
 help:
+	@ echo "Current configuration:"
+	@ echo "   Compiler       $(CC)"
+	@ echo "   Optimizations  $(OPT_FLAGS)"
+	@ echo "   MAXCOMPILERDIR $(MAXCOMPILERDIR)"
+	@ echo ""
 	@ echo "Available targets: "
 	@ echo "   runsim   -- build and run design in simulation (requires MaxCompiler license)"
 	@ echo "   stopsim  -- stop the currently running simulated device"
 	@ echo "   build    -- build the design in hardware (requires MaxCompiler license)"
 	@ echo "   run      -- run design in hardware (requires local access to a DFE)"
 	@ echo "   debug    -- debug a simulation design using MaxDebug"
-	@ echo "   debughw  -- debug a hardware design using MaxDebug (requries local access to DFE)"
-	@ echo "   help     -- print this help message"
+	@ echo "   debughw  -- debug a hardware design using MaxDebug (requires local access to DFE)"
+	@ echo "   gdbsim, gdbdfe -- build CPU code with debug symbols"
 	@ echo "   cleansim, cleandfe, clean -- clean executables for simulation, hardware or both"
 	@ echo "   distcleansim, distcleanhw, distclean -- delete the entire sim, hw or both directories"
+	@ echo "   help     -- print this help message"
+
 
 all: runsim build
 
@@ -84,15 +92,15 @@ $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_simc.o: $(CPUFILES)
-	$(CC) $< $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CC) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
-	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS) -o $@ $^ $(LFLAGS)
+	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 runsim: $(PRJ)_sim
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) restart
 	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so ./$(PRJ)_sim $(USER)a0:$(USER)a
-	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
+	make stopsim
 
 stopsim:
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
@@ -111,10 +119,10 @@ $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_dfec.o: $(CPUFILES)
-	$(CC) $< $(CFLAGS) $(DEBUG_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CC) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
-	$(CC) $(CFLAGS) $(DEBUG_FLAGS) -o $@ $^ $(LFLAGS)
+	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 build: $(PRJ)_dfe
 
