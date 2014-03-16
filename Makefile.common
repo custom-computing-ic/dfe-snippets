@@ -47,7 +47,7 @@ LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpt
 # Useful for debug/optimization flags
 EXTRA_CFLAGS?=
 
-# This varible is set in the gdbsim target
+# This is set in the gdbsim/gdbdfe targets
 DEBUG_FLAGS?=
 
 ALL_FLAGS = $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS)
