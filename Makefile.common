@@ -43,6 +43,9 @@ LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpt
 # Useful for debug/optimization flags
 EXTRA_CFLAGS?=
 
+# This varible is set in the gdbsim target
+DEBUG_FLAGS?=
+
 # ---- Default DFE ----
 DFEID=/dev/maxeler0
 
@@ -77,10 +80,10 @@ $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_simc.o: $(CPUFILES)
-	$(CC) $< $(CFLAGS) $(EXTRA_CFLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CC) $< $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
-	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $^ $(LFLAGS)
+	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS) -o $@ $^ $(LFLAGS)
 
 runsim: $(PRJ)_sim
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) restart
@@ -89,6 +92,9 @@ runsim: $(PRJ)_sim
 
 stopsim:
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
+
+gdbsim:
+	DEBUG_FLAGS="-g" make runsim
 
 # ---- DFE ----
 
