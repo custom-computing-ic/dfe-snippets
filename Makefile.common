@@ -109,7 +109,7 @@ stopsim:
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
 
 gdbsim:
-	DEBUG_FLAGS="-g" make $(PRJ)_sim
+	DEBUG_FLAGS="-O0 -g" make $(PRJ)_sim
 	LD_PRELOAD=$(MAXOS_SIM) gdb $(PRJ)_sim
 
 # ---- DFE ----
@@ -134,7 +134,7 @@ run:
 	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=$(MAXOS_HW) ./${PRJ}_dfe
 
 gdbdfe:
-	DEBUG_FLAGS="-g" make build
+	DEBUG_FLAGS="-O0 -g" make build
 	LD_PRELOAD=$(MAXOS_HW) gdb $(PRJ)_dfe
 
 # ---- Clean ----
