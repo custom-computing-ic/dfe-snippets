@@ -23,6 +23,9 @@ ENGINEFILES=$(wildcard ../src/*.maxj)
 CPUFILES=$(wildcard ../src/*.c)
 
 # ---- Command alias ----
+
+# Note that if you want to change CC to gcc, you may also have to
+# change some of the compiler optimization flags
 CC=icc
 MAXFILECOMPILE=maxfilecompile
 SLICCOMPILE=sliccompile
@@ -34,33 +37,48 @@ MAXDEBUG=maxdebug
 MAXRENDERGRAPHS=maxRenderGraphs
 MAXCOMPILERSIM=maxcompilersim
 
+MAXOS_HW=/opt/maxeler/maxeleros/lib/libmaxeleros.so
+MAXOS_SIM=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so
+
 # ---- Compiler settings ----
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar -1.6 -d .
-CFLAGS=-std=c99 -openmp -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
+OPT_FLAGS=-xHost -O3
+CFLAGS=-std=c99 -openmp $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
 LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread -openmp
 
 # Add this on the command line to pass to make when compiling
 # Useful for debug/optimization flags
 EXTRA_CFLAGS?=
 
+# This is set in the gdbsim/gdbdfe targets
+DEBUG_FLAGS?=
+
+ALL_FLAGS = $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS)
 # ---- Default DFE ----
 DFEID=/dev/maxeler0
 
 # Files to remove on clean
-TRASH=*~ ../src/*~
+TRASH=*~ ../src/*~ *.o
 DIST_TRASH=Maxfiles.h *.class *.o debug*
 
 help:
+	@ echo "Current configuration:"
+	@ echo "   Compiler       $(CC)"
+	@ echo "   Optimizations  $(OPT_FLAGS)"
+	@ echo "   MAXCOMPILERDIR $(MAXCOMPILERDIR)"
+	@ echo ""
 	@ echo "Available targets: "
 	@ echo "   runsim   -- build and run design in simulation (requires MaxCompiler license)"
 	@ echo "   stopsim  -- stop the currently running simulated device"
 	@ echo "   build    -- build the design in hardware (requires MaxCompiler license)"
 	@ echo "   run      -- run design in hardware (requires local access to a DFE)"
 	@ echo "   debug    -- debug a simulation design using MaxDebug"
-	@ echo "   debughw  -- debug a hardware design using MaxDebug (requries local access to DFE)"
-	@ echo "   help     -- print this help message"
+	@ echo "   debughw  -- debug a hardware design using MaxDebug (requires local access to DFE)"
+	@ echo "   gdbsim, gdbdfe -- build CPU code with debug symbols"
 	@ echo "   cleansim, cleandfe, clean -- clean executables for simulation, hardware or both"
 	@ echo "   distcleansim, distcleanhw, distclean -- delete the entire sim, hw or both directories"
+	@ echo "   help     -- print this help message"
+
 
 all: runsim build
 
@@ -77,18 +95,22 @@ $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_simc.o: $(CPUFILES)
-	$(CC) $< $(CFLAGS) $(EXTRA_CFLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CC) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
-	$(CC) $(CFLAGS) $(EXTRA_CFLAGS) -o $@ $^ $(LFLAGS)
+	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 runsim: $(PRJ)_sim
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) restart
-	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so ./$(PRJ)_sim $(USER)a0:$(USER)a
-	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
+	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXOS_SIM) ./$(PRJ)_sim $(USER)a0:$(USER)a
+	make stopsim
 
 stopsim:
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) stop
+
+gdbsim:
+	DEBUG_FLAGS="-g" make $(PRJ)_sim
+	LD_PRELOAD=$(MAXOS_SIM) gdb $(PRJ)_sim
 
 # ---- DFE ----
 
@@ -101,15 +123,19 @@ $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_dfec.o: $(CPUFILES)
-	$(CC) $< $(CFLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CC) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
-	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS)
+	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 build: $(PRJ)_dfe
 
 run:
-	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=/opt/maxeler/maxeleros/lib/libmaxeleros.so ./${PRJ}_dfe
+	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=$(MAXOS_HW) ./${PRJ}_dfe
+
+gdbdfe:
+	DEBUG_FLAGS="-g" make build
+	LD_PRELOAD=$(MAXOS_HW) gdb $(PRJ)_dfe
 
 # ---- Clean ----
 
