@@ -1,6 +1,6 @@
 /***
-    Sends two 32 bit integer streams and checks int, float and double
-    results from FPGA.
+    Sends two 32 bit integer streams (3 times, apparently) and checks
+    int, float and double results from FPGA.
 */
 
 #include <stdio.h>
@@ -20,6 +20,7 @@ int main(void)
 
   int *intRes = malloc(sizeof(int) * inSize);
   float *spRes = malloc(sizeof(float) * inSize);
+  float *mpRes = malloc(sizeof(float) * inSize);
   double *dpRes = malloc(sizeof(double) * inSize);
 
   for(int i = 0; i < inSize; ++i) {
@@ -28,7 +29,7 @@ int main(void)
   }
 
   printf("Running on DFE.\n");
-  ResourceUsage(inSize, a, b, dpRes, intRes, spRes);
+  ResourceUsage(inSize, a,a,a, b,b,b, dpRes, intRes, mpRes, spRes);
 
   for (int i = 0; i < inSize; i++) {
     int exp = 2 * a[i] + a[i] * b[i];
