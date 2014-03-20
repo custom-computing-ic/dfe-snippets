@@ -83,7 +83,12 @@ class ResourceUsageKernel extends Kernel {
         DFEVar prodsp = spA * spB;
         DFEVar divsp  = spA / spB;
 
-        // Is this cheaper in resource utilisation than (sumsp + subsp)?
+        /***
+            Since subtraction is cheaper in resources than addition, may
+            it happen that (spA - (-spB)) takes less resources than (spA + spB)?
+            Let's test it! In order to fool compiler optimizations out,
+            tryint (spA - (-spB) out on a new variables:
+        */
         DFEVar spA1 = a.cast(spfloat);
         DFEVar spB1 = b.cast(spfloat);
         DFEVar sumsp2 = spA1 - (-spB1);
@@ -143,7 +148,12 @@ class ResourceUsageKernel extends Kernel {
         DFEVar prodmp = mpA * mpB;
         DFEVar divmp  = mpA / mpB;
 
-        // Is this cheaper in resource utilisation than (summp + submp)?
+        /***
+            Since subtraction is cheaper in resources than addition, may
+            it happen that (mpA - (-mpB)) takes less resources than (mpA + mpB)?
+            Let's test it! In order to fool compiler optimizations out,
+            tryint (mpA - (-mpB) out on a new variables:
+        */
         DFEVar mpA1 = a.cast(float43bit);
         DFEVar mpB1 = b.cast(float43bit);
         DFEVar summp2 = mpA1 - (-mpB1);
@@ -166,7 +176,9 @@ class ResourceUsageKernel extends Kernel {
         DFEVar mpsqrt  = KernelMath.sqrt(mpA);
 
         /***
-            This doesn't compile: Altera MegaWizard's float-to-float conversion error:
+            This doesn't compile on Maia with a message
+               'Altera MegaWizard's float-to-float conversion error'
+            but perfectly compiles on Max3:
 
             DFEVar mpcos   = KernelMath.cos(mpA);
             DFEVar mpsin   = KernelMath.sin(mpB);
@@ -210,7 +222,13 @@ class ResourceUsageKernel extends Kernel {
         DFEVar subdp  = dpA - dpB;
         DFEVar proddp = dpA * dpB;
         DFEVar divdp  = dpA / dpB;
-        // Is this cheaper in resource utilisation than (summp + submp)?
+
+        /***
+            Since subtraction is cheaper in resources than addition, may
+            it happen that (dpA - (-dpB)) takes less resources than (dpA + dpB)?
+            Let's test it! In order to fool compiler optimizations out,
+            tryint (dpA - (-dpB) out on a new variables:
+        */
         DFEVar dpA1 = a.cast(dpfloat);
         DFEVar dpB1 = b.cast(dpfloat);
         DFEVar sumdp2 = dpA1 - (-dpB1);
@@ -225,7 +243,8 @@ class ResourceUsageKernel extends Kernel {
              Some KernelMath routines have contraints on supported precisions:
                 - log  expects output type to be 2..50 bit wide.
                 - log2 expects output type to be 2..60 bit wide.
-                - sin/cos cause exponential code bloat inside java compiler:
+                - sin/cos cause exponential time expression evaluation at java
+                  runtime:
                     43 bit wide input: seconds,
                     44 bit wide input: 6 minutes,
                     50 bit wide input: compilation stopped after 8.5 hours
@@ -233,9 +252,9 @@ class ResourceUsageKernel extends Kernel {
         */
 
         // for KernelMath.log
-        DFEType float60bit  = dfeFloat(11, 49);
-        // for KernelMath.log2
         DFEType float50bit = dfeFloat(11, 39);
+        // for KernelMath.log2
+        DFEType float60bit  = dfeFloat(11, 49);
 
         DFEVar dplogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), dpA, float50bit);
         DFEVar dplogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), dpB, float50bit);
@@ -250,7 +269,7 @@ class ResourceUsageKernel extends Kernel {
         DFEVar dpsqrt  = KernelMath.sqrt(dpA);
 
         /***
-            This doesn't compile on Maia with message
+            This doesn't compile on Maia with a message
                'Altera MegaWizard's float-to-float conversion error'
             but perfectly compiles on Max3:
 
