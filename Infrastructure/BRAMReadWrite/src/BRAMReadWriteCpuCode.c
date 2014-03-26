@@ -1,10 +1,12 @@
 /***
-    TODO: Add a descriptive comment!
+    Stream some floats and check they are stored, incremented and read
+    properly from the kernel's local memory.
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
@@ -12,34 +14,31 @@
 int main(void)
 {
 
-  const int inSize = 384;
+  const int inSize = BRAMReadWrite_dataSize;
 
-  int *a = malloc(sizeof(int) * inSize);
-  int *b = malloc(sizeof(int) * inSize);
-  int *expected = malloc(sizeof(int) * inSize);
-  int *out = malloc(sizeof(int) * inSize);
-  memset(out, 0, sizeof(int) * inSize);
+  float *a = malloc(sizeof(float) * inSize);
+  float *expected = malloc(sizeof(float) * inSize);
+  float *out = malloc(sizeof(float) * inSize);
+
   for(int i = 0; i < inSize; ++i) {
-    a[i] = i + 1;
-    b[i] = i - 1;
-    expected[i] = 2 * i;
+    a[i] = i;
+    expected[i] = a[i] + 1;
   }
 
   printf("Running on DFE.\n");
-  BRAMReadWrite(inSize, a, b, out);
+  BRAMReadWrite(inSize, a, out);
 
-
-  /***
-      Note that you should always test the output of your DFE
-      design against a CPU version to ensure correctness.
-  */
+  int status = 1;
   for (int i = 0; i < inSize; i++)
-    if (out[i] != expected[i]) {
-      printf("Output from DFE did not match CPU: %d : %d != %d\n",
+    if (fabs(out[i] - expected[i]) > 1e-10) {
+      printf("Output from DFE did not match CPU: %d : %f != %f\n",
         i, out[i], expected[i]);
-      return 1;
+      status = 0;
     }
 
-  printf("Test passed!\n");
+  if (status)
+    printf("Test passed!\n");
+  else
+    printf("Test failed\n");
   return 0;
 }

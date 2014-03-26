@@ -1,5 +1,13 @@
 /***
-	TODO Add a descriptive comment!
+    Streams data from CPU to the kernel. Note that for an input stream
+    of size N, the kernel will run for 3 * N cycles:
+
+    1. N cycles for loading the data into the local BRAM
+
+    2. N cycles for reading back, incrementing and writing the results back
+
+    3. N cycles for reading the final results back and streaming them
+    to CPU
 */
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
@@ -12,29 +20,30 @@ public class BRAMReadWriteManager extends CustomManager{
 
     private static final String s_kernelName  = "BRAMReadWriteKernel";
 
+    private static final int DATA_SIZE = 16;
+
     BRAMReadWriteManager(EngineParameters ep)
     {
         super(ep);
 
-        KernelBlock k = addKernel(new BRAMReadWriteKernel(makeKernelParameters(s_kernelName)));
+        KernelBlock k = addKernel(new BRAMReadWriteKernel(makeKernelParameters(s_kernelName),
+							  DATA_SIZE));
 
-        k.getInput("a") <== addStreamFromCPU("a");
-        k.getInput("b") <== addStreamFromCPU("b");
+        k.getInput("input") <== addStreamFromCPU("input");
         addStreamToCPU("output") <== k.getOutput("output");
     }
 
     private static EngineInterface interfaceDefault() {
         EngineInterface engine_interface = new EngineInterface();
-        CPUTypes type = CPUTypes.INT32;
+        CPUTypes type = CPUTypes.FLOAT;
         int size = type.sizeInBytes();
 
         InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam sizeBytes = N * size;
 
-        engine_interface.setTicks(s_kernelName, N);
+        engine_interface.setTicks(s_kernelName, 3 * N);
 
-        engine_interface.setStream("a", type, sizeBytes);
-        engine_interface.setStream("b", type, sizeBytes);
+        engine_interface.setStream("input", type, sizeBytes);
         engine_interface.setStream("output", type, sizeBytes);
         return engine_interface;
     }
@@ -43,6 +52,7 @@ public class BRAMReadWriteManager extends CustomManager{
     public static void main(String[] args) {
         BRAMReadWriteManager manager = new BRAMReadWriteManager(new EngineParameters(args));
         manager.createSLiCinterface(interfaceDefault());
+	manager.addMaxFileConstant("dataSize", DATA_SIZE);
         manager.build();
     }
 }

@@ -1,19 +1,57 @@
 /***
-	TODO: Add a descriptive comment!
+    A simple kernel that:
+
+    1. loads some data into its local memory
+
+    2. increments every data item (this is a floating point operation
+    so it has some latency associated)
+
+    3. sends back its local memory contents to the CPU
+
+    This can be used for operations like x[i] = f(x[i]) where x is a
+    vector stored in BRAM and f has latency l (measured using
+    `stream.measureDistance()`).
 */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
 
 class BRAMReadWriteKernel extends Kernel {
 
-    protected BRAMReadWriteKernel(KernelParameters parameters) {
+    private final DFEType FLOAT = dfeFloat(8, 24);
+    private final DFEVar ONE = constant.var(FLOAT, 1);
+
+    protected BRAMReadWriteKernel(KernelParameters parameters,
+                                  int dataSize) {
         super(parameters);
 
-        DFEVar a = io.input("a", dfeInt(32));
-        DFEVar b = io.input("b", dfeInt(32));
-        io.output("output", a + b, dfeInt(32));
+        DFEVar cycleCounter = control.count.simpleCounter(32);
+        DFEVar a = io.input("input", FLOAT, cycleCounter < dataSize);
+
+        Memory<DFEVar> memory = mem.alloc(FLOAT, 2 * dataSize);
+
+        DFEVar address = control.count.simpleCounter(32, dataSize)
+            .cast(dfeUInt(MathUtils.bitsToAddress(2 * dataSize)));
+        DFEVar memData = memory.read(address);
+
+        /***
+            Write data to BRAM on the first dataSize cycles; on the
+            following cycles, write the result of some computation
+            which has latency.
+        */
+        DFEVar memUpdate = memData + 1;
+        DFEVar memInput = cycleCounter < dataSize ? a: memData + 1;
+        Stream.OffsetExpr offset = stream.measureDistance("Offset", address, memInput);
+        // Note! We should also buffer the write enable signal if its value is not always one
+        memory.write(stream.offset(address, -offset),
+                     stream.offset(memInput, -offset),
+                     constant.var(dfeUInt(1), 1));
+
+        io.output("output", memData, FLOAT, cycleCounter >= 2 * dataSize);
     }
 
 }
