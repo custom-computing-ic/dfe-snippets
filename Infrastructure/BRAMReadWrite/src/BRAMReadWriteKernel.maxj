@@ -10,7 +10,10 @@
 
     This can be used for operations like x[i] = f(x[i]) where x is a
     vector stored in BRAM and f has latency l (measured using
-    `stream.measureDistance()`).
+    `stream.measureDistance()`). Note that extra buffering is required
+    since the data becomes available l cycles after the write address
+    is generated.
+
 */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
