@@ -20,7 +20,7 @@ int32_t intCpuResult(int a, int b)
 
     int32_t imod1   = a % 3;          // = 2^2 - 1
     int32_t imod2   = b % 32767;      // = 2^15 - 1
-    int32_t imod3   = b % 2147483647; // = 2^31 - 1 , 1345345345
+    int32_t imod3   = b % 2147483646; // = 2^31 - 1
 
     int32_t iexp    = exp(b);
     int32_t isqrt   = sqrt(b);
@@ -38,7 +38,7 @@ int32_t intCpuResult(int a, int b)
 }
 
 /*** Single Precision Floating point arithmetic operations */
-float intFloatResult(int a, int b)
+float floatResult(int a, int b)
 {
     float spA = (float)a;
     float spB = (float)b;
@@ -77,7 +77,7 @@ float intFloatResult(int a, int b)
 }
 
 /*** Double Precision Floating point arithmetic operations */
-double intDoubleResult(int a, int b, int useTrig)
+double doubleResult(int a, int b, int useTrig)
 {
     double dpA = (double)a;
     double dpB = (double)b;
@@ -136,15 +136,17 @@ int main(void)
   double *dpRes = malloc(sizeof(double) * inSize);
 
   for(int i = 0; i < inSize; ++i) {
-    a[i] = i + 1;
-    b[i] = i - 1;
+    a[i] = i + 4;
+    b[i] = i + 5;
   }
 
   printf("Running on DFE.\n");
   ResourceUsage(inSize, a, a, a, b, b, b, dpRes, intRes, mpRes, spRes);
 
-  float  spTol = 1e-8;
-  double dpTol = 1e-16;
+  // we allow for some rounding in integer math
+  int    intTol = 2;
+  float  spTol  = 1e-8;
+  double dpTol  = 1e-16;
 
   // on Max3 there's no problem compiling HW with trigonometric functions
   // in double precision but on Max4 (Maia) it doesn't compile (MaxCompiler 2013.2.2).
@@ -152,25 +154,26 @@ int main(void)
 
   for (int i = 0; i < inSize; i++) {
     int intExp  = intCpuResult(a[i],b[i]);
-    float flExp = intFloatResult(a[i],b[i]);
-    double dpExp = intDoubleResult(a[i],b[i], useTrigonometricFunctionsOnDFE);
+    float flExp = floatResult(a[i],b[i]);
+    double dpExp = doubleResult(a[i],b[i], useTrigonometricFunctionsOnDFE);
     float mpExp = (float)dpExp;
-    if (intRes[i] != intExp){
+    if ((intRes[i] - intExp) > intTol){
         printf("Integer output from DFE did not match CPU: %d : %d != %d\n", i, intRes[i], intExp);
         return 1;
     }
     if ((spRes[i] - flExp) > spTol){
-        printf("Single precision output from DFE did not match CPU: %d : %f != %f\n", i, spRes[i], exp);
+        printf("Single precision output from DFE did not match CPU: %d : %f != %f\n", i, spRes[i], flExp);
         return 1;
     }
     if ((mpRes[i] - mpExp) > spTol){
-        printf("Middle precision output from DFE did not match CPU: %d : %f != %f\n", i, mpRes[i], exp);
+        printf("Middle precision output from DFE did not match CPU: %d : %f != %f\n", i, mpRes[i], mpExp);
         return 1;
     }
     if ((dpRes[i] - dpExp) > dpTol){
-        printf("Double precision output from DFE did not match CPU: %d : %f != %f\n", i, dpRes[i], exp);
+        printf("Double precision output from DFE did not match CPU: %d : %f != %f\n", i, dpRes[i], dpExp);
         return 1;
     }
+
   }
 
   printf("Test passed!\n");

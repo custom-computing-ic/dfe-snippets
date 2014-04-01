@@ -32,6 +32,8 @@
 import com.maxeler.maxcompiler.v2.kernelcompiler.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.RoundingMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.Optimization;
 
 class ResourceUsageKernel extends Kernel {
 
@@ -40,6 +42,9 @@ class ResourceUsageKernel extends Kernel {
 
     protected ResourceUsageKernel(KernelParameters parameters) {
         super(parameters);
+
+        // Set integer rounding mode to match CPU
+        optimization.pushRoundingMode(RoundingMode.TRUNCATE);
 
         /*** 32 bit integer operations */
         DFEVar a = io.input("a0", int32);
@@ -53,7 +58,7 @@ class ResourceUsageKernel extends Kernel {
         /*** KernelMath routines for 32bit integers */
         DFEVar imod1   = KernelMath.modulo(a, 3);          // = 2^2 - 1
         DFEVar imod2   = KernelMath.modulo(b, 32767);      // = 2^15 - 1
-        DFEVar imod3   = KernelMath.modulo(b, 2147483647); // = 2^31 - 1 , 1345345345
+        DFEVar imod3   = KernelMath.modulo(b, 2147483647); // = 2^31 - 1
 
         DFEVar iexp    = KernelMath.exp(b);
         DFEVar isqrt   = KernelMath.sqrt(new KernelMath.Range(-1000.0, 1000.0),b, int32);
