@@ -14,8 +14,11 @@
 
 
 # ---- Paths ----
-SIMMAXDIR=$(PRJ)_$(DFEModel)_DFE_SIM/results
-DFEMAXDIR=$(PRJ)_$(DFEModel)_DFE/results
+ifndef $(MAXCOMPILER_BUILD_DIR)
+	MAXCOMPILER_BUILD_DIR=.
+endif
+SIMMAXDIR=$(MAXCOMPILER_BUILD_DIR)/$(PRJ)_$(DFEModel)_DFE_SIM/results
+DFEMAXDIR=$(MAXCOMPILER_BUILD_DIR)/$(PRJ)_$(DFEModel)_DFE/results
 MAXELEROSDIR_SIM:=$(MAXCOMPILERDIR)/lib/maxeleros-sim
 
 # ---- Source files ----

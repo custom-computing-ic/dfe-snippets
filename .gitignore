@@ -18,3 +18,7 @@
 # 3. Ignore other compiled objects
 *.class
 *.o
+
+# 4. Igonre vim temporary files
+*~
+*.swp
