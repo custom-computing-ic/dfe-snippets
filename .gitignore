@@ -19,6 +19,6 @@
 *.class
 *.o
 
-# 4. Igonre vim temporary files
+# 4. Ignore vim temporary files
 *~
 *.swp
