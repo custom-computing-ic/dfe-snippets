@@ -1,8 +1,8 @@
     LUTs     FFs   BRAMs    DSPs : ResourceUsageKernel.maxj
-  109488  141679     631     249 : resources used by this file
-  20.86%  13.50%  24.58%  12.68% : % of available
-  90.66%  91.62%  81.21% 100.00% : % of total used
-  99.61%  99.19%  99.21% 100.00% : % of user resources
+  109090  140467     630     249 : resources used by this file
+  20.79%  13.38%  24.54%  12.68% : % of available
+  90.62%  91.57%  81.19% 100.00% : % of total used
+  99.60%  99.18%  99.21% 100.00% : % of user resources
 
                                  : /***
                                  :     This benchmark performs a number of floating point, integer and
@@ -17,7 +17,7 @@
                                  :     figures should serve as a reasonable estimate.
                                  : 
                                  :     TODO it would be good to include __all__ operations supported on streams.
-                                 :     TODO add more integer precisions
+                                 :     TODO add more integer precisions.
                                  : 
                                  :     Note: available floating point precisions are not arbitrary. Here's
                                  :     MaxCompiler exception message:
@@ -38,6 +38,8 @@
                                  : import com.maxeler.maxcompiler.v2.kernelcompiler.*;
                                  : import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
                                  : import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.*;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.RoundingMode;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.Optimization;
                                  : 
                                  : class ResourceUsageKernel extends Kernel {
                                  : 
@@ -47,30 +49,33 @@
                                  :     protected ResourceUsageKernel(KernelParameters parameters) {
                                  :         super(parameters);
                                  : 
+                                 :         // Set integer rounding mode to match CPU
+                                 :         optimization.pushRoundingMode(RoundingMode.TRUNCATE);
+                                 : 
                                  :         /*** 32 bit integer operations */
-       1      34       0       0 :         DFEVar a = io.input("a0", int32);
+       1      32       0       0 :         DFEVar a = io.input("a0", int32);
        1      33       0       0 :         DFEVar b = io.input("b0", int32);
       32      32       0       0 :         DFEVar sum  = a + b;
       32      32       0       0 :         DFEVar sub  = a - b;
-      13     149       1       2 :         DFEVar prod = a * b;
-    1571    2905      16       0 :         DFEVar div  = a / b;
+      13     147       1       2 :         DFEVar prod = a * b;
+    1505    2768      16       0 :         DFEVar div  = a / b;
                                  : 
                                  : 
                                  :         /*** KernelMath routines for 32bit integers */
-      39     177       3       0 :         DFEVar imod1   = KernelMath.modulo(a, 3);          // = 2^2 - 1
-     561    1090       0       0 :         DFEVar imod2   = KernelMath.modulo(b, 32767);      // = 2^15 - 1
-    1063    1555       1       0 :         DFEVar imod3   = KernelMath.modulo(b, 2147483647); // = 2^31 - 1 , 1345345345
+      17     167       2       0 :         DFEVar imod1   = KernelMath.modulo(a, 3);          // = 2^2 - 1
+     561    1087       0       0 :         DFEVar imod2   = KernelMath.modulo(b, 32767);      // = 2^15 - 1
+    1056    1584       0       0 :         DFEVar imod3   = KernelMath.modulo(b, 2147483647); // = 2^31 - 1
                                  : 
-    1179    1230       7      13 :         DFEVar iexp    = KernelMath.exp(b);
-     663    1570       6       8 :         DFEVar isqrt   = KernelMath.sqrt(new KernelMath.Range(-1000.0, 1000.0),b, int32);
-     247     613       4       8 :         DFEVar isin    = KernelMath.sin(b);
-     261     692       5       8 :         DFEVar icos    = KernelMath.cos(b);
+    1179    1235       7      13 :         DFEVar iexp    = KernelMath.exp(b);
+     678    1512       7       8 :         DFEVar isqrt   = KernelMath.sqrt(new KernelMath.Range(-1000.0, 1000.0),b, int32);
+     244     610       4       8 :         DFEVar isin    = KernelMath.sin(b);
+     258     685       5       8 :         DFEVar icos    = KernelMath.cos(b);
       22      33       0       0 :         DFEVar imax    = KernelMath.max(a, b);
-       0     236       0       0 :         DFEVar imin    = KernelMath.min(a, b);
-       0      69       0       0 :         DFEVar iabs    = KernelMath.abs(iexp);
+       0     242       0       0 :         DFEVar imin    = KernelMath.min(a, b);
+       0      70       0       0 :         DFEVar iabs    = KernelMath.abs(iexp);
                                  : 
                                  : 
-     231     260       1       0 :         DFEVar intArithmetic  = sum + sub + prod + div;
+     231     261       1       0 :         DFEVar intArithmetic  = sum + sub + prod + div;
                                  :         DFEVar intKernelMaths = 
                                  :                            iexp + isqrt + isin + icos + imax + imin + iabs +
                                  :                            imod1.cast(int32) + imod2.cast(int32) + imod3.cast(int32);
@@ -82,37 +87,42 @@
                                  :         /*** Single Precision Floating point arithmetic operations */
                                  :         DFEType spfloat = dfeFloat(8, 24);
                                  : 
-      41      81       0       0 :         DFEVar spA = a.cast(spfloat);
-     200     246       0       0 :         DFEVar spB = b.cast(spfloat);
-     621     832       6       0 :         DFEVar sumsp = spA + spB;
-     316     404       0       0 :         DFEVar subsp = spA - spB;
-     162     411       2       1 :         DFEVar prodsp = spA * spB;
-    3382    3246      12       0 :         DFEVar divsp  = spA / spB;
+     201     247       0       0 :         DFEVar spA = a.cast(spfloat);
+     200     243       0       0 :         DFEVar spB = b.cast(spfloat);
+     621     779       6       0 :         DFEVar sumsp = spA + spB;
+     316     400       0       0 :         DFEVar subsp = spA - spB;
+     174     470       3       1 :         DFEVar prodsp = spA * spB;
+    3382    3234      12       0 :         DFEVar divsp  = spA / spB;
                                  : 
-                                 :         // Is this cheaper in resource utilisation than (sumsp + subsp)?
-      41      84       0       0 :         DFEVar spA1 = a.cast(spfloat);
-      41      83       0       0 :         DFEVar spB1 = b.cast(spfloat);
-     581     624       5       0 :         DFEVar sumsp2 = spA1 - (-spB1);
+                                 :         /***
+                                 :             Since subtraction is cheaper in resources than addition, may
+                                 :             it happen that (spA - (-spB)) takes less resources than (spA + spB)?
+                                 :             Let's test it! In order to fool compiler optimizations out,
+                                 :             tryint (spA - (-spB) out on a new variables:
+                                 :         */
+      41      82       0       0 :         DFEVar spA1 = a.cast(spfloat);
+      41      80       0       0 :         DFEVar spB1 = b.cast(spfloat);
+     582     627       5       0 :         DFEVar sumsp2 = spA1 - (-spB1);
                                  :         DFEVar negsp = (-spA1);
                                  : 
                                  : 
-    2908    3200      19       0 :         DFEVar spArithmetic = sumsp + subsp + negsp + prodsp + divsp + sumsp2;
+    2909    3197      19       0 :         DFEVar spArithmetic = sumsp + subsp + negsp + prodsp + divsp + sumsp2;
                                  : 
                                  : 
                                  :         /*** KernelMath routines for single precision floating point */
-     620    1137       9       7 :         DFEVar splogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), spA, spfloat);
-     608    1159       8       7 :         DFEVar splogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), spB, spfloat);
-     424     784       6       3 :         DFEVar splog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), spA, spfloat);
-     426     920       7       3 :         DFEVar splog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), spB, spfloat);
-     718     933       8       5 :         DFEVar spexp   = KernelMath.exp(spA);
-      68     357       1       0 :         DFEVar spmax   = KernelMath.max(spA, spB);
-      45      12       1       0 :         DFEVar spmin   = KernelMath.min(spA, spB);
+     626    1149      10       7 :         DFEVar splogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), spA, spfloat);
+     629    1148      10       7 :         DFEVar splogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), spB, spfloat);
+     411     695       5       3 :         DFEVar splog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), spA, spfloat);
+     422     946       6       3 :         DFEVar splog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), spB, spfloat);
+     708     840       8       5 :         DFEVar spexp   = KernelMath.exp(spA);
+      68     286       1       0 :         DFEVar spmax   = KernelMath.max(spA, spB);
+      45      13       1       0 :         DFEVar spmin   = KernelMath.min(spA, spB);
        8       6       1       0 :         DFEVar spabs   = KernelMath.abs(spexp);
-     780     945       6       0 :         DFEVar spceil  = KernelMath.ceil(spA);
-     765     975       5       0 :         DFEVar spfloor = KernelMath.floor(spA);
-     947    1781       8       8 :         DFEVar spcos   = KernelMath.cos(spA);
-     940    1799       8       8 :         DFEVar spsin   = KernelMath.sin(spA);
-     472     900       1       0 :         DFEVar spsqrt  = KernelMath.sqrt(spA);
+     781     946       6       0 :         DFEVar spceil  = KernelMath.ceil(spA);
+     764     982       5       0 :         DFEVar spfloor = KernelMath.floor(spA);
+     947    1782       8       8 :         DFEVar spcos   = KernelMath.cos(spA);
+     940    1815       8       8 :         DFEVar spsin   = KernelMath.sin(spA);
+     472     903       1       0 :         DFEVar spsqrt  = KernelMath.sqrt(spA);
                                  : 
                                  :         /***
                                  :              This doesn't compile (on Maia) unless 'power' argument for
@@ -126,14 +136,14 @@
                                  :              (exponent+1) precision and lower:
                                  :         */
                                  :         DFEVar power8bit = constant.var(dfeInt(8), 5);
-     232     326       0       3 :         DFEVar sppow2    = KernelMath.pow2(power8bit,spfloat);
+     232     321       0       3 :         DFEVar sppow2    = KernelMath.pow2(power8bit,spfloat);
      233     321       0       3 :         DFEVar sppow2a   = KernelMath.pow2(power9bit,spfloat);
                                  : 
-    8891    9623      60       0 :         DFEVar spKernelMath = splogRange1 + splogRange2 + splog2Range1 + splog2Range2 +
+    8892    9670      60       0 :         DFEVar spKernelMath = splogRange1 + splogRange2 + splog2Range1 + splog2Range2 +
                                  :                               spexp + spmax + spmin + spabs + spceil + spfloor + spcos + spsin +
                                  :                               sppow2 + sppow2a + spscalb + spsqrt;
                                  : 
-     603     656       5       0 :         DFEVar spResult = spArithmetic + spKernelMath;
+     603     654       5       0 :         DFEVar spResult = spArithmetic + spKernelMath;
                                  :         io.output("spResult", spResult, spfloat);
                                  : 
                                  : 
@@ -142,37 +152,44 @@
        1      33       0       0 :         DFEVar a1 = io.input("a1", int32);
        1      33       0       0 :         DFEVar b1 = io.input("b1", int32);
                                  : 
-     167     117       2       0 :         DFEVar mpA = a1.cast(float43bit);
-     159     116       2       0 :         DFEVar mpB = b1.cast(float43bit);
-     807     868       7       0 :         DFEVar summp  = mpA + mpB;
-     421     508       0       0 :         DFEVar submp  = mpA - mpB;
-     232     526       5       2 :         DFEVar prodmp = mpA * mpB;
-    5453    5446      14       0 :         DFEVar divmp  = mpA / mpB;
+     159     128       2       0 :         DFEVar mpA = a1.cast(float43bit);
+     160     118       2       0 :         DFEVar mpB = b1.cast(float43bit);
+     806     870       7       0 :         DFEVar summp  = mpA + mpB;
+     421     507       0       0 :         DFEVar submp  = mpA - mpB;
+     232     529       5       2 :         DFEVar prodmp = mpA * mpB;
+    5454    5429      14       0 :         DFEVar divmp  = mpA / mpB;
                                  : 
-                                 :         // Is this cheaper in resource utilisation than (summp + submp)?
+                                 :         /***
+                                 :             Since subtraction is cheaper in resources than addition, may
+                                 :             it happen that (mpA - (-mpB)) takes less resources than (mpA + mpB)?
+                                 :             Let's test it! In order to fool compiler optimizations out,
+                                 :             tryint (mpA - (-mpB) out on a new variables:
+                                 :         */
      154     203       1       0 :         DFEVar mpA1 = a.cast(float43bit);
-     154     218       1       0 :         DFEVar mpB1 = b.cast(float43bit);
-     754     783       6       0 :         DFEVar summp2 = mpA1 - (-mpB1);
+     154     213       1       0 :         DFEVar mpB1 = b.cast(float43bit);
+     756     775       6       0 :         DFEVar summp2 = mpA1 - (-mpB1);
                                  :         DFEVar negmp = (-mpA1);
                                  : 
-    3862    4088      19       0 :         DFEVar mpArithmetic = summp + submp + negmp + prodmp + divmp + summp2;
+    3862    4094      19       0 :         DFEVar mpArithmetic = summp + submp + negmp + prodmp + divmp + summp2;
                                  : 
                                  : 
                                  :         /*** KernelMath routines for double precision floating point */
      845    1596      13       8 :         DFEVar mplogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), mpA, float43bit);
-     857    1570      15       8 :         DFEVar mplogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), mpB, float43bit);
-     585    1056       7       6 :         DFEVar mplog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), mpA, float43bit);
-     610    1076       9       6 :         DFEVar mplog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), mpB, float43bit);
-    1111    1201       9       8 :         DFEVar mpexp   = KernelMath.exp(mpA);
-      83     471       0       0 :         DFEVar mpmax   = KernelMath.max(mpA, mpB);
-     110     384       4       0 :         DFEVar mpmin   = KernelMath.min(mpA, mpB);
-      16      11       2       0 :         DFEVar mpabs   = KernelMath.abs(mpexp);
-     959    1238       9       0 :         DFEVar mpceil  = KernelMath.ceil(mpA);
-     925    1229       6       0 :         DFEVar mpfloor = KernelMath.floor(mpA);
-     759    1480       1       0 :         DFEVar mpsqrt  = KernelMath.sqrt(mpA);
+     857    1559      15       8 :         DFEVar mplogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), mpB, float43bit);
+     584    1055       7       6 :         DFEVar mplog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), mpA, float43bit);
+     608    1061       9       6 :         DFEVar mplog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), mpB, float43bit);
+    1100    1239       8       8 :         DFEVar mpexp   = KernelMath.exp(mpA);
+      99     375       2       0 :         DFEVar mpmax   = KernelMath.max(mpA, mpB);
+     110     393       4       0 :         DFEVar mpmin   = KernelMath.min(mpA, mpB);
+      16      12       2       0 :         DFEVar mpabs   = KernelMath.abs(mpexp);
+     961    1221       9       0 :         DFEVar mpceil  = KernelMath.ceil(mpA);
+     923    1230       6       0 :         DFEVar mpfloor = KernelMath.floor(mpA);
+     759    1452       1       0 :         DFEVar mpsqrt  = KernelMath.sqrt(mpA);
                                  : 
                                  :         /***
-                                 :             This doesn't compile: Altera MegaWizard's float-to-float conversion error:
+                                 :             This doesn't compile on Maia with a message
+                                 :                'Altera MegaWizard's float-to-float conversion error'
+                                 :             but perfectly compiles on Max3:
                                  : 
                                  :             DFEVar mpcos   = KernelMath.cos(mpA);
                                  :             DFEVar mpsin   = KernelMath.sin(mpB);
@@ -183,17 +200,17 @@
                                  :              scalb is 12-bit wide for 43bit floats with 11-bit exponent (=exponent + 1?)
                                  :         */
                                  :         DFEVar power12bit = constant.var(dfeInt(12), 5);
-      43      54       2       0 :         DFEVar mpscalb = KernelMath.scalb(mpA, power12bit);
+      43      53       2       0 :         DFEVar mpscalb = KernelMath.scalb(mpA, power12bit);
                                  : 
                                  :         /***
                                  :              It seems pow2 can accept 'power' argument of 12-bit
                                  :              (exponent+1) precision and lower:
                                  :         */
-     435     557       0       4 :         DFEVar mppow2  = KernelMath.pow2(power8bit, float43bit);
+     435     558       0       4 :         DFEVar mppow2  = KernelMath.pow2(power8bit, float43bit);
      436     562       0       4 :         DFEVar mppow2a = KernelMath.pow2(power12bit,float43bit);
                                  : 
                                  : 
-   10270   10637      52       0 :         DFEVar mpKernelMath = mpexp + mpmax + mpmin + 
+   10271   10605      52       0 :         DFEVar mpKernelMath = mpexp + mpmax + mpmin + 
                                  :                               mpabs + mpceil + mpfloor +
                                  :                               mpsqrt + mpscalb + mppow2 + mppow2a +
                                  : //                              mpcos + mpsin +
@@ -201,7 +218,7 @@
                                  :                               mplog2Range1.cast(float43bit) + mplog2Range2.cast(float43bit)
                                  :                             ;
                                  : 
-     904     964       4       0 :         DFEVar mpResult = (mpArithmetic + mpKernelMath).cast(spfloat);
+     905     962       4       0 :         DFEVar mpResult = (mpArithmetic + mpKernelMath).cast(spfloat);
        0       1       0       0 :         io.output("mpResult", mpResult, spfloat);
                                  : 
                                  : 
@@ -210,19 +227,25 @@
        1      32       0       0 :         DFEVar a2 = io.input("a2", int32);
        1      33       0       0 :         DFEVar b2 = io.input("b2", int32);
                                  : 
-     174     127       4       0 :         DFEVar dpA = a2.cast(dpfloat);
-     196     141       5       0 :         DFEVar dpB = b2.cast(dpfloat);
-    1058    1249       5       0 :         DFEVar sumdp  = dpA + dpB;
-     642     749       0       0 :         DFEVar subdp  = dpA - dpB;
-     356     930       3       4 :         DFEVar proddp = dpA * dpB;
-    9630    7896      28       0 :         DFEVar divdp  = dpA / dpB;
-                                 :         // Is this cheaper in resource utilisation than (summp + submp)?
-     153     203       1       0 :         DFEVar dpA1 = a.cast(dpfloat);
-     160     146       2       0 :         DFEVar dpB1 = b.cast(dpfloat);
-    1058    1347       4       0 :         DFEVar sumdp2 = dpA1 - (-dpB1);
+     162     207       1       0 :         DFEVar dpA = a2.cast(dpfloat);
+     184     217       2       0 :         DFEVar dpB = b2.cast(dpfloat);
+    1057    1249       5       0 :         DFEVar sumdp  = dpA + dpB;
+     641     756       0       0 :         DFEVar subdp  = dpA - dpB;
+     356     927       3       4 :         DFEVar proddp = dpA * dpB;
+    9620    7876      27       0 :         DFEVar divdp  = dpA / dpB;
+                                 : 
+                                 :         /***
+                                 :             Since subtraction is cheaper in resources than addition, may
+                                 :             it happen that (dpA - (-dpB)) takes less resources than (dpA + dpB)?
+                                 :             Let's test it! In order to fool compiler optimizations out,
+                                 :             tryint (dpA - (-dpB) out on a new variables:
+                                 :         */
+     187     181       4       0 :         DFEVar dpA1 = a.cast(dpfloat);
+       0       4       0       0 :         DFEVar dpB1 = b.cast(dpfloat);
+    1040    1264       5       0 :         DFEVar sumdp2 = dpA1 - (-dpB1);
                                  :         DFEVar negdp = (-dpA1);
                                  : 
-    5220    7367      10       0 :         DFEVar dpArithmetic = sumdp + subdp + negdp + proddp + divdp + sumdp2;
+    5219    7378      10       0 :         DFEVar dpArithmetic = sumdp + subdp + negdp + proddp + divdp + sumdp2;
                                  : 
                                  : 
                                  : 
@@ -231,7 +254,8 @@
                                  :              Some KernelMath routines have contraints on supported precisions:
                                  :                 - log  expects output type to be 2..50 bit wide.
                                  :                 - log2 expects output type to be 2..60 bit wide.
-                                 :                 - sin/cos cause exponential code bloat inside java compiler:
+                                 :                 - sin/cos cause exponential time expression evaluation at java
+                                 :                   runtime:
                                  :                     43 bit wide input: seconds,
                                  :                     44 bit wide input: 6 minutes,
                                  :                     50 bit wide input: compilation stopped after 8.5 hours
@@ -239,25 +263,25 @@
                                  :         */
                                  : 
                                  :         // for KernelMath.log
-                                 :         DFEType float60bit  = dfeFloat(11, 49);
-                                 :         // for KernelMath.log2
                                  :         DFEType float50bit = dfeFloat(11, 39);
+                                 :         // for KernelMath.log2
+                                 :         DFEType float60bit  = dfeFloat(11, 49);
                                  : 
-    1136    2011      15      16 :         DFEVar dplogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), dpA, float50bit);
-    1138    1996      15      16 :         DFEVar dplogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), dpB, float50bit);
-     997    1693      26      12 :         DFEVar dplog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), dpA, float60bit);
-    1034    1673      27      12 :         DFEVar dplog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), dpB, float60bit);
-    2366    2530      17      24 :         DFEVar dpexp   = KernelMath.exp(dpA);
-     110     472       4       0 :         DFEVar dpmax   = KernelMath.max(dpA, dpB);
-     110     122       4       0 :         DFEVar dpmin   = KernelMath.min(dpA, dpB);
+    1142    2003      16      16 :         DFEVar dplogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), dpA, float50bit);
+    1144    1994      16      16 :         DFEVar dplogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), dpB, float50bit);
+    1000    1562      24      12 :         DFEVar dplog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), dpA, float60bit);
+    1021    1660      27      12 :         DFEVar dplog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), dpB, float60bit);
+    2372    2655      19      24 :         DFEVar dpexp   = KernelMath.exp(dpA);
+     110     466       4       0 :         DFEVar dpmax   = KernelMath.max(dpA, dpB);
+     110     119       4       0 :         DFEVar dpmin   = KernelMath.min(dpA, dpB);
       16      56       2       0 :         DFEVar dpabs   = KernelMath.abs(dpmax);
-    1216    1624       8       0 :         DFEVar dpceil  = KernelMath.ceil(dpA);
-    1166    1599       3       0 :         DFEVar dpfloor = KernelMath.floor(dpA);
-    1742    3374       1       0 :         DFEVar dpsqrt  = KernelMath.sqrt(dpA);
+    1210    1632       8       0 :         DFEVar dpceil  = KernelMath.ceil(dpA);
+    1164    1599       3       0 :         DFEVar dpfloor = KernelMath.floor(dpA);
+    1742    3364       1       0 :         DFEVar dpsqrt  = KernelMath.sqrt(dpA);
                                  : 
                                  :         /***
-                                 :             This doesn't compile on Maia with message
-                                 :                 'Altera MegaWizard's float-to-float conversion error'
+                                 :             This doesn't compile on Maia with a message
+                                 :                'Altera MegaWizard's float-to-float conversion error'
                                  :             but perfectly compiles on Max3:
                                  : 
                                  :             DFEType float44bit = dfeFloat(11, 33);
@@ -271,24 +295,24 @@
                                  :              This doesn't compile (on Maia) unless 'power' argument for
                                  :              scalb is 12-bit wide for 64bit floats with 11-bit exponent (=exponent + 1?)
                                  :         */
-      96     113       3       0 :         DFEVar dpscalb = KernelMath.scalb(dpA, power12bit);
+      96     108       3       0 :         DFEVar dpscalb = KernelMath.scalb(dpA, power12bit);
                                  : 
                                  :         /***
                                  :              It seems pow2 can accept 'power' argument of 12-bit
                                  :              (exponent+1) precision and lower:
                                  :         */
-    1236    1718       0      16 :         DFEVar dppow2  = KernelMath.pow2(power8bit,dpfloat);
-    1238    1725       0      16 :         DFEVar dppow2a = KernelMath.pow2(power12bit,dpfloat);
+    1238    1720       0      16 :         DFEVar dppow2  = KernelMath.pow2(power8bit,dpfloat);
+    1238    1720       0      16 :         DFEVar dppow2a = KernelMath.pow2(power12bit,dpfloat);
                                  : 
                                  : 
                                  :         DFEVar dpKernelMath = 
-   13855   19271      26       0 :                               dplogRange1.cast(dpfloat) + dplogRange2.cast(dpfloat) + 
-     168     385       0       0 :                               dplog2Range1.cast(dpfloat) + dplog2Range2.cast(dpfloat) +
+   13717   18922      26       0 :                               dplogRange1.cast(dpfloat) + dplogRange2.cast(dpfloat) + 
+                                 :                               dplog2Range1.cast(dpfloat) + dplog2Range2.cast(dpfloat) +
                                  :                               dpexp + dpmax + dpmin + dpabs + dpceil + dpfloor +
                                  : //                              dpcos.cast(dpfloat) + dpsin.cast(dpfloat) +
                                  :                               dpscalb + dppow2 + dppow2a + dpsqrt;
                                  : 
-    1042    1497       4       0 :         DFEVar dpResult = dpArithmetic + dpKernelMath;
+    1041    1512       4       0 :         DFEVar dpResult = dpArithmetic + dpKernelMath;
        0       1       0       0 :         io.output("dpResult", dpResult, dpfloat);
                                  : 
                                  :     }
