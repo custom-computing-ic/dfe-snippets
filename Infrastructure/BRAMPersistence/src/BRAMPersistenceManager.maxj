@@ -1,0 +1,44 @@
+/***
+*/
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class BRAMPersistenceManager extends CustomManager{
+
+    private static final String s_kernelName  = "BRAMPersistenceKernel";
+    private static final int    loopLatency   = 16;
+
+
+    BRAMPersistenceManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel(new BRAMPersistenceKernel(makeKernelParameters(s_kernelName), loopLatency));
+
+        addStreamToCPU("output") <== k.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.FLOAT;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam sizeBytes = N * size;
+
+        engine_interface.setTicks(s_kernelName, N * 2 * loopLatency);
+        engine_interface.setStream("output", type, sizeBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        BRAMPersistenceManager manager = new BRAMPersistenceManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}

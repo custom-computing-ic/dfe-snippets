@@ -1,0 +1,45 @@
+/***
+    A simple kernel that increments its floating point counter stored
+    in BRAM and stalls most of the time waiting for adder pipeline
+    to complete its work.
+
+    Key feature of this design is that it DOES NOT check the content
+    of BRAM location of its counter. As the result, two consecutive
+    runs of this kernel show a persistent state of a BRAM counter.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
+
+class BRAMPersistenceKernel extends Kernel {
+
+    private final DFEType FLOAT = dfeFloat(8, 24);
+
+    protected BRAMPersistenceKernel(KernelParameters parameters, int loopLatency)
+    {
+        super(parameters);
+
+        Memory<DFEVar> memory = mem.alloc(FLOAT, 2);
+        DFEVar address = constant.var(dfeUInt(1), 0);
+        DFEVar memData = memory.read(address);
+
+        Params params = control.count.makeParams(32)
+                        .withInitValue( 1 )
+                        .withMax( 2*loopLatency )
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        DFEVar residualCount = control.count.makeCounter(params).getCount();
+
+        DFEVar memUpdate = memData + 1;
+
+        memory.write(stream.offset(address, -loopLatency),
+                     stream.offset(memUpdate, -loopLatency),
+                     stream.offset(residualCount.eq(0), -loopLatency));
+
+        io.output("output", memUpdate, FLOAT, residualCount.eq(0));
+    }
+
+}
