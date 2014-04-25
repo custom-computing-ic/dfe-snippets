@@ -46,8 +46,12 @@ def main():
             return
 
         script = sys.argv[0]
-        if not script.startswith('scripts'):
-            print 'Run this script from the maxdfe-snippets project root directory.'
+
+        # TODO Add a a more reliable way to check if at root (perhaps
+        # based on the readme location?)
+        if not (script.startswith('scripts') or
+                script.startswith('./scripts')):
+            print 'Run this script from the maxdfe-snippets root directory.'
             return
 
     projectName = sys.argv[1]
