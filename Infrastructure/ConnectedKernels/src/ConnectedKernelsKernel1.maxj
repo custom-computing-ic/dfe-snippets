@@ -1,0 +1,18 @@
+/***
+    Just do some work on input vector and output it unconditionally.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class ConnectedKernelsKernel1 extends Kernel {
+
+    protected ConnectedKernelsKernel1(KernelParameters parameters) {
+        super(parameters);
+
+        DFEVar a = io.input("a", dfeInt(32));
+        io.output("output", a + 1, dfeInt(32));
+    }
+
+}
