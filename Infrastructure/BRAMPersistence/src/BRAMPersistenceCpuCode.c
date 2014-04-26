@@ -1,6 +1,6 @@
 /***
-    Stream some floats and check they are stored, incremented and read
-    properly from the kernel's local memory.
+    Run the Kernel twice and check their outputs are different due
+    to a presence of shared internal state.
 */
 
 #include <stdio.h>

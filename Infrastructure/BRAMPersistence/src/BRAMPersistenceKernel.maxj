@@ -3,16 +3,15 @@
     in BRAM and stalls most of the time waiting for adder pipeline
     to complete its work.
 
-    Key feature of this design is that it DOES NOT check the content
-    of BRAM location of its counter. As the result, two consecutive
-    runs of this kernel show a persistent state of a BRAM counter.
+    Key feature of this design is that it DOES NOT initialise the
+    counter stored in BRAM at first run cycle. As the result, two
+    consecutive runs of this kernel show a persistent state stored in BRAM.
 */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
-import com.maxeler.maxcompiler.v2.utils.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
 
 class BRAMPersistenceKernel extends Kernel {
