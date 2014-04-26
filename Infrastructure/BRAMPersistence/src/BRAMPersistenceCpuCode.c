@@ -26,9 +26,9 @@ int main(void)
     expected2[i] = i + inSize;
   }
 
-  printf("Running on DFE first time.\n");
-
-  BRAMPersistence(inSize, out);
+  printf("Running DFE first time.\n");
+  int32_t firstRun = 1;
+  BRAMPersistence(inSize, firstRun, out);
 
   int status = 1;
   for (int i = 0; i < inSize; i++)
@@ -43,9 +43,10 @@ int main(void)
     printf("\n");
   }
 
-  printf("Running on DFE second time.\n");
+  printf("Running DFE second time.\n");
 
-  BRAMPersistence(inSize, out);
+  firstRun = 0;
+  BRAMPersistence(inSize, firstRun, out);
 
   for (int i = 0; i < inSize; i++)
   {

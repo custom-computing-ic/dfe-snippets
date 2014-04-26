@@ -27,11 +27,13 @@ public class BRAMPersistenceManager extends CustomManager{
         CPUTypes type = CPUTypes.FLOAT;
         int size = type.sizeInBytes();
 
+        InterfaceParam firstRun = engine_interface.addParam("firstRun", CPUTypes.INT32);
         InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam sizeBytes = N * size;
 
         engine_interface.setTicks(s_kernelName, N * 2 * loopLatency);
         engine_interface.setStream("output", type, sizeBytes);
+        engine_interface.setScalar(s_kernelName, "firstRun", firstRun);
         return engine_interface;
     }
 
