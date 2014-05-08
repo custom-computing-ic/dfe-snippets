@@ -1,0 +1,53 @@
+/***
+	TODO Add a descriptive comment!
+*/
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class FifoBufferManager extends CustomManager{
+
+    private static final String s_kernelName    = "FifoBufferKernel";
+    private static final int fifoBufferCapacity = 8;
+
+    FifoBufferManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel(new FifoBufferKernel(makeKernelParameters(s_kernelName), fifoBufferCapacity));
+
+        k.getInput("input") <== addStreamFromCPU("input");
+        addStreamToCPU("inputsShiftedInTime") <== k.getOutput("inputsShiftedInTime");
+        addStreamToCPU("onlyOddInputs")      <== k.getOutput("onlyOddInputs");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam numInputs = engine_interface.addParam("numInputs", CPUTypes.INT);
+        InterfaceParam numCycles = engine_interface.addParam("numCycles", CPUTypes.INT);
+        InterfaceParam inputSizeBytes  = numInputs * size;
+        InterfaceParam outputSizeBytes = numCycles * size;
+
+        engine_interface.setTicks(s_kernelName, numCycles);
+        engine_interface.setScalar(s_kernelName, "numInputs", numInputs);
+
+        engine_interface.setStream("input", type, inputSizeBytes);
+        engine_interface.setStream("onlyOddInputs", type, outputSizeBytes);
+        engine_interface.setStream("inputsShiftedInTime", type, outputSizeBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        FifoBufferManager manager = new FifoBufferManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.addMaxFileConstant("fifoBufferCapacity", fifoBufferCapacity);
+        manager.build();
+    }
+}

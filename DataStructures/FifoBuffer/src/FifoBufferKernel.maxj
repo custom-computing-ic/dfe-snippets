@@ -1,0 +1,73 @@
+/***
+       This implements a FIFO buffer of fixed length (as shift register).
+       Push and Pop operations are performed same time. Data movements done
+       with 1 cycle latency.
+
+       Input value is put to the end of a buffer and will come out (return value)
+       only after bufferCapacity enabled cycles.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+
+class FifoBufferKernel extends Kernel {
+
+    private static final DFEType scalarType = dfeUInt(32);
+
+    protected FifoBufferKernel(KernelParameters parameters, int fifoBufferCapacity) {
+        super(parameters);
+
+        DFEVar cycleCounter = control.count.simpleCounter(32);
+        DFEVar numInputs = io.scalarInput("numInputs", scalarType);
+        DFEVar input = io.input("input", scalarType, cycleCounter < numInputs);
+
+        DFEVar onlyOddInputEnable = KernelMath.modulo(cycleCounter+1,2);
+        DFEVar alwaysEnable = constant.var(dfeBool(), 1);
+
+        /***
+            Here we push new entries at every cycle; members of FIFO queue
+            are shifted at each cycle as well, so the first input entry
+            is popped out exactly fifoBufferCapacity cycles after.
+        */
+        DFEVar inputsShiftedInTime   = fifoBufferPushPop(alwaysEnable, input, fifoBufferCapacity, scalarType);
+        /***
+            Here we not only push new entries only at odd kernel cycles (thus
+            we ignore all inputs at odd cycles), we also shift FIFO members
+            once in 2 cycles. The first input entry leaves the queue in
+            2*fifoBufferCapacity cycles.
+        */
+        DFEVar onlyOddInputs = fifoBufferPushPop(onlyOddInputEnable, input, fifoBufferCapacity, scalarType);
+
+        io.output("inputsShiftedInTime", inputsShiftedInTime, scalarType);
+        io.output("onlyOddInputs", onlyOddInputs, scalarType);
+    }
+
+
+    private DFEVar fifoBufferPushPop(DFEVar enable, DFEVar input, int bufferCapacity, DFEType dataType)
+    {
+        DFEVector<DFEVar> fifoBuffer = new DFEVectorType<DFEVar> (dataType, bufferCapacity).newInstance(this);
+        DFEVar stored = dataType.newInstance(this);
+ 
+        optimization.pushPipeliningFactor(0.0);
+        {
+            stored <== enable? stream.offset(fifoBuffer[bufferCapacity-1],-1) : stream.offset(stored,-1);
+            for (int i = 1; i < bufferCapacity; i++)
+            {
+                fifoBuffer[i] <== enable? stream.offset(fifoBuffer[i-1],-1) : stream.offset(fifoBuffer[i],-1);
+            }
+            fifoBuffer[0] <== enable? input : stream.offset(fifoBuffer[0],-1);
+        }
+ 
+        optimization.popPipeliningFactor();
+ 
+        return stored;
+    }
+}
