@@ -4,12 +4,15 @@ This implements a FIFO buffer of fixed length (as shift register).
 Push and Pop operations are performed same time. Data movements done
 with 1 cycle latency.
 
+Possible use cases:
+ * keeping persistent state in registers, not BRAM (buffer length = 1)
+ * implementing self-controlled input (see snippets in Infrastructure/InputDependentCounterIterateUntil and Infrastructure/InputDependentCounterTimesToRepeat)
+
 # Parameters
 
 Length of this buffer is a compile time parameter.
 
-# Example:
-
+# Example
 
  * Parameters: buffer size = 8
 
