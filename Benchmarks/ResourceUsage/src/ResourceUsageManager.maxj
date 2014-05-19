@@ -35,11 +35,16 @@ public class ResourceUsageManager extends CustomManager{
 
         engine_interface.setTicks(s_kernelName, N);
 
-        engine_interface.setStream("a", type, sizeBytes);
-        engine_interface.setStream("b", type, sizeBytes);
+        engine_interface.setStream("a0", type, sizeBytes);
+        engine_interface.setStream("a1", type, sizeBytes);
+        engine_interface.setStream("a2", type, sizeBytes);
+        engine_interface.setStream("b0", type, sizeBytes);
+        engine_interface.setStream("b1", type, sizeBytes);
+        engine_interface.setStream("b2", type, sizeBytes);
         engine_interface.setStream("intResult", type, sizeBytes);
         engine_interface.setStream("spResult", CPUTypes.FLOAT, spSizeBytes);
         engine_interface.setStream("dpResult", CPUTypes.DOUBLE, dpSizeBytes);
+        engine_interface.setStream("mpResult", CPUTypes.FLOAT, spSizeBytes);
         return engine_interface;
     }
 
