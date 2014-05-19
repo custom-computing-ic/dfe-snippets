@@ -118,8 +118,8 @@
 	  number of cycles to run should be replaced as the maximum of all the
 	  numTotalData when calling <max_set_ticks>:
 
-	  kernel_ticks = numFPGAs*2 * floor((max(numTotalData_i)+dataPerRound-1)
-	    / dataPerRound) * dataPerRound - dataPerRound;
+	  kernel_ticks = numFPGAs*2 * ceil((float)max(numTotalData_i)/
+	    dataPerRound) * dataPerRound - dataPerRound;
 	  
 	numFPGAs:
 	  Number of FPGAs to be used, 2 <= n <= maxCards 
