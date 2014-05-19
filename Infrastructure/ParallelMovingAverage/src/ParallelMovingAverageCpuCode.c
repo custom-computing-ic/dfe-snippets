@@ -1,5 +1,6 @@
 /***
-    TODO: Add a descriptive comment!
+    Run a maxfile in parallel on multiple DFEs using DFE groups and
+    OpenMP.
 */
 
 #include <stdio.h>
