@@ -14,9 +14,6 @@ int main(void)
 
   const int inSize = 384;
 
-  max_file_t* maxfile = ParallelMovingAverage_init();
-  max_engine_t* engine = max_load(maxfile, "local");
-
   int *a = malloc(sizeof(int) * inSize);
   int *b = malloc(sizeof(int) * inSize);
   int *expected = malloc(sizeof(int) * inSize);
@@ -30,21 +27,26 @@ int main(void)
 
   printf("Running on DFE.\n");
 
-  ParallelMovingAverage_actions_t actions;
-  actions.param_N = inSize;
-  actions.instream_a = a;
-  actions.instream_b = b;
-  actions.outstream_output = out;
+  const int numEngines = 1;
+  ParallelMovingAverage_actions_t *actions[numEngines];
+  for (int i = 0; i < numEngines; i++) {
+    actions[i] = malloc(sizeof(ParallelMovingAverage_actions_t));
+    actions[i]->param_N = inSize;
+    actions[i]->instream_a = a;
+    actions[i]->instream_b = b;
+    actions[i]->outstream_output = out;
+  }
 
+  max_file_t *maxfile = ParallelMovingAverage_init();
+  max_group_t *group = max_load_group(maxfile, MAXOS_EXCLUSIVE, "1", numEngines);
 
-  //  ParallelMovingAverage(inSize, a, b, out);
-  ParallelMovingAverage_run(engine, &actions);
+  ParallelMovingAverage_run_group(group, actions[0]);
+  //  ParallelMovingAverage_run_group(group, actions[1]);
 
-  max_unload(engine);
-  /***
-      Note that you should always test the output of your DFE
-      design against a CPU version to ensure correctness.
-  */
+  max_unload_group(group);
+
+  max_file_free(maxfile);
+
   for (int i = 0; i < inSize; i++)
     if (out[i] != expected[i]) {
       printf("Output from DFE did not match CPU: %d : %d != %d\n",
