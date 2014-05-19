@@ -12,6 +12,9 @@
 #       to project's directory and use makefile there)
 #
 
+# ---- Common Configuration Defaults ----
+
+NUMDEVICES ?= 1
 
 # ---- Paths ----
 SIMMAXDIR=$(PRJ)_$(DFEModel)_DFE_SIM/results
@@ -101,7 +104,7 @@ $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
 	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 runsim: $(PRJ)_sim
-	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) restart
+	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) -d$(NUMDEVICES) restart
 	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXOS_SIM) ./$(PRJ)_sim $(USER)a0:$(USER)a
 	make stopsim
 
