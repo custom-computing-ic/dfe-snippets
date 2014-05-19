@@ -7,56 +7,308 @@
     report, each operation is on a line of its own.
 
     Note! There may be inaccuracies (e.g. stray resources) either due
-    to MaxCompiler or to the backend Xilinx tools. However, the
+    to MaxCompiler or to the backend Xilinx/Altera tools. However, the
     figures should serve as a reasonable estimate.
 
-    TODO it would be good to include __all__ functions in KernelMath
-    and __all__ operations supported on streams.
+    TODO it would be good to include __all__ operations supported on streams.
+    TODO add more integer precisions.
+
+    Note: available floating point precisions are not arbitrary. Here's
+    MaxCompiler exception message:
+
+    Floating point types supported on Altera FPGAs are: single and double precision, 
+    as well as any type such that:
+    - exponent width is at least 11 bits
+    - exponent width is less than mantissa width
+    - mantissa width is at least 31 bits
+    - the total number of bits (sign + exponent + mantissa) is between 43 and 64, 
+    inclusive
+
+    Thus, it is not possible to declare e.g. 16 bit wide floating point number,
+    at least in the way portable to Max4.
+
  */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.RoundingMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.Optimization;
 
 class ResourceUsageKernel extends Kernel {
 
 
     DFEType int32 = dfeInt(32);
-    DFEType spfloat = dfeFloat(8, 24);
-    DFEType dpfloat = dfeFloat(11, 53);
 
     protected ResourceUsageKernel(KernelParameters parameters) {
         super(parameters);
 
-        /*** 32 bit integer operations */
-        DFEVar a = io.input("a", int32);
-        DFEVar b = io.input("b", int32);
-        DFEVar sum = a + b;
-        DFEVar sub = a - b;
-        DFEVar prod = a * b;
+        // Set integer rounding mode to match CPU
+        optimization.pushRoundingMode(RoundingMode.TRUNCATE);
 
-        DFEVar intResult = sum + sub + prod;
+        /*** 32 bit integer operations */
+        DFEVar a = io.input("a0", int32);
+        DFEVar b = io.input("b0", int32);
+        DFEVar sum  = a + b;
+        DFEVar sub  = a - b;
+        DFEVar prod = a * b;
+        DFEVar div  = a / b;
+
+
+        /*** KernelMath routines for 32bit integers */
+        DFEVar imod1   = KernelMath.modulo(a, 3);          // = 2^2 - 1
+        DFEVar imod2   = KernelMath.modulo(b, 32767);      // = 2^15 - 1
+        DFEVar imod3   = KernelMath.modulo(b, 2147483647); // = 2^31 - 1
+
+        DFEVar iexp    = KernelMath.exp(b);
+        DFEVar isqrt   = KernelMath.sqrt(new KernelMath.Range(-1000.0, 1000.0),b, int32);
+        DFEVar isin    = KernelMath.sin(b);
+        DFEVar icos    = KernelMath.cos(b);
+        DFEVar imax    = KernelMath.max(a, b);
+        DFEVar imin    = KernelMath.min(a, b);
+        DFEVar iabs    = KernelMath.abs(iexp);
+
+
+        DFEVar intArithmetic  = sum + sub + prod + div;
+        DFEVar intKernelMaths = 
+                           iexp + isqrt + isin + icos + imax + imin + iabs +
+                           imod1.cast(int32) + imod2.cast(int32) + imod3.cast(int32);
+        DFEVar intResult = intArithmetic + intKernelMaths;
         io.output("intResult", intResult, int32);
 
-        /*** Single Precision Floating point operations */
+
+
+        /*** Single Precision Floating point arithmetic operations */
+        DFEType spfloat = dfeFloat(8, 24);
+
         DFEVar spA = a.cast(spfloat);
         DFEVar spB = b.cast(spfloat);
         DFEVar sumsp = spA + spB;
         DFEVar subsp = spA - spB;
         DFEVar prodsp = spA * spB;
+        DFEVar divsp  = spA / spB;
 
-        DFEVar spResult = sumsp + subsp + prodsp;
+        /***
+            Since subtraction is cheaper in resources than addition, may
+            it happen that (spA - (-spB)) takes less resources than (spA + spB)?
+            Let's test it! In order to fool compiler optimizations out,
+            tryint (spA - (-spB) out on a new variables:
+        */
+        DFEVar spA1 = a.cast(spfloat);
+        DFEVar spB1 = b.cast(spfloat);
+        DFEVar sumsp2 = spA1 - (-spB1);
+        DFEVar negsp = (-spA1);
+
+
+        DFEVar spArithmetic = sumsp + subsp + negsp + prodsp + divsp + sumsp2;
+
+
+        /*** KernelMath routines for single precision floating point */
+        DFEVar splogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), spA, spfloat);
+        DFEVar splogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), spB, spfloat);
+        DFEVar splog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), spA, spfloat);
+        DFEVar splog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), spB, spfloat);
+        DFEVar spexp   = KernelMath.exp(spA);
+        DFEVar spmax   = KernelMath.max(spA, spB);
+        DFEVar spmin   = KernelMath.min(spA, spB);
+        DFEVar spabs   = KernelMath.abs(spexp);
+        DFEVar spceil  = KernelMath.ceil(spA);
+        DFEVar spfloor = KernelMath.floor(spA);
+        DFEVar spcos   = KernelMath.cos(spA);
+        DFEVar spsin   = KernelMath.sin(spA);
+        DFEVar spsqrt  = KernelMath.sqrt(spA);
+
+        /***
+             This doesn't compile (on Maia) unless 'power' argument for
+             scalb is 9-bit wide for 32bit floats with 8-bit exponent (=exponent + 1?)
+        */
+        DFEVar power9bit = constant.var(dfeInt(9), 5);
+        DFEVar spscalb   = KernelMath.scalb(spA, power9bit);
+
+        /***
+             It seems pow2 can accept 'power' argument of 9-bit
+             (exponent+1) precision and lower:
+        */
+        DFEVar power8bit = constant.var(dfeInt(8), 5);
+        DFEVar sppow2    = KernelMath.pow2(power8bit,spfloat);
+        DFEVar sppow2a   = KernelMath.pow2(power9bit,spfloat);
+
+        DFEVar spKernelMath = splogRange1 + splogRange2 + splog2Range1 + splog2Range2 +
+                              spexp + spmax + spmin + spabs + spceil + spfloor + spcos + spsin +
+                              sppow2 + sppow2a + spscalb + spsqrt;
+
+        DFEVar spResult = spArithmetic + spKernelMath;
         io.output("spResult", spResult, spfloat);
 
-        /*** Double Precision Floating point operations */
-        DFEVar dpA = a.cast(dpfloat);
-        DFEVar dpB = b.cast(dpfloat);
-        DFEVar sumdp = dpA + dpB;
-        DFEVar subdp = dpA - dpB;
-        DFEVar proddp = dpA * dpB;
 
-        DFEVar dpResult = sumdp + subdp + proddp;
+        /*** Middle Precision Floating point arithmetic operations */
+        DFEType float43bit  = dfeFloat(11, 32);
+        DFEVar a1 = io.input("a1", int32);
+        DFEVar b1 = io.input("b1", int32);
+
+        DFEVar mpA = a1.cast(float43bit);
+        DFEVar mpB = b1.cast(float43bit);
+        DFEVar summp  = mpA + mpB;
+        DFEVar submp  = mpA - mpB;
+        DFEVar prodmp = mpA * mpB;
+        DFEVar divmp  = mpA / mpB;
+
+        /***
+            Since subtraction is cheaper in resources than addition, may
+            it happen that (mpA - (-mpB)) takes less resources than (mpA + mpB)?
+            Let's test it! In order to fool compiler optimizations out,
+            tryint (mpA - (-mpB) out on a new variables:
+        */
+        DFEVar mpA1 = a.cast(float43bit);
+        DFEVar mpB1 = b.cast(float43bit);
+        DFEVar summp2 = mpA1 - (-mpB1);
+        DFEVar negmp = (-mpA1);
+
+        DFEVar mpArithmetic = summp + submp + negmp + prodmp + divmp + summp2;
+
+
+        /*** KernelMath routines for double precision floating point */
+        DFEVar mplogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), mpA, float43bit);
+        DFEVar mplogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), mpB, float43bit);
+        DFEVar mplog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), mpA, float43bit);
+        DFEVar mplog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), mpB, float43bit);
+        DFEVar mpexp   = KernelMath.exp(mpA);
+        DFEVar mpmax   = KernelMath.max(mpA, mpB);
+        DFEVar mpmin   = KernelMath.min(mpA, mpB);
+        DFEVar mpabs   = KernelMath.abs(mpexp);
+        DFEVar mpceil  = KernelMath.ceil(mpA);
+        DFEVar mpfloor = KernelMath.floor(mpA);
+        DFEVar mpsqrt  = KernelMath.sqrt(mpA);
+
+        /***
+            This doesn't compile on Maia with a message
+               'Altera MegaWizard's float-to-float conversion error'
+            but perfectly compiles on Max3:
+
+            DFEVar mpcos   = KernelMath.cos(mpA);
+            DFEVar mpsin   = KernelMath.sin(mpB);
+        */
+
+        /***
+             This doesn't compile (on Maia) unless 'power' argument for
+             scalb is 12-bit wide for 43bit floats with 11-bit exponent (=exponent + 1?)
+        */
+        DFEVar power12bit = constant.var(dfeInt(12), 5);
+        DFEVar mpscalb = KernelMath.scalb(mpA, power12bit);
+
+        /***
+             It seems pow2 can accept 'power' argument of 12-bit
+             (exponent+1) precision and lower:
+        */
+        DFEVar mppow2  = KernelMath.pow2(power8bit, float43bit);
+        DFEVar mppow2a = KernelMath.pow2(power12bit,float43bit);
+
+
+        DFEVar mpKernelMath = mpexp + mpmax + mpmin + 
+                              mpabs + mpceil + mpfloor +
+                              mpsqrt + mpscalb + mppow2 + mppow2a +
+//                              mpcos + mpsin +
+                              mplogRange1.cast(float43bit) + mplogRange2.cast(float43bit) + 
+                              mplog2Range1.cast(float43bit) + mplog2Range2.cast(float43bit)
+                            ;
+
+        DFEVar mpResult = (mpArithmetic + mpKernelMath).cast(spfloat);
+        io.output("mpResult", mpResult, spfloat);
+
+
+        /*** Double Precision Floating point arithmetic operations */
+        DFEType dpfloat = dfeFloat(11, 53);
+        DFEVar a2 = io.input("a2", int32);
+        DFEVar b2 = io.input("b2", int32);
+
+        DFEVar dpA = a2.cast(dpfloat);
+        DFEVar dpB = b2.cast(dpfloat);
+        DFEVar sumdp  = dpA + dpB;
+        DFEVar subdp  = dpA - dpB;
+        DFEVar proddp = dpA * dpB;
+        DFEVar divdp  = dpA / dpB;
+
+        /***
+            Since subtraction is cheaper in resources than addition, may
+            it happen that (dpA - (-dpB)) takes less resources than (dpA + dpB)?
+            Let's test it! In order to fool compiler optimizations out,
+            tryint (dpA - (-dpB) out on a new variables:
+        */
+        DFEVar dpA1 = a.cast(dpfloat);
+        DFEVar dpB1 = b.cast(dpfloat);
+        DFEVar sumdp2 = dpA1 - (-dpB1);
+        DFEVar negdp = (-dpA1);
+
+        DFEVar dpArithmetic = sumdp + subdp + negdp + proddp + divdp + sumdp2;
+
+
+
+        /*** KernelMath routines for double precision floating point.
+
+             Some KernelMath routines have contraints on supported precisions:
+                - log  expects output type to be 2..50 bit wide.
+                - log2 expects output type to be 2..60 bit wide.
+                - sin/cos cause exponential time expression evaluation at java
+                  runtime:
+                    43 bit wide input: seconds,
+                    44 bit wide input: 6 minutes,
+                    50 bit wide input: compilation stopped after 8.5 hours
+             Declaring maximum allowed precision types where necessary.
+        */
+
+        // for KernelMath.log
+        DFEType float50bit = dfeFloat(11, 39);
+        // for KernelMath.log2
+        DFEType float60bit  = dfeFloat(11, 49);
+
+        DFEVar dplogRange1 = KernelMath.log(new KernelMath.Range(-10000000.0, 10000000.0), dpA, float50bit);
+        DFEVar dplogRange2 = KernelMath.log(new KernelMath.Range(-0.5, 100.0), dpB, float50bit);
+        DFEVar dplog2Range1 = KernelMath.log2(new KernelMath.Range(-10000000.0, 10000000.0), dpA, float60bit);
+        DFEVar dplog2Range2 = KernelMath.log2(new KernelMath.Range(-0.5, 100.0), dpB, float60bit);
+        DFEVar dpexp   = KernelMath.exp(dpA);
+        DFEVar dpmax   = KernelMath.max(dpA, dpB);
+        DFEVar dpmin   = KernelMath.min(dpA, dpB);
+        DFEVar dpabs   = KernelMath.abs(dpmax);
+        DFEVar dpceil  = KernelMath.ceil(dpA);
+        DFEVar dpfloor = KernelMath.floor(dpA);
+        DFEVar dpsqrt  = KernelMath.sqrt(dpA);
+
+        /***
+            This doesn't compile on Maia with a message
+               'Altera MegaWizard's float-to-float conversion error'
+            but perfectly compiles on Max3:
+
+            DFEType float44bit = dfeFloat(11, 33);
+            DFEVar a44bit = a.cast(dpfloat).cast(float44bit);
+
+            DFEVar dpcos   = KernelMath.cos(a44bit);
+            DFEVar dpsin   = KernelMath.sin(a44bit);
+        */
+
+        /***
+             This doesn't compile (on Maia) unless 'power' argument for
+             scalb is 12-bit wide for 64bit floats with 11-bit exponent (=exponent + 1?)
+        */
+        DFEVar dpscalb = KernelMath.scalb(dpA, power12bit);
+
+        /***
+             It seems pow2 can accept 'power' argument of 12-bit
+             (exponent+1) precision and lower:
+        */
+        DFEVar dppow2  = KernelMath.pow2(power8bit,dpfloat);
+        DFEVar dppow2a = KernelMath.pow2(power12bit,dpfloat);
+
+
+        DFEVar dpKernelMath = 
+                              dplogRange1.cast(dpfloat) + dplogRange2.cast(dpfloat) + 
+                              dplog2Range1.cast(dpfloat) + dplog2Range2.cast(dpfloat) +
+                              dpexp + dpmax + dpmin + dpabs + dpceil + dpfloor +
+//                              dpcos.cast(dpfloat) + dpsin.cast(dpfloat) +
+                              dpscalb + dppow2 + dppow2a + dpsqrt;
+
+        DFEVar dpResult = dpArithmetic + dpKernelMath;
         io.output("dpResult", dpResult, dpfloat);
+
     }
 
 }

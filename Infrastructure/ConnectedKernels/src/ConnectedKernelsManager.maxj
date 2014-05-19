@@ -1,0 +1,53 @@
+/***
+    Here we make input stream to the kernel 1 twice shorter than input to the kernel 2,
+    synchronous to the kernel 2 accepting input from kernel 1 every 2 cycles.
+*/
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class ConnectedKernelsManager extends CustomManager{
+
+    private static final String s_kernelName  = "ConnectedKernelsKernel";
+
+    ConnectedKernelsManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k1 = addKernel(new ConnectedKernelsKernel1(makeKernelParameters(s_kernelName + "" + "1")));
+        KernelBlock k2 = addKernel(new ConnectedKernelsKernel2(makeKernelParameters(s_kernelName + "" + "2")));
+
+        k1.getInput("a") <== addStreamFromCPU("a");
+        k2.getInput("a") <== k1.getOutput("output");
+        k2.getInput("b") <== addStreamFromCPU("b");
+        addStreamToCPU("output") <== k2.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam sizeBytesA = N / 2 * size;
+        InterfaceParam sizeBytesB = N * size;
+
+        engine_interface.setTicks(s_kernelName + "" + "1" , N / 2);
+        engine_interface.setTicks(s_kernelName + "" + "2" , N);
+
+        engine_interface.setStream("a", type, sizeBytesA);
+        engine_interface.setStream("b", type, sizeBytesB);
+        engine_interface.setStream("output", type, sizeBytesB);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        ConnectedKernelsManager manager = new ConnectedKernelsManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}

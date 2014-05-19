@@ -1,0 +1,48 @@
+/***
+    A simple kernel that increments its floating point counter stored
+    in BRAM and stalls most of the time waiting for adder pipeline
+    to complete its work.
+
+    Key feature: the counter stored in BRAM is initialised at first
+    run cycle of the _first kernel run_. It does not initialise that
+    counter at further runs of the kernel. As the result, two consecutive
+    runs of this kernel show a persistent state stored in BRAM.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
+
+class BRAMPersistenceKernel extends Kernel {
+
+    private final DFEType FLOAT = dfeFloat(8, 24);
+
+    protected BRAMPersistenceKernel(KernelParameters parameters, int loopLatency)
+    {
+        super(parameters);
+
+        DFEVar firstRun = io.scalarInput("firstRun", dfeInt(32));
+
+        Memory<DFEVar> memory = mem.alloc(FLOAT, 2);
+        DFEVar address = constant.var(dfeUInt(1), 0);
+        DFEVar memData = memory.read(address);
+
+        DFEVar cycleCounter = control.count.simpleCounter(32);
+        Params params = control.count.makeParams(32)
+                        .withInitValue( 1 )
+                        .withMax( 2*loopLatency )
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        DFEVar residualCount = control.count.makeCounter(params).getCount();
+
+        DFEVar memUpdate = (firstRun.eq(1) & cycleCounter.eq(0)) ? 1 : memData + 1;
+
+        memory.write(stream.offset(address, -loopLatency),
+                     stream.offset(memUpdate, -loopLatency),
+                     stream.offset(residualCount.eq(0), -loopLatency));
+
+        io.output("output", memUpdate, FLOAT, residualCount.eq(0));
+    }
+
+}

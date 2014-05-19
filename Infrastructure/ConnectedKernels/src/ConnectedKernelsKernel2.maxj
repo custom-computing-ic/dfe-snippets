@@ -1,0 +1,27 @@
+/***
+    Take input from the other kernel conditionally and do some work on another unconditional stream.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+
+class ConnectedKernelsKernel2 extends Kernel {
+
+    protected ConnectedKernelsKernel2(KernelParameters parameters) {
+        super(parameters);
+
+        Params params = control.count.makeParams( 32 )
+                        .withMax( 2 )
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        DFEVar count  = control.count.makeCounter(params).getCount();
+
+        DFEVar a = io.input("a", dfeInt(32), count.eq(0) );
+        DFEVar b = io.input("b", dfeInt(32));
+        io.output("output", a * b, dfeInt(32));
+    }
+
+}
