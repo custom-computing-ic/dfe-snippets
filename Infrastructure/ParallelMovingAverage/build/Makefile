@@ -28,7 +28,7 @@ WHEREISROOT=../../..
 PRJ=ParallelMovingAverage
 KERNEL=$(PRJ)Kernel
 MANAGER=$(PRJ)Manager
-
+NUMDEVICES=2
 
 # Using known hardware settings
 include $(WHEREISROOT)/Makefile.Max3.hardware

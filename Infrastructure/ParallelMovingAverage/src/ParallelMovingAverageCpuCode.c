@@ -27,7 +27,7 @@ int main(void)
 
   printf("Running on DFE.\n");
 
-  const int numEngines = 1;
+  const int numEngines = 2;
   ParallelMovingAverage_actions_t *actions[numEngines];
   for (int i = 0; i < numEngines; i++) {
     actions[i] = malloc(sizeof(ParallelMovingAverage_actions_t));
@@ -40,11 +40,11 @@ int main(void)
   max_file_t *maxfile = ParallelMovingAverage_init();
   max_group_t *group = max_load_group(maxfile, MAXOS_EXCLUSIVE, "1", numEngines);
 
-  ParallelMovingAverage_run_group(group, actions[0]);
-  //  ParallelMovingAverage_run_group(group, actions[1]);
+#pragma omp parallel for
+  for (int i = 0; i < numEngines; i++)
+    ParallelMovingAverage_run_group(group, actions[i]);
 
   max_unload_group(group);
-
   max_file_free(maxfile);
 
   for (int i = 0; i < inSize; i++)
