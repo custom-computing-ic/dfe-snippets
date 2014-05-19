@@ -22,3 +22,7 @@
 # 4. Ignore vim temporary files
 *~
 *.swp
+
+# 5. Ignore debug graphs
+*.dot
+*.png

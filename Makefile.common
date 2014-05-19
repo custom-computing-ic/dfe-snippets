@@ -70,7 +70,7 @@ DFEID=/dev/maxeler0
 
 # Files to remove on clean
 TRASH=*~ ../src/*~ *.o
-DIST_TRASH=Maxfiles.h *.class *.o debug*
+DIST_TRASH=Maxfiles.h *.class *.o debug* *.dot *.png
 
 help:
 	@ echo "Current configuration:"
