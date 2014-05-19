@@ -15,15 +15,13 @@ int main(void)
   const int inSize = 384;
 
   int *a = malloc(sizeof(int) * inSize);
-  int *b = malloc(sizeof(int) * inSize);
   int *expected = malloc(sizeof(int) * inSize);
-  int *out = malloc(sizeof(int) * inSize);
-  memset(out, 0, sizeof(int) * inSize);
-  for(int i = 0; i < inSize; ++i) {
+  int *out = calloc(inSize, sizeof(int));
+  for(int i = 0; i < inSize; ++i)
     a[i] = i + 1;
-    b[i] = i - 1;
-    expected[i] = 2 * i;
-  }
+
+  for (int i = 1; i < inSize - 1; i++)
+    expected[i] = (a[i - 1] + a[i] + a[i + 1]) / 3;
 
   printf("Running on DFE.\n");
 
@@ -33,7 +31,6 @@ int main(void)
     actions[i] = malloc(sizeof(ParallelMovingAverage_actions_t));
     actions[i]->param_N = inSize;
     actions[i]->instream_a = a;
-    actions[i]->instream_b = b;
     actions[i]->outstream_output = out;
   }
 
@@ -47,7 +44,7 @@ int main(void)
   max_unload_group(group);
   max_file_free(maxfile);
 
-  for (int i = 0; i < inSize; i++)
+  for (int i = 1; i < inSize - 1; i++)
     if (out[i] != expected[i]) {
       printf("Output from DFE did not match CPU: %d : %d != %d\n",
              i, out[i], expected[i]);

@@ -19,7 +19,6 @@ public class ParallelMovingAverageManager extends CustomManager{
         KernelBlock k = addKernel(new ParallelMovingAverageKernel(makeKernelParameters(s_kernelName)));
 
         k.getInput("a") <== addStreamFromCPU("a");
-        k.getInput("b") <== addStreamFromCPU("b");
         addStreamToCPU("output") <== k.getOutput("output");
     }
 
@@ -34,11 +33,9 @@ public class ParallelMovingAverageManager extends CustomManager{
         engine_interface.setTicks(s_kernelName, N);
 
         engine_interface.setStream("a", type, sizeBytes);
-        engine_interface.setStream("b", type, sizeBytes);
         engine_interface.setStream("output", type, sizeBytes);
         return engine_interface;
     }
-
 
     public static void main(String[] args) {
         ParallelMovingAverageManager manager = new ParallelMovingAverageManager(new EngineParameters(args));
