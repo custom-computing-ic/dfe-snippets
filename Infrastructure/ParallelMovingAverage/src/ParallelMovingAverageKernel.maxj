@@ -10,11 +10,8 @@ class ParallelMovingAverageKernel extends Kernel {
 
     protected ParallelMovingAverageKernel(KernelParameters parameters) {
         super(parameters);
-
         DFEVar a = io.input("a", dfeInt(32));
-
-	DFEVar result = (stream.offset(a, -1) + stream.offset(a, 1) + a) / 3;
-
+        DFEVar result = (stream.offset(a, -1) + stream.offset(a, 1) + a) / 3;
         io.output("output", result, dfeInt(32));
     }
 
