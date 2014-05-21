@@ -1,10 +1,5 @@
 /***
-       This implements a FIFO buffer of fixed length (as shift register).
-       Push and Pop operations are performed same time. Data movements done
-       with 1 cycle latency.
-
-       Input value is put to the end of a buffer and will come out (return value)
-       only after bufferCapacity enabled cycles.
+    Here we provide two example use cases of a small FIFO buffer.
 */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
@@ -37,37 +32,19 @@ class FifoBufferKernel extends Kernel {
             are shifted at each cycle as well, so the first input entry
             is popped out exactly fifoBufferCapacity cycles after.
         */
-        DFEVar inputsShiftedInTime   = fifoBufferPushPop(alwaysEnable, input, fifoBufferCapacity, scalarType);
+        FifoBuffer fifo1 = new FifoBuffer(this, fifoBufferCapacity, scalarType);
+        DFEVar inputsShiftedInTime = fifo1.pushPop(alwaysEnable, input);
+
         /***
             Here we not only push new entries only at odd kernel cycles (thus
             we ignore all inputs at odd cycles), we also shift FIFO members
             once in 2 cycles. The first input entry leaves the queue in
             2*fifoBufferCapacity cycles.
         */
-        DFEVar onlyOddInputs = fifoBufferPushPop(onlyOddInputEnable, input, fifoBufferCapacity, scalarType);
+        FifoBuffer fifo2 = new FifoBuffer(this, fifoBufferCapacity, scalarType);
+        DFEVar onlyOddInputs = fifo2.pushPop(onlyOddInputEnable, input);
 
         io.output("inputsShiftedInTime", inputsShiftedInTime, scalarType);
         io.output("onlyOddInputs", onlyOddInputs, scalarType);
-    }
-
-
-    private DFEVar fifoBufferPushPop(DFEVar enable, DFEVar input, int bufferCapacity, DFEType dataType)
-    {
-        DFEVector<DFEVar> fifoBuffer = new DFEVectorType<DFEVar> (dataType, bufferCapacity).newInstance(this);
-        DFEVar stored = dataType.newInstance(this);
- 
-        optimization.pushPipeliningFactor(0.0);
-        {
-            stored <== enable? stream.offset(fifoBuffer[bufferCapacity-1],-1) : stream.offset(stored,-1);
-            for (int i = 1; i < bufferCapacity; i++)
-            {
-                fifoBuffer[i] <== enable? stream.offset(fifoBuffer[i-1],-1) : stream.offset(fifoBuffer[i],-1);
-            }
-            fifoBuffer[0] <== enable? input : stream.offset(fifoBuffer[0],-1);
-        }
- 
-        optimization.popPipeliningFactor();
- 
-        return stored;
     }
 }
