@@ -13,11 +13,11 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
 
-class FifoBufferKernel extends Kernel {
+class FifoAsShiftRegisterKernel extends Kernel {
 
     private static final DFEType scalarType = dfeUInt(32);
 
-    protected FifoBufferKernel(KernelParameters parameters, int fifoBufferCapacity) {
+    protected FifoAsShiftRegisterKernel(KernelParameters parameters, int fifoBufferCapacity) {
         super(parameters);
 
         DFEVar cycleCounter = control.count.simpleCounter(32);
@@ -32,8 +32,8 @@ class FifoBufferKernel extends Kernel {
             are shifted at each cycle as well, so the first input entry
             is popped out exactly fifoBufferCapacity cycles after.
         */
-        FifoBuffer fifo1 = new FifoBuffer(this, fifoBufferCapacity, scalarType);
-        DFEVar inputsShiftedInTime = fifo1.pushPop(alwaysEnable, input);
+        FifoAsShiftRegister fifo1 = new FifoAsShiftRegister(this, fifoBufferCapacity, scalarType);
+        DFEVar inputsShiftedInTime = fifo1.popPush(alwaysEnable, input);
 
         /***
             Here we not only push new entries only at odd kernel cycles (thus
@@ -41,8 +41,9 @@ class FifoBufferKernel extends Kernel {
             once in 2 cycles. The first input entry leaves the queue in
             2*fifoBufferCapacity cycles.
         */
-        FifoBuffer fifo2 = new FifoBuffer(this, fifoBufferCapacity, scalarType);
-        DFEVar onlyOddInputs = fifo2.pushPop(onlyOddInputEnable, input);
+        FifoAsShiftRegister fifo2 = new FifoAsShiftRegister(this, fifoBufferCapacity, scalarType);
+        DFEVar onlyOddInputs = fifo2.popPush(onlyOddInputEnable, input);
+
 
         io.output("inputsShiftedInTime", inputsShiftedInTime, scalarType);
         io.output("onlyOddInputs", onlyOddInputs, scalarType);

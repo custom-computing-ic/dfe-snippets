@@ -13,7 +13,7 @@ int main(void)
 {
 
   const int inSize = 32;
-  const int outSize = 32 + FifoBuffer_fifoBufferCapacity;
+  const int outSize = 32 + FifoAsShiftRegister_fifoBufferCapacity;
 
   int *input = malloc(sizeof(int) * inSize);
   int *outShift = malloc(sizeof(int) * outSize);
@@ -29,35 +29,36 @@ int main(void)
   int count = 0;
   for(int i = 0; i < outSize; ++i)
   {
-    if (i == 2*FifoBuffer_fifoBufferCapacity)  count = 1;
+    if (i == 2*FifoAsShiftRegister_fifoBufferCapacity)  count = 1;
     expOdd[i] = count;
-    if ((i >= 2*FifoBuffer_fifoBufferCapacity) && (i % 2))  count += 2;
+    if ((i >= 2*FifoAsShiftRegister_fifoBufferCapacity) && (i % 2))  count += 2;
   }
   count = 0;
   for(int i = 0; i < outSize; ++i)
   {
-    if (i == FifoBuffer_fifoBufferCapacity)  count = 1;
-    if (i < FifoBuffer_fifoBufferCapacity)
+    if (i == FifoAsShiftRegister_fifoBufferCapacity)  count = 1;
+    if (i < FifoAsShiftRegister_fifoBufferCapacity)
         expShift[i] = 0;
     else
-        expShift[i] = count++;
+        expShift[i] = count;
+    count++;
   }
 
   printf("Running on DFE.\n");
 
-  FifoBuffer(outSize, inSize, input, outShift, outOdd);
+  FifoAsShiftRegister(outSize, inSize, input, outShift, outOdd);
 
-  printf("\ncycle number:            ");
+  printf("\ncycle number:                 ");
   for (int i = 0; i < outSize; i++)  printf("%2d ", i);
-  printf("\ninput:                   ");
+  printf("\ninput:                        ");
   for (int i = 0; i < inSize; i++)   printf("%2d ", input[i]);
-  printf("\nexpected shifted output: ");
+  printf("\nexpected shifted output:      ");
   for (int i = 0; i < outSize; i++)  printf("%2d ", expShift[i]);
-  printf("\nshifted output from DFE: ");
+  printf("\nshifted output from DFE:      ");
   for (int i = 0; i < outSize; i++)  printf("%2d ", outShift[i]);
-  printf("\nexpected odd output:     ");
+  printf("\nexpected odd output:          ");
   for (int i = 0; i < outSize; i++)  printf("%2d ", expOdd[i]);
-  printf("\nodd output from DFE:     ");
+  printf("\nodd output from DFE:          ");
   for (int i = 0; i < outSize; i++)  printf("%2d ", outOdd[i]);
   printf("\n\n");
 
