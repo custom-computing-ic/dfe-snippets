@@ -57,7 +57,7 @@ else ifeq ($(CC), cc)
   OPT_FLAGS = -march=native -O3
 else ifeq ($(CC), g++)
   COMPILER_CFLAGS = -fopenmp
-  OPT_FLAGS = -march=native -O
+  OPT_FLAGS = -march=native -O3
 else ifeq ($(CC), icpc)
   COMPILER_CFLAGS = -fopenmp
   OPT_FLAGS = -march=native -O3
