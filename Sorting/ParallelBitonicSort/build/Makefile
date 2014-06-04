@@ -28,6 +28,7 @@ WHEREISROOT=../../..
 PRJ=BitonicSorting
 KERNEL=$(PRJ)Kernel
 MANAGER=$(PRJ)Manager
+NUMDEVICES=4
 CC=g++
 
 # Using known hardware settings
