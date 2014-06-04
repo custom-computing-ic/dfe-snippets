@@ -1,0 +1,18 @@
+/***
+    A simple three point moving average kernel.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class ParallelMovingAverageKernel extends Kernel {
+
+    protected ParallelMovingAverageKernel(KernelParameters parameters) {
+        super(parameters);
+        DFEVar a = io.input("a", dfeInt(32));
+        DFEVar result = (stream.offset(a, -1) + stream.offset(a, 1) + a) / 3;
+        io.output("output", result, dfeInt(32));
+    }
+
+}
