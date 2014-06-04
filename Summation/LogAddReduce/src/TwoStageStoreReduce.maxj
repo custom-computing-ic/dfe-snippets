@@ -60,6 +60,13 @@ class TwoStageStoreReduce extends KernelLib
     public  DFEVar getOutput()       {   return output;        }
     public  DFEVar isOutputValid()   {   return outputValid;   }
 
+
+    /***
+        @ param     input           new input term subject to be add-reduced
+        @ param     newValueEnable  boolean: whether new input to be ignored
+        @ param     flush           boolean: forcing to complete reduction and output sum of previously fed values (if any)
+        @ param     dataType        underlying data type of add-reduced data
+    */
     public TwoStageStoreReduce(KernelLib owner, DFEVar newValueEnable, DFEVar flush,
                                                 DFEVar input, DFEType dataType)
     {
