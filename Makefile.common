@@ -26,7 +26,7 @@ MAXELEROSDIR_SIM:=$(MAXCOMPILERDIR)/lib/maxeleros-sim
 
 # ---- Source files ----
 ENGINEFILES=$(wildcard ../src/*.maxj)
-CPUFILES=$(wildcard ../src/*.c)
+CPUFILES=$(wildcard ../src/*.c ../src/*.cpp)
 
 # ---- Command alias ----
 
@@ -58,6 +58,9 @@ else ifeq ($(CC), cc)
 else ifeq ($(CC), g++)
   COMPILER_CFLAGS = -fopenmp
   OPT_FLAGS = -march=native -O
+else ifeq ($(CC), icpc)
+  COMPILER_CFLAGS = -fopenmp
+  OPT_FLAGS = -march=native -O3
 endif
 
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar -1.6 -d .
