@@ -30,9 +30,7 @@ CPUFILES=$(wildcard ../src/*.c)
 
 # ---- Command alias ----
 
-# Note that if you want to change CC to gcc, you may also have to
-# change some of the compiler optimization flags
-CC=icc
+CC ?= icc
 MAXFILECOMPILE=maxfilecompile
 SLICCOMPILE=sliccompile
 MAXGUESSBUILDDIR=maxGuessBuildDir
@@ -48,14 +46,23 @@ MAXOS_SIM=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so
 
 # ---- Compiler settings ----
 ifeq ($(CC), icc)
-  OPT_FLAGS=-xHost -O3
-else
-  OPT_FLAGS=-march=native -O3
+  COMPILER_CFLAGS = -std=c99 -openmp
+  OPT_FLAGS = -xHost -O3
+else ifeq ($(CC), gcc)
+  COMPILER_CFLAGS = -std=c99 -fopenmp
+  OPT_FLAGS = -march=native -O3
+else ifeq ($(CC), cc)
+  # Assuming CC points to gcc by default
+  COMPILER_CFLAGS = -std=c99 -fopenmp
+  OPT_FLAGS = -march=native -O3
+else ifeq ($(CC), g++)
+  COMPILER_CFLAGS = -fopenmp
+  OPT_FLAGS = -march=native -O
 endif
 
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar -1.6 -d .
-CFLAGS=-std=c99 -openmp $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
-LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread -openmp
+CFLAGS= $(COMPILER_CFLAGS) $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
+LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread
 
 # Add this on the command line to pass to make when compiling
 # Useful for debug/optimization flags
@@ -70,7 +77,7 @@ DFEID=/dev/maxeler0
 
 # Files to remove on clean
 TRASH=*~ ../src/*~ *.o
-DIST_TRASH=Maxfiles.h *.class *.o debug*
+DIST_TRASH=Maxfiles.h *.class *.o debug* *.dot *.png
 
 help:
 	@ echo "Current configuration:"

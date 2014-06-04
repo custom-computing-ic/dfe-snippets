@@ -47,10 +47,10 @@ char* strcat_int(const char *str_in, int i){
 int main(void)
 {
 
-	const int numTotalData = 76800000;
+	const int numTotalData = 16;
 	// Since data are sent in multiple of 32 bytes, dataPerRound should
 	// be a multiple of 8 since each data is 32 bits
-	const int dataPerRound = 2048;
+	const int dataPerRound = 8;
 	const int numFPGAs = 6;
 	const bool MAX4 = 1;
 	const bool sim = false;
@@ -89,7 +89,7 @@ int main(void)
 		strcpy(kernel_name, "MaxRingMulticastKernel");
 		// [floor(...)]: the minimum rounds needed
 		// [- dataPerRound]: the last idle cycles
-		kernel_ticks = numFPGAs*2 * floor((numTotalData+dataPerRound-1) / dataPerRound) * dataPerRound - dataPerRound;
+		kernel_ticks = numFPGAs*2 * ceil((float)numTotalData / dataPerRound) * dataPerRound - dataPerRound;
 		for (i = 0; i < numFPGAs; i++){
 			action[i] = max_actions_init(maxfile, NULL);
 			max_set_uint64t(action[i], kernel_name, "dataPerRound", dataPerRound);
@@ -114,7 +114,7 @@ int main(void)
 		max_actions_t *actions = max_actions_init(maxfile, NULL);
 		max_engine_t* engine = max_load(maxfile, "local");
 
-		kernel_ticks = numFPGAs*2 * floor((numTotalData+dataPerRound-1) / dataPerRound) * dataPerRound - dataPerRound;
+		kernel_ticks = numFPGAs*2 * ceil((float)numTotalData / dataPerRound) * dataPerRound - dataPerRound;
 		for (i = 0; i < numFPGAs; i++){
 			strcpy(kernel_name, strcat_int("MaxRingMulticastKernel", i));
 			max_set_uint64t(actions, kernel_name, "dataPerRound", dataPerRound);
