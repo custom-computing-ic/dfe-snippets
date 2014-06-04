@@ -46,7 +46,7 @@ SO REMEMBER TO STOP PROCESS AFTER RUNNING SIMULATION / HARDWARE.
 << LMEM Performance >>
 MAX4 (Stream clock: 150MHz, DRAM clock: 800MHz, quarter rate mode)
 Memory speed:
-  Read only, bpc = 2/64/128:    29GB/s 
+  Read only, bpc = 2/64/128:    29GB/s(#)
   Read only, bpc = 1:           19GB/s
   R/W, bpc = 64/128:            29GB/s x 2
   R/W, bpc = 2:                 12GB/s x 2
@@ -55,54 +55,59 @@ Memory speed:
 
 MAX4 (Stream clock: 150MHz, DRAM clock: 533MHz)
 Memory speed:
-  Read only, bpc = 2/64/128:    28GB/s 
-  Read only, bpc = 1:           21GB/s
-  R/W, bpc = 128:               23GB/s x 2
-  R/W, bpc = 64:                22GB/s x 2
-  R/W, bpc = 2:                 9.6GB/s x 2
-  R/W, bpc = 1:                 6.8GB/s x 2
+  Read only, bpc = 2/64/128:      28GB/s(#)
+  Read only, bpc = 1:             21GB/s
+  R/W, bpc = 128:                 23GB/s x 2
+  R/W, bpc = 64:                  22GB/s x 2
+  R/W, bpc = 2:                  9.6GB/s x 2
+  R/W, bpc = 1:                  6.8GB/s x 2
 
 
 MAX3 (Stream clock: 120MHz, DRAM clock: 400MHz)
 Memory speed:
-  Read only, bpc = 2/64/128:    23GB/s 
-  Read only, bpc = 1:           17GB/s
-  R/W, bpc = 128:               18GB/s x 2
-  R/W, bpc = 64:                17GB/s x 2
-  R/W, bpc = 2:                 8.8GB/s x 2
-  R/W, bpc = 1:                 5.4GB/s x 2
+  Read only, bpc = 2/64/128:      23GB/s(#)
+  Read only, bpc = 1:             17GB/s
+  R/W, bpc = 128:                 18GB/s x 2
+  R/W, bpc = 64:                  17GB/s x 2
+  R/W, bpc = 2:                  8.8GB/s x 2
+  R/W, bpc = 1:                  5.4GB/s x 2
 
-  
-Max tested total bandwidth (multiple streams used):
-  MAX3 (400MHz DRAM)             36GB/s
-  MAX4 (533MHz DRAM)             46GB/s
-  MAX4 (QR mode 800MHz DRAM)     65GB/s
 
-  
-Max bandwidth for single read stream
-  MAX3 (400MHz DRAM)             23GB/s
-  MAX4 (533MHz DRAM)             28GB/s
-  MAX4 (QR mode 800MHz DRAM)     29GB/s
+Max tested total bandwidth (multiple streams used^):
+  MAX3 (400MHz DRAM)              36GB/s
+  MAX4 (533MHz DRAM)              46GB/s
+  MAX4 (QR mode 800MHz DRAM)      65GB/s
 
-  
-FPGA-to-Host Speed (PCI/infiniband)*
-  MAX3                      1.3-1.4GB/s
-  MAX4                          0.6GB/s
+
+Max bandwidth for single read stream^
+  MAX3 (400MHz DRAM)              23GB/s
+  MAX4 (533MHz DRAM)              28GB/s
+  MAX4 (QR mode 800MHz DRAM)      29GB/s
+
+
+FPGA-to-Host Speed (PCI/infiniband)(*)
+  MAX3                       1.3-1.4GB/s
+  MAX4                           0.6GB/s
 
 
 bpc: bursts per command
 R/W: Write back to memory after reading
 FPGA DRAM interface width = 1536 bits, which may not meet timing for larger design
 Results accounted for overhead time in filling pipeline / FPGA set up
-*looks too slow, need further testing
+
+# capped by stream clock rate, 64/128 bpc should result in higher speed using higher FPGA streaming clock
+  (e.g. For MAX4, 150MHz * 1536bits (max bus width) = 28.8GHz)
+* looks too slow, need further testing
+^ achieved using large burst size, will be lower using smaller burst size (e.g. under 64)
 
 
 << Summary & LMEM Usage Advice >>
 - You can get most bandwidth using two streams using large burst size and input width
-- Using quarter rate mode increases the total bandwidth considerably due to higher clock rate but not much performance benefit for a single stream
+- Using quarter rate mode increases the total bandwidth considerably due to higher clock rate but not much performance
+  benefit for a single stream
 - Using sequential or random access pattern for access address in custom memory cmd (128 bpc) does not influence speed
 - Recommended max bursts per command: 60-160 (64/128 are good choices), burst size > 200 generally results in slower speed
-- Speed limit = bit width * clock rate, so when interface width is narrow, speed is capped by clock rate
+- Speed limit = interface width * clock rate, so when interface width is narrow, speed is capped by clock rate
   e.g. for a width of 384bits and streaming clock at 120MHz, each stream gets 5.7GB/s
 
   

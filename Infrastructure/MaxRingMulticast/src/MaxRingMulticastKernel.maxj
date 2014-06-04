@@ -1,0 +1,238 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.MathUtils;
+
+class MaxRingMulticastKernel extends Kernel {
+
+	private static final int     counterWidth = 32;
+	private static final int     dataWidth = 28;
+	private static final int     maxCards = 8;
+	private static final int     maxDataPerRound = 5120;
+	private static final int     cardCntBits = MathUtils.bitsToAddress(maxCards*2);
+	private static final int     cardBits = MathUtils.bitsToAddress(maxCards);
+	private static final int     maxCntBits = MathUtils.bitsToAddress(maxDataPerRound+1);
+	private static final DFEType dataType = dfeRawBits(dataWidth+cardBits+1);
+	private static final DFEType dataInType = dfeUInt(dataWidth);
+	private static final DFEType cntType = dfeUInt(counterWidth);
+	private static final DFEType cardCntType = dfeUInt(cardCntBits);
+	private static final DFEType cardType = dfeUInt(cardBits);
+	private static final DFEType maxCntType = dfeUInt(maxCntBits);
+
+	private DFEVar shifter(DFEVar in, int in_bits, int shift_bits){
+		return (in # constant.var(dfeUInt(shift_bits), 0)).cast(dfeUInt(in_bits+shift_bits));
+	}
+
+	protected MaxRingMulticastKernel(KernelParameters parameters)
+	{
+		super(parameters);
+
+		DFEVar dataPerRound = io.scalarInput("dataPerRound", maxCntType);
+		DFEVar numTotalData = io.scalarInput("numTotalData", cntType);
+		DFEVar numFPGAs = io.scalarInput("numFPGAs", cardType);
+		DFEVar FPGA_id = io.scalarInput("FPGA_id", cardType);
+		DFEVar FPGA_id_long = FPGA_id.cast(cardCntType);
+ 
+
+		// ==================== Algorithm ====================
+		// card id                             0   1   2   3   4   5
+		// 1. data to receive/pass-on* to R    0   1   2   3   4   5
+		// 2. send own data to pass on to R    1   1   1   1   1   0
+		// 3. idle#                            5   4   3   2   1   1
+		// 4. data to receive/pass-on* to L    5   4   3   2   1   0
+		// 5. send own data to pass on to L    0   1   1   1   1   1
+		// 6. idle#                            1   1   2   3   4   5
+
+		// * Numbers = data sent in multiple of dataPerRound
+		// # 1 cardCnt cycle extra to account for the pipeline depth
+		// When all data is sent, valid bit is set to 0 and then complete the round
+
+		// Right Phase = 1 + 2 + 3, Left Phase = 4 + 5 + 6
+
+		// < Switch for each phase >
+		// 1. inL open, outR open
+		// 2. outR open
+		// 3. all close
+		// 4. inR open, outL open
+		// 5. outL open
+		// 6. all close
+		// (inL/outL disabled for leftmost card, oposite for rightmost card)
+
+		// Total cnt before switching direction (i.e. (1)+(2)+(3))
+		// = numFPGAs
+
+		// Total cnt for both direction in 1 round (i.e. sum of (1) to (6))
+		// = numFPGAs*2
+
+		Count.Params ctrParams;
+		Counter ctr;
+
+		// Boolean for checking rightmost and leftmost FPGAs
+		DFEVar rightEnd = FPGA_id === numFPGAs-1;
+		DFEVar leftEnd = FPGA_id === 0;
+
+
+
+
+		// ==================== Counters ====================
+		// Loop level 1: dataCnt
+		// Switches and inputs from other FPGAs, determined by the FPGA id
+		ctrParams = control.count.makeParams(maxCntBits)
+			.withMax(dataPerRound)
+			.withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+		ctr = control.count.makeCounter(ctrParams);
+		DFEVar dataCnt = ctr.getCount();
+		DFEVar dataCntWrap = ctr.getWrap();
+
+		// Loop level 2: cards (L/R)
+		DFEVar cardCntMax = shifter(numFPGAs, cardBits, 1);
+		ctrParams = control.count.makeParams(cardCntBits)
+			.withMax(cardCntMax)
+			.withEnable(dataCntWrap);
+		ctr = control.count.makeCounter(ctrParams);
+		DFEVar cardCnt = ctr.getCount();
+		
+
+
+
+		// ==================== Control Signals ====================
+		// Send data when passing on all data from FPGAs from the other direction
+		DFEVar leftPhase = cardCnt >= numFPGAs.cast(cardCntType);  // 0: send to right, 1: send to left
+		DFEVar ownDataToR = (cardCnt === FPGA_id_long) & ~rightEnd; // phase 2, send own data
+		DFEVar ownDataToL = (cardCnt === cardCntMax - FPGA_id_long - 1) & ~leftEnd; // phase 5, send own data
+		DFEVar idle = (~leftPhase & cardCnt >= FPGA_id_long & ~ownDataToR) | (leftPhase & cardCnt >= cardCntMax - FPGA_id_long - 1 & ~ownDataToL);
+
+
+		// pass all data to other direction, then add data
+		// from own FPGA
+
+		DFEVar ctrlInL = ~leftEnd & ~leftPhase & ~ownDataToR & ~idle;
+		DFEVar ctrlOutR = ~rightEnd & ~leftPhase & ~idle;
+
+		DFEVar ctrlInR = ~rightEnd & leftPhase & ~ownDataToL & ~idle;
+		DFEVar ctrlOutL = ~leftEnd & leftPhase & ~idle;
+		
+
+		// Convert left & right to maxring I/O A & B (Note: A/B not equivalent to L/R)
+		DFEVar A_equals_L = FPGA_id.slice(0);
+			
+		DFEVar ctrlInA = A_equals_L? ctrlInL: ctrlInR;
+		DFEVar ctrlInB = A_equals_L? ctrlInR: ctrlInL;
+		
+		// Total number of data sent
+		DFEVar ctrlIn_cycle = cardCnt === (FPGA_id_long + rightEnd.cast(cardCntType));
+		ctrParams = control.count.makeParams(counterWidth)
+			.withEnable(ctrlIn_cycle)
+			.withWrapMode(WrapMode.STOP_AT_MAX);
+		ctr = control.count.makeCounter(ctrParams);
+		DFEVar numTotalDataCnt = ctr.getCount();
+
+ 		// validBit: 1 if data is new data from source (when ctrl = 0, data remains
+		// same as the last one, not required to send from source)
+ 		DFEVar validBit = numTotalDataCnt < numTotalData;
+		DFEVar ctrlIn = ctrlIn_cycle & validBit;
+
+		
+
+
+		// ==================== Data I/O and Data Routing ====================
+		// ********************************************************************
+		// The following code replaces the source from another kernel,
+		// the source need to send number of 'numTotalData' data to this kernel
+		//
+		// DFEVar dataIn = io.input("dataIn", dataInType, ctrlIn);
+		//
+		// ********************************************************************
+
+		// Data from this FPGA to be sent
+		// validBit and FPGA_id padded in front of actual data
+		ctrParams = control.count.makeParams(dataWidth)
+			.withEnable(ctrlIn);
+		ctr = control.count.makeCounter(ctrParams);
+		DFEVar dataIn = ctr.getCount();
+
+		DFEVar dataInPadded = validBit # FPGA_id # dataIn; // # = cat
+
+
+		// Store the data into BRAM buffer for later use for leftward transfer
+		Memory<DFEVar> dataIn_buffer = mem.alloc(dataType, maxDataPerRound);
+		DFEVar buffer_addr;
+		if (MathUtils.isPowerOf2(maxDataPerRound)){
+			int maxCntBits_ = MathUtils.bitsToAddress(maxDataPerRound);
+			buffer_addr = dataCnt.slice(0, maxCntBits_).cast(dfeUInt(maxCntBits_));
+		}
+		else {
+			buffer_addr = dataCnt;
+		}
+		dataIn_buffer.write(buffer_addr, dataInPadded, ctrlIn_cycle); // addr, data, enable
+		DFEVar dataBufferOut = dataIn_buffer.read(buffer_addr); // addr
+
+		DFEVar dataToSend = ctrlIn_cycle? dataInPadded : dataBufferOut;
+		// Note: ctrlIn is a bit cheeky, when it's 1 dataIn writes into buffer,
+		// but for the right border case (FPGA_id == num_FPGAs -1) in the leftward phase
+		// the dataIn is also used instead of dataBramOut
+
+		// Data from other FPGAs
+		DFEVar dataInA = io.input("dataInA", dataType, ctrlInA);
+		DFEVar dataInB = io.input("dataInB", dataType, ctrlInB);
+
+		DFEVar dataInL = A_equals_L? dataInA: dataInB;
+		DFEVar dataInR = A_equals_L? dataInB: dataInA;
+
+		DFEVar dataOutL = ownDataToL? dataToSend: dataInR;
+		DFEVar dataOutR = ownDataToR? dataToSend: dataInL;
+
+
+		// Output to FPGAs
+		DFEVar dataOutA = A_equals_L? dataOutL: dataOutR;
+		DFEVar dataOutB = A_equals_L? dataOutR: dataOutL;
+		
+		DFEVar ctrlOutA = A_equals_L? ctrlOutL: ctrlOutR;
+		DFEVar ctrlOutB = A_equals_L? ctrlOutR: ctrlOutL;
+
+		io.output("dataOutA", dataOutA, dataType, ctrlOutA);
+		io.output("dataOutB", dataOutB, dataType, ctrlOutB);
+
+
+		// Output to downstream computation
+		DFEVar dataOutPadded = leftPhase? dataInR: dataInL;
+		dataOutPadded = ctrlIn_cycle? dataInPadded : dataOutPadded;
+
+		DFEVar dataOut = dataOutPadded.slice(0, dataWidth);
+		DFEVar cardNumOut = dataOutPadded.slice(dataWidth, cardBits);
+		DFEVar validBitOut = dataOutPadded.slice(dataWidth + cardBits, 1);
+
+		// use 'valid' bit to see if it should be sent downstream
+		DFEVar ctrlOut = (ctrlIn | ctrlInL | ctrlInR) & validBitOut;
+
+		// Output to CPU/other kernels
+		// like dataIn, dataOut outputs data if it is valid
+		io.output("dataOut", dataOutPadded, dataType , ctrlOut); // actual dataOut
+
+
+
+
+		// ==================== DEBUG ====================
+		debug.simPrintf("[SIM%d: Counter] FPGACnt:%d   dataCnt:%d   totalCnt:%d/%d\n", FPGA_id, cardCnt, dataCnt, numTotalDataCnt, numTotalData);
+		debug.simPrintf("[SIM%d: Data]  dataIn:%d    dataInL:%o    dataInR:%o    dataInPadded:%o\n", FPGA_id, dataIn, dataInL, dataInR, dataInPadded);
+		debug.simPrintf("[SIM%d: Data]  dataOut:%d   dataOutL:%o   dataOutR:%o    dataOutPadded:%o\n", FPGA_id, dataOut, dataOutL, dataOutR, dataOutPadded);
+		debug.simPrintf("[SIM%d: Ctrl]  ctrlIn:%d   ctrlInL:%d   ctrlInR:%d\n", FPGA_id, ctrlIn, ctrlInL, ctrlInR);
+		debug.simPrintf("[SIM%d: Ctrl]  ctrlOut:%d  ctrlOutL:%d  ctrlOutR:%d\n", FPGA_id, ctrlOut, ctrlOutL, ctrlOutR);
+		debug.simPrintf("[SIM%d: Ctrl]  leftPhase:%d  ownDataToL:%d  ownDataToR:%d\n", FPGA_id, leftPhase, ownDataToL, ownDataToR);
+		debug.simPrintf(ctrlOut, "[SIM%d: Out]  FromFPGA:%d    Data:%d\n", FPGA_id, cardNumOut, dataOut);
+		
+
+		ctrParams = control.count.makeParams(counterWidth)
+			.withEnable(ctrlOut);
+		ctr = control.count.makeCounter(ctrParams);
+		DFEVar dataOutCnt = ctr.getCount();
+		io.scalarOutput("dataOutCnt", dataOutCnt, cntType);
+		io.scalarOutput("cardCnt", cardCnt, cardCntType);
+		io.scalarOutput("dataCnt", dataCnt, maxCntType);
+	}
+
+}

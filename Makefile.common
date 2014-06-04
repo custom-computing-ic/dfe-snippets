@@ -12,6 +12,9 @@
 #       to project's directory and use makefile there)
 #
 
+# ---- Common Configuration Defaults ----
+
+NUMDEVICES ?= 1
 
 # ---- Paths ----
 ifndef $(MAXCOMPILER_BUILD_DIR)
@@ -67,7 +70,7 @@ DFEID=/dev/maxeler0
 
 # Files to remove on clean
 TRASH=*~ ../src/*~ *.o
-DIST_TRASH=Maxfiles.h *.class *.o debug*
+DIST_TRASH=Maxfiles.h *.class *.o debug* *.dot *.png
 
 help:
 	@ echo "Current configuration:"
@@ -109,7 +112,7 @@ $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
 	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 runsim: $(PRJ)_sim
-	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) restart
+	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) -d$(NUMDEVICES) restart
 	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXOS_SIM) ./$(PRJ)_sim $(USER)a0:$(USER)a
 	make stopsim
 
