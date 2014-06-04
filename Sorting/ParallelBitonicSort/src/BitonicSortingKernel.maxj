@@ -1,0 +1,65 @@
+/***
+    Recursively create a small bitonic sorting network.
+    This only goes up to 128 elements or so.
+    See http://en.wikipedia.org/wiki/Bitonic_sorter for a detailed description.
+*/
+
+import java.util.List;
+import java.util.ArrayList;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+
+public class BitonicSortingKernel extends Kernel {
+
+
+    private static final DFEType realType = dfeInt(32);
+
+    public BitonicSortingKernel(KernelParameters parameters, int width) {
+        super(parameters);
+
+        DFEArrayType<DFEVar> arrayType = new DFEArrayType(realType, width);
+        DFEArray<DFEVar> inArray = io.input("in_array", arrayType);
+
+        for (int size = 2; size <= width; size *= 2) {
+            DFEArray<DFEVar> outNext = arrayType.newInstance(this);
+
+            for (int start = 0; start < width; start += size) {
+                boolean sortAsc =  (start / size) % 2 == 0;
+                DFEArrayType<DFEVar> arrayType2 = new DFEArrayType(realType, size);
+                DFEArray<DFEVar> in = arrayType2.newInstance(this);
+                for (int i = 0; i < size; i++) {
+                    in[i] <== inArray[start + i];
+                }
+
+                DFEArray<DFEVar> out = null;
+                for (int size2 = size; size2 >= 2; size2 /= 2) {
+                    out = arrayType2.newInstance(this);
+                    for (int start2 = 0; start2 < size; start2 += size2 ) {
+                        int m = size2 / 2;
+                        for (int i = start2; i < start2 + m; i++) {
+                            DFEVar swap = (sortAsc ? in[i] > in[m + i] : in[i] < in[m + i]);
+                            out[i] <== swap ? in[m + i] : in[i];
+                            out[m + i] <== swap ? in[i] : in[m + i];
+                        }
+
+                    }
+                    in = out;
+                }
+
+                for (int i = 0; i < size; i++ )
+                    outNext[start + i] <== out[i];
+
+            }
+
+            inArray = outNext;
+        }
+
+
+        io.output("out_array", inArray, arrayType);
+    }
+
+}
