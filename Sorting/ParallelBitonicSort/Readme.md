@@ -1,6 +1,9 @@
 # About
-The kernel is a scalable (up to 128 inputs) bitonic sorting network.
-This is used to sort nVectors vectors of size networkWidth each.
+
+This is a bitonic sorter design for multiple DFEs using OpenMP.
+
+Each DFE is loaded with one (variable input count) bitonic sorter
+kernel and allocated a chunk of the input.
 
 For a detailed description of the bitonic sorting network see this
 [article](http://en.wikipedia.org/wiki/Bitonic_sorter) and
@@ -9,21 +12,21 @@ For a detailed description of the bitonic sorting network see this
 # Parameters
   * networkWidth - number of inputs to the bitonic network; this
     must be a __power of 2__.
-  * nVectors - number of vectors to sort
 
 # Input
-  The input is nVectors floating point vectors of size networkWidth.
+  The input is a stream of integer numbers to sort.
+  __Note__ The number of elements in the input stream must be a power of 2.
 
 # Output
-  Each of the input vectors sorted in increasing order.
+  Sorted input stream.
 
 # Example:
 
  * Parameters:
-    * networkWidth = 4, nVectors = 2:
+    * networkWidth = 4
 
  * Input:
-    *  in  = {{4.0, 7.0, 6.0, 5.0}, {3.0, 2.0, 1.0, 4.0}}
+    *  in  = {4, 7, 6, 5, 3, 2, 1, 8}
 
  * Output:
-    * out = {{4.0, 5.0, 6.0, 7.0}, {1.0, 2.0, 3.0, 4.0}}
+    * out = {1, 2, 3, 4, 5, 6, 7, 8}
