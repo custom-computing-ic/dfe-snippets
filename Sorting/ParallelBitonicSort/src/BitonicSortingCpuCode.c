@@ -1,5 +1,6 @@
 /***
-    Sorts nVectors vectors of networkWidth size each.
+    Runs multiple bitonic sorting kernels and does output merging
+    using a min heap.
 */
 
 #include <stdio.h>
@@ -90,18 +91,6 @@ int main(void) {
     int val = out_array[entry.second];
     min_heap.push(make_pair(val, entry.second));
   }
-
-  /* printf("Input:\n"); */
-  /* print_vec(in_array, inSize); */
-
-  /* printf("\nExpected (sorted):\n"); */
-  /* print_vec(expected, inSize); */
-
-  /* printf("\nOutput (sorted):\n"); */
-  /* print_vec(out_array, inSize); */
-
-  /* printf("\nOutput (merged):\n"); */
-  /* print_vec(new_out, inSize); */
 
   for (int i = 0; i < inSize; i++)
     if (new_out[i] != expected[i]) {
