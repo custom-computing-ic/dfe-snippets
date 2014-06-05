@@ -33,15 +33,18 @@ def main():
                       help="""Generate a completely standalone project. Use this
                               when you want to create DFE projects for use
                               outside of the dfe-snippets project.""")
+    parser.add_option('-c', '--clang', default=False, action='store_true',
+                      help="""Generate C99 for CPU code.""")
+
     (options, args) = parser.parse_args()
 
     if options.standalone:
         print "Creating standalone project."
-        if len(sys.argv) != 3:
+        if len(sys.argv) < 3:
             print "Usage create.py <ProjectName> -s"
             return
     else:
-        if len(sys.argv) != 3:
+        if len(sys.argv) < 3:
             print "Usage scripts/create.py <ProjectName> <ProjectConcept>"
             return
 
@@ -66,22 +69,39 @@ def main():
         dest = projectConcept + "/" + projectName
 
     d = os.path.dirname(__file__)
-    templates_path=os.path.join(d, 'template')
-    demo_project_path=os.path.join(templates_path, 'DemoProject')
+    templates_path = os.path.join(d, 'template')
+
+    demo_project_path = os.path.join(templates_path, 'DemoProject')
+
+    files = [
+        'DemoKernel.maxj',
+        'DemoManager.maxj'
+    ]
+
+    if options.clang:
+        files.append('DemoCpuCode.c')
+    else:
+        files.append('DemoCpuCode.cpp')
+
     shutil.copytree(demo_project_path, dest)
 
     macro_dict = {
         PROJECT_NAME_MACRO: projectName,
         PROJECT_ROOT_MACRO: projectRoot,
-        }
+    }
 
+    srcRoot = os.path.join(dest, 'src')
+
+    # remove extra source files
+    for f in os.listdir(srcRoot):
+        if f not in files:
+            os.remove(os.path.join(srcRoot, f))
 
     # replace macros with project name
     # just hardcode this for now, perhaps make it more flexible in the future
-    for f in ['DemoKernel.maxj', 'DemoCpuCode.c', 'DemoManager.maxj']:
-        ReplaceMacros(dest + "/src/" + f, projectName, macro_dict)
+    for f in files:
+        ReplaceMacros(srcRoot + "/" + f, projectName, macro_dict)
     ReplaceMacros(dest + "/build/Makefile", projectName, macro_dict)
-
 
     if options.standalone:
         # For standalone projects, copy makefiles
@@ -89,6 +109,18 @@ def main():
             makefile = 'Makefile' + f
             shutil.copyfile(os.path.join(templates_path, makefile),
                             os.path.join(dest, makefile))
+
+    # printSummary
+    print 'Created {} {} project.'.format(
+        'standalone' if options.standalone else '',
+        'C99' if options.clang else 'C++'
+    )
+    print '   Project Path: {}'.format(srcRoot)
+    print '   Files: '
+    for root, dirs, files in os.walk(dest):
+        for f in files:
+            print '     ' + os.path.join(root, f)
+
 
 if __name__ == '__main__':
     main()
