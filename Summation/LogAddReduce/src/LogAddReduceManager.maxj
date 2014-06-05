@@ -1,0 +1,63 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class LogAddReduceManager extends CustomManager{
+
+    private static final String s_kernelName  = "LogAddReduceKernel";
+
+    LogAddReduceManager(EngineParameters ep)
+    {
+        super(ep);
+
+        // Set clock frequency
+        config.setDefaultStreamClockFrequency(300);
+
+
+        KernelBlock k = addKernel(
+            new LogAddReduceKernel(makeKernelParameters(s_kernelName)));
+
+        DFELink x = addStreamFromCPU("input");
+        k.getInput("input") <== x;
+
+        DFELink nnz = addStreamFromCPU("nnz");
+        k.getInput("nnz") <== nnz;
+
+        DFELink y = addStreamToCPU("output");
+        y <== k.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes   typeDouble = CPUTypes.DOUBLE;
+        CPUTypes   typeInt32  = CPUTypes.INT32;
+        int        doubleSize = typeDouble.sizeInBytes();
+        int        int32Size  = typeInt32.sizeInBytes();
+
+        InterfaceParam inputLength    = engine_interface.addParam("inputLength", CPUTypes.INT);
+        InterfaceParam outputLength   = engine_interface.addParam("outputLength", CPUTypes.INT);
+        InterfaceParam inputInBytes   = inputLength * doubleSize;
+        InterfaceParam nnzInBytes     = inputLength * int32Size;
+        InterfaceParam outputInBytes  = outputLength * doubleSize;
+
+        engine_interface.setTicks(s_kernelName, inputLength);
+
+        engine_interface.setStream("input",   typeDouble, inputInBytes);
+        engine_interface.setStream("nnz",     typeInt32,  nnzInBytes);
+        engine_interface.setStream("output",  typeDouble, outputInBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        LogAddReduceManager manager =
+            new LogAddReduceManager(new EngineParameters(args));
+
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}
