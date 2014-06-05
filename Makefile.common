@@ -36,31 +36,26 @@ ifneq ($(findstring cpp, $(CPUFILES)), )
     CXX ?= icpc
     CPUCOMPILER = $(CXX)
 
-    ifeq ($(CXX), g++)
-      COMPILER_CFLAGS = -fopenmp
-      OPT_FLAGS = -march=native -O3
-    else ifeq ($(CXX), icpc)
-      COMPILER_CFLAGS = -fopenmp
+    # Assuming CXX points to g++/c++ by default
+    COMPILER_CFLAGS = -fopenmp
+    OPT_FLAGS = -march=native -O3
+
+    ifeq ($(CXX), icpc)
+      COMPILER_CFLAGS = -openmp
       OPT_FLAGS = -xHost -O3
-    else ifeq ($(CXX), c++)
-      # Assuming CXX points to g++ by default
-      COMPILER_CFLAGS = -fopenmp
-      OPT_FLAGS = -march=native -O3
+    endif
 else
     # language: C
     CC ?= icc
     CPUCOMPILER = $(CC)
 
+    # Assuming CC points to gcc/cc by default
+    COMPILER_CFLAGS = -std=c99 -fopenmp
+    OPT_FLAGS = -march=native -O3
+
     ifeq ($(CC), icc)
       COMPILER_CFLAGS = -std=c99 -openmp
       OPT_FLAGS = -xHost -O3
-    else ifeq ($(CC), gcc)
-      COMPILER_CFLAGS = -std=c99 -fopenmp
-      OPT_FLAGS = -march=native -O3
-    else ifeq ($(CC), cc)
-      # Assuming CC points to gcc by default
-      COMPILER_CFLAGS = -std=c99 -fopenmp
-      OPT_FLAGS = -march=native -O3
     endif
 endif
 
