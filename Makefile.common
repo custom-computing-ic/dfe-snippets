@@ -26,11 +26,43 @@ MAXELEROSDIR_SIM:=$(MAXCOMPILERDIR)/lib/maxeleros-sim
 
 # ---- Source files ----
 ENGINEFILES=$(wildcard ../src/*.maxj)
-CPUFILES=$(wildcard ../src/*.c)
+CPUFILES=$(wildcard ../src/*.c ../src/*.cpp)
+
+# ---- Compiler settings ----
+
+# detect the language: do we have .cpp extensions?
+ifneq ($(findstring cpp, $(CPUFILES)), )
+    # language: C++
+    CXX ?= icpc
+    CPUCOMPILER = $(CXX)
+
+    # Assuming CXX points to g++/c++ by default
+    COMPILER_CFLAGS = -fopenmp
+    OPT_FLAGS = -march=native -O3
+
+    ifeq ($(CXX), icpc)
+      COMPILER_CFLAGS = -openmp
+      OPT_FLAGS = -xHost -O3
+    endif
+else
+    # language: C
+    CC ?= icc
+    CPUCOMPILER = $(CC)
+
+    # Assuming CC points to gcc/cc by default
+    COMPILER_CFLAGS = -std=c99 -fopenmp
+    OPT_FLAGS = -march=native -O3
+
+    ifeq ($(CC), icc)
+      COMPILER_CFLAGS = -std=c99 -openmp
+      OPT_FLAGS = -xHost -O3
+    endif
+endif
+
 
 # ---- Command alias ----
 
-CC ?= icc
+
 MAXFILECOMPILE=maxfilecompile
 SLICCOMPILE=sliccompile
 MAXGUESSBUILDDIR=maxGuessBuildDir
@@ -43,22 +75,6 @@ MAXCOMPILERSIM=maxcompilersim
 
 MAXOS_HW=/opt/maxeler/maxeleros/lib/libmaxeleros.so
 MAXOS_SIM=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so
-
-# ---- Compiler settings ----
-ifeq ($(CC), icc)
-  COMPILER_CFLAGS = -std=c99 -openmp
-  OPT_FLAGS = -xHost -O3
-else ifeq ($(CC), gcc)
-  COMPILER_CFLAGS = -std=c99 -fopenmp
-  OPT_FLAGS = -march=native -O3
-else ifeq ($(CC), cc)
-  # Assuming CC points to gcc by default
-  COMPILER_CFLAGS = -std=c99 -fopenmp
-  OPT_FLAGS = -march=native -O3
-else ifeq ($(CC), g++)
-  COMPILER_CFLAGS = -fopenmp
-  OPT_FLAGS = -march=native -O
-endif
 
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar -1.6 -d .
 CFLAGS= $(COMPILER_CFLAGS) $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
@@ -113,10 +129,10 @@ $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_simc.o: $(CPUFILES)
-	$(CC) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
-	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
+	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 runsim: $(PRJ)_sim
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) -d$(NUMDEVICES) restart
@@ -141,10 +157,10 @@ $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_dfec.o: $(CPUFILES)
-	$(CC) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
-	$(CC) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
+	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 build: $(PRJ)_dfe
 

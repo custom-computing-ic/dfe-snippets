@@ -10,7 +10,8 @@ from optparse import OptionParser
 PROJECT_NAME_MACRO = "%%%ProjectName%%%"
 PROJECT_ROOT_MACRO = "%%%ProjectRoot%%%"
 
-def ReplaceMacros(path, projectName, project_macros):
+
+def ReplaceMacros(path, project_macros):
     f = open(path)
     content = f.read()
     f.close()
@@ -18,12 +19,59 @@ def ReplaceMacros(path, projectName, project_macros):
 
     for k, v in project_macros.iteritems():
         content = content.replace(k, v)
-    new_file_name = basename(path).replace("Demo", projectName)
+    new_file_name = basename(path).replace("Demo",
+                                           project_macros.get('PROJECT_NAME_MACRO'))
     dir_name = dirname(path)
     new_file_path = dir_name + "/" + new_file_name
 
     f = open(new_file_path, 'w')
     f.write(content)
+
+
+def PrintSummary(files, dest, options):
+    print 'Created {}{} project.'.format(
+        'standalone ' if options.standalone else '',
+        'C99' if options.clang else 'C++'
+    )
+    print '   Path:  {}'.format(dest)
+    print '   Files: '
+    for root, dirs, files in os.walk(dest):
+        for f in files:
+            print '     ' + os.path.join(root, f)
+
+
+def ProcessSourceFiles(files, dest, macro_dict):
+    srcRoot = os.path.join(dest, 'src')
+    for f in files:
+        ReplaceMacros(srcRoot + "/" + f, macro_dict)
+    ReplaceMacros(dest + "/build/Makefile", macro_dict)
+
+
+def CopyTemplateFiles(dest, options):
+    templates_path = os.path.join(os.path.dirname(__file__), 'template')
+    srcRoot = os.path.join(dest, 'src')
+    demo_project_path = os.path.join(templates_path, 'DemoProject')
+
+    files = [
+        'DemoKernel.maxj',
+        'DemoManager.maxj'
+    ]
+    files.append('DemoCpuCode.c' if options.clang else 'DemoCpuCode.cpp')
+    shutil.copytree(demo_project_path, dest)
+
+    # remove extra source files
+    for f in os.listdir(srcRoot):
+        if f not in files:
+            os.remove(os.path.join(srcRoot, f))
+
+    if options.standalone:
+        # For standalone projects, copy makefiles
+        for f in ['.common', '.Maia.hardware', '.Max3.hardware']:
+            makefile = 'Makefile' + f
+            shutil.copyfile(os.path.join(templates_path, makefile),
+                            os.path.join(dest, makefile))
+
+    return files
 
 
 def main():
@@ -33,15 +81,18 @@ def main():
                       help="""Generate a completely standalone project. Use this
                               when you want to create DFE projects for use
                               outside of the dfe-snippets project.""")
+    parser.add_option('-c', '--clang', default=False, action='store_true',
+                      help="""Generate C99 for CPU code.""")
+
     (options, args) = parser.parse_args()
 
     if options.standalone:
         print "Creating standalone project."
-        if len(sys.argv) != 3:
+        if len(sys.argv) < 3:
             print "Usage create.py <ProjectName> -s"
             return
     else:
-        if len(sys.argv) != 3:
+        if len(sys.argv) < 3:
             print "Usage scripts/create.py <ProjectName> <ProjectConcept>"
             return
 
@@ -55,40 +106,26 @@ def main():
             return
 
     projectName = sys.argv[1]
-    projectConcept = sys.argv[2] if len(sys.argv) > 2 else None
+    projectConcept = None if options.standalone else sys.argv[2]
+    projectRoot = "../../.."
+    dest = projectConcept + "/" + projectName
 
     # copy template to the target location
     if options.standalone:
         dest = projectName
         projectRoot = ".."
-    else:
-        projectRoot = "../../.."
-        dest = projectConcept + "/" + projectName
 
-    d = os.path.dirname(__file__)
-    templates_path=os.path.join(d, 'template')
-    demo_project_path=os.path.join(templates_path, 'DemoProject')
-    shutil.copytree(demo_project_path, dest)
+    files = CopyTemplateFiles(dest, options)
 
+    # replace macros and rename files based on project name
     macro_dict = {
-        PROJECT_NAME_MACRO: projectName,
-        PROJECT_ROOT_MACRO: projectRoot,
-        }
+        'PROJECT_NAME_MACRO': projectName,
+        'PROJECT_ROOT_MACRO': projectRoot,
+    }
+    ProcessSourceFiles(files, dest, macro_dict)
 
-
-    # replace macros with project name
-    # just hardcode this for now, perhaps make it more flexible in the future
-    for f in ['DemoKernel.maxj', 'DemoCpuCode.c', 'DemoManager.maxj']:
-        ReplaceMacros(dest + "/src/" + f, projectName, macro_dict)
-    ReplaceMacros(dest + "/build/Makefile", projectName, macro_dict)
-
-
-    if options.standalone:
-        # For standalone projects, copy makefiles
-        for f in ['.common', '.Maia.hardware', '.Max3.hardware']:
-            makefile = 'Makefile' + f
-            shutil.copyfile(os.path.join(templates_path, makefile),
-                            os.path.join(dest, makefile))
+    # printSummary
+    PrintSummary(files, dest, options)
 
 if __name__ == '__main__':
     main()
