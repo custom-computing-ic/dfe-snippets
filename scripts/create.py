@@ -20,7 +20,7 @@ def ReplaceMacros(path, project_macros):
     for k, v in project_macros.iteritems():
         content = content.replace(k, v)
     new_file_name = basename(path).replace("Demo",
-                                           project_macros.get('PROJECT_NAME_MACRO'))
+                                           project_macros.get(PROJECT_NAME_MACRO))
     dir_name = dirname(path)
     new_file_path = dir_name + "/" + new_file_name
 
@@ -119,8 +119,8 @@ def main():
 
     # replace macros and rename files based on project name
     macro_dict = {
-        'PROJECT_NAME_MACRO': projectName,
-        'PROJECT_ROOT_MACRO': projectRoot,
+        PROJECT_NAME_MACRO: projectName,
+        PROJECT_ROOT_MACRO: projectRoot,
     }
     ProcessSourceFiles(files, dest, macro_dict)
 
