@@ -1,0 +1,54 @@
+/***
+    Here we test thin wrapper around DFEsmFifo.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.SMIO;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+
+class FifoWrapperKernel extends Kernel
+{
+
+    private static final int     bitWidth   = 32;
+    private static final DFEType scalarType = dfeUInt(bitWidth);
+
+    protected FifoWrapperKernel(KernelParameters parameters) {
+        super(parameters);
+
+        DFEVar cycleCounter = control.count.simpleCounter(bitWidth);
+
+        DFEVar input  = io.input("input", scalarType);
+
+        debug.simPrintf("\ncycle=%d ", cycleCounter);
+
+        /***
+            Here we show how to shot yourself into the foot. We write into the FIFO
+            always but read occasionally. As the result, FIFO gets full and we loose
+            some input data when trying to push it to FIFO (watch 'full' output!)
+        */
+        DFEVar alwaysEnable = constant.var(dfeBool(), 1);
+        DFEVar readEnable   = control.count.pulse(2) | ((cycleCounter > 6) & (cycleCounter < 12)) | (cycleCounter >= 13);
+
+        int fifoDepth = 4;
+        SMIO sm = addStateMachine("Sm", new FifoWrapperSM(this, bitWidth, fifoDepth));
+        sm.connectInput("dataIn", input);
+        sm.connectInput("readEnable", readEnable);
+        sm.connectInput("writeEnable", alwaysEnable);
+        DFEVar fifoOut = sm.getOutput("dataOut");
+        DFEVar valid   = sm.getOutput("outValid");
+        DFEVar empty   = sm.getOutput("empty");
+        DFEVar full    = sm.getOutput("full");
+
+        // readEnable enables for the output at the next cycle => current value was enables at previous cycle.
+        // data is output twice when readEnable is 0, but 'valid' output becomes 0, so we need to filter out
+        // FIFO's output really:
+        DFEVar output = (valid & stream.offset(readEnable,-1))? fifoOut : constant.var(scalarType, 0);
+
+        debug.simPrintf("| FIFO<-%d | FIFO->%d, valid=%d, readEnable=%d, empty=%d, full=%d | output=%d ", input, fifoOut, valid, readEnable, empty, full, output);
+
+        io.output("output", output, scalarType);
+    }
+}

@@ -1,0 +1,47 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class FifoWrapperManager extends CustomManager{
+
+    private static final String s_kernelName  = "FifoWrapperKernel";
+
+    FifoWrapperManager(EngineParameters ep)
+    {
+        super(ep);
+
+        config.setDefaultStreamClockFrequency(200);
+
+        KernelBlock k = addKernel(new FifoWrapperKernel(makeKernelParameters(s_kernelName)));
+
+        k.getInput("input")  <== addStreamFromCPU("input");
+        addStreamToCPU("output") <== k.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault()
+    {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam inputSizeBytes = N * size;
+
+        engine_interface.setTicks(s_kernelName, N);
+
+        engine_interface.setStream("input",  type, inputSizeBytes);
+        engine_interface.setStream("output", type, inputSizeBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args)
+    {
+        FifoWrapperManager manager = new FifoWrapperManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}
