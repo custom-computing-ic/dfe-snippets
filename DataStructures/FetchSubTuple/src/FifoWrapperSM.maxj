@@ -33,26 +33,28 @@ public class FifoWrapperSM extends KernelStateMachine
     private DFEsmOutput m_dataCount;
     private DFEsmFifo   m_buffer;
 
+    private DFEsmValueType m_dType;
+
     public FifoWrapperSM(KernelLib owner, int dataBitWidth, int fifoDepth)
     {
         super(owner);
 
-        DFEsmValueType dType = dfeUInt(dataBitWidth);
+        m_dType = dfeUInt(dataBitWidth);
 
         DFEsmFifoConfig config = new DFEsmFifoConfig();
         config.setBufferSpec(BufferSpec.UseLUTRam);
         config.setHasDataCount();
         config.setHasValidFlag();
-        m_buffer        = buffer.fifo(dType, fifoDepth, config);
+        m_buffer        = buffer.fifo(m_dType, fifoDepth, config);
 
-        m_dataIn        = io.input("dataIn", dType);
-        m_writeEnable   = io.input("writeEnable", dfeBool());
+        m_dataIn        = io.input("dataIn",     m_dType);
+        m_writeEnable   = io.input("writeEnable",dfeBool());
         m_readEnable    = io.input("readEnable", dfeBool());
-        m_dataOut       = io.output("dataOut",   dType);
+        m_dataOut       = io.output("dataOut",   m_dType);
+        m_dataCount     = io.output("dataCount", m_dType);
         m_outValid      = io.output("outValid",  dfeBool());
         m_empty         = io.output("empty",     dfeBool());
         m_full          = io.output("full",      dfeBool());
-        m_dataCount     = io.output("dataCount", dType);
     }
 
     @Override
@@ -70,6 +72,6 @@ public class FifoWrapperSM extends KernelStateMachine
         m_empty     <== m_buffer.output.empty;
         m_dataOut   <== m_buffer.output.dataOut;
         m_outValid  <== m_buffer.output.valid;
-        m_dataCount <== m_buffer.data_count.cast(dfeUInt(32));
+        m_dataCount <== m_buffer.data_count.cast(m_dType);
     }
 }
