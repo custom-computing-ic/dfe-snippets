@@ -100,7 +100,7 @@ class FetchSubTuple extends KernelLib
             m_pushAccepted <== pushEnable & (pastNumElements < (bufferDepth-1)*m_tupleSize);
             for (int i = 0; i < m_tupleSize; i++)
             {
-                m_buffer[i].connectInput("dataIn", inputTuple[i]);
+                m_buffer[i].connectInput("dataIn", inputTuple[i].cast(m_indexType));
                 m_buffer[i].connectInput("writeEnable", m_pushAccepted);
             }
         optimization.popPipeliningFactor();
@@ -113,6 +113,9 @@ class FetchSubTuple extends KernelLib
     */
     public DFEVector<DFEVar> pop(DFEVar subTupleSize)
     {
+        // in case subTupleSize has incompatible bit width with m_indexType
+        DFEVar numElements = subTupleSize.cast(m_indexType);
+
         // ----------------------------------------------------------------------
         //  Manage state
         // ----------------------------------------------------------------------
@@ -129,8 +132,8 @@ class FetchSubTuple extends KernelLib
 
             // do we have enough data to pop?
             DFEVar incomingData = m_pushAccepted? constant.var(m_indexType,m_tupleSize) : constant.var(m_indexType,0);
-            DFEVar enoughData = (incomingData + pastNumElements >= subTupleSize);
-            DFEVar fetchSize  = (enoughData)? subTupleSize : 0;
+            DFEVar enoughData = (incomingData + pastNumElements >= numElements);
+            DFEVar fetchSize  = (enoughData)? numElements : 0;
 
             for (int i = 0; i < m_tupleSize; i++)
             {
@@ -155,13 +158,12 @@ class FetchSubTuple extends KernelLib
         for (int i = 0; i < m_tupleSize; i++)
         {
             m_buffer[i].connectInput("readEnable", readEnable[i]);
-            DFEVar fifoOut   = stream.offset(m_buffer[i].getOutput("dataOut"),1);
+            DFEVar fifoOut   = stream.offset(m_buffer[i].getOutput("dataOut"),1).cast(m_contentType);
             DFEVar fifoValid = stream.offset(m_buffer[i].getOutput("outValid"),1);
 
-            dataValid[i] <== fifoValid & stream.offset(readEnable[i],0);
+            dataValid[i] <== fifoValid & readEnable[i];
 
-            DFEVar validOut = dataValid[i]? fifoOut : constant.var(m_contentType, 0);
-            tuple[i] <== stream.offset(validOut, 0);
+            tuple[i] <== dataValid[i]? fifoOut : constant.var(m_contentType, 0);
         }
         m_popSuccessful <== logicORReductionTree(dataValid, 0, m_tupleSize-1);
 

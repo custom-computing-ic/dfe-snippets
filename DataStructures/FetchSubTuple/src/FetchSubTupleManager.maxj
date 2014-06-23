@@ -14,7 +14,8 @@ public class FetchSubTupleManager extends CustomManager{
     {
         super(ep);
 
-        config.setDefaultStreamClockFrequency(150);
+        config.setDefaultStreamClockFrequency(135);
+
 
         KernelBlock k = addKernel(new FetchSubTupleKernel(makeKernelParameters(s_kernelName), tupleSize));
 
@@ -27,17 +28,19 @@ public class FetchSubTupleManager extends CustomManager{
         EngineInterface engine_interface = new EngineInterface();
         CPUTypes type = CPUTypes.INT32;
         int size = type.sizeInBytes();
+        CPUTypes typeDouble = CPUTypes.DOUBLE;
+        int sizeDouble = typeDouble.sizeInBytes();
 
         InterfaceParam numInputs = engine_interface.addParam("numInputs", CPUTypes.INT);
         InterfaceParam numCycles = engine_interface.addParam("numCycles", CPUTypes.INT);
-        InterfaceParam inputSizeBytes = numInputs * size;
+        InterfaceParam inputSizeBytes = numInputs * sizeDouble;
         InterfaceParam sizesSizeBytes = numCycles * size;
 
         engine_interface.setTicks(s_kernelName, numCycles);
 
-        engine_interface.setStream("input",  type, inputSizeBytes);
-        engine_interface.setStream("output", type, inputSizeBytes);
-        engine_interface.setStream("sizes",  type, sizesSizeBytes);
+        engine_interface.setStream("input",  typeDouble, inputSizeBytes);
+        engine_interface.setStream("output", typeDouble, inputSizeBytes);
+        engine_interface.setStream("sizes",  type,       sizesSizeBytes);
         return engine_interface;
     }
 
