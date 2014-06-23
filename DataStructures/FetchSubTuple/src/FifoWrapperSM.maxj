@@ -11,6 +11,8 @@
     - readEnable signal enables for output at the NEXT cycle
     - beware of data being out twice if FIFO is empty first time
       (though 'valid' output signal is 0 second time)
+    - internal data type must be signed in order to allow storing
+      64-bit floating point values.
 */
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
 import com.maxeler.maxcompiler.v2.statemachine.DFEsmInput;
@@ -39,7 +41,7 @@ public class FifoWrapperSM extends KernelStateMachine
     {
         super(owner);
 
-        m_dType = dfeUInt(dataBitWidth);
+        m_dType = dfeInt(dataBitWidth);
 
         DFEsmFifoConfig config = new DFEsmFifoConfig();
         config.setBufferSpec(BufferSpec.UseLUTRam);

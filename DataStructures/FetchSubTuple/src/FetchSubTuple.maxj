@@ -64,7 +64,7 @@ class FetchSubTuple extends KernelLib
         m_align            = align;
         m_tupleBitWidth    = MathUtils.bitsToAddress(tupleSize);
         m_contentType      = dataType;
-        m_indexType        = dfeUInt(dataBitWidth);
+        m_indexType        = dfeInt(dataBitWidth);
         m_tupleSize        = tupleSize;
         m_tupleType =
                 new DFEVectorType<DFEVar> (m_contentType, m_tupleSize);
