@@ -196,3 +196,5 @@ debug:
 
 debughw:
 	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(DFEID) $(DFEMAXDIR)/$(PRJ).max
+
+.PHONY: debug
