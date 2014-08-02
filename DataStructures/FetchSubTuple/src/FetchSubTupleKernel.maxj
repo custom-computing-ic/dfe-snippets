@@ -45,7 +45,7 @@ class FetchSubTupleKernel extends Kernel
         DFEVar size             = io.input("sizes", scalarType, popEnable);
 
         boolean alignOutput = true;
-        FetchSubTuple buffer = new FetchSubTuple(this, tupleSize, 64, floatType, alignOutput);
+        FetchSubTuple buffer = new FetchSubTuple(this, "test", tupleSize, 64, floatType, alignOutput);
         DFEVar success = buffer.push(pushEnable, input);
         DFEVar subTupleSize = (popEnable)? size: 0;
         DFEVector<DFEVar> outTuple = buffer.pop(subTupleSize);
