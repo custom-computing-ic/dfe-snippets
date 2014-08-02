@@ -1,0 +1,59 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class ReduceStaggeredVectorsManager extends CustomManager{
+
+    private static final String s_kernelName  = "ReduceStaggeredVectorsKernel";
+    private static final int    maxTimeOffset = 4;
+    private static final int    numVectors    = 16;
+
+
+    ReduceStaggeredVectorsManager(EngineParameters ep)
+    {
+        super(ep);
+
+        // Set clock frequency
+        config.setDefaultStreamClockFrequency(200);
+
+        KernelBlock k = addKernel(
+            new ReduceStaggeredVectorsKernel(makeKernelParameters(s_kernelName), maxTimeOffset, numVectors));
+
+        DFELink x = addStreamFromCPU("input");
+        k.getInput("input") <== x;
+
+        DFELink y = addStreamToCPU("output");
+        y <== k.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes   typeDouble = CPUTypes.DOUBLE;
+        int        doubleSize = typeDouble.sizeInBytes();
+
+        InterfaceParam inputLength = engine_interface.addParam("inputLength", CPUTypes.INT);
+        InterfaceParam sizeInBytes = inputLength * doubleSize;
+
+        engine_interface.setTicks(s_kernelName, inputLength+numVectors*maxTimeOffset);
+        engine_interface.setScalar(s_kernelName, "N", inputLength);
+
+        engine_interface.setStream("input",   typeDouble, sizeInBytes);
+        engine_interface.setStream("output",  typeDouble, sizeInBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        ReduceStaggeredVectorsManager manager =
+            new ReduceStaggeredVectorsManager(new EngineParameters(args));
+
+        manager.createSLiCinterface(interfaceDefault());
+        manager.addMaxFileConstant("numVectors", numVectors);
+
+        manager.build();
+    }
+}
