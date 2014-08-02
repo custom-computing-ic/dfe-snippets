@@ -25,7 +25,7 @@ WHEREISROOT=../../..
 
 
 # Assuming Kernel and Manager class names follow the pattern below:
-PRJ=ReduceVectorsWithOffset
+PRJ=ReduceStaggeredVectors
 KERNEL=$(PRJ)Kernel
 MANAGER=$(PRJ)Manager
 
