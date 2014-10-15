@@ -1,12 +1,10 @@
-# Usage: type 'make help'
-
 # ---- Project settings ----
 
-WHEREISROOT=%%%ProjectRoot%%%
+WHEREISROOT=../../..
 
 
 # Assuming Kernel and Manager class names follow the pattern below:
-PRJ=%%%ProjectName%%%
+PRJ=FifoWrapper
 KERNEL=$(PRJ)Kernel
 MANAGER=$(PRJ)Manager
 

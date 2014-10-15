@@ -1,0 +1,48 @@
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class CircularBufferManager extends CustomManager {
+
+    private static final String s_kernelName = "CircularBufferKernel";
+    private static final int bufferSize = 8;
+
+    public CircularBufferManager(EngineParameters engineParameters) {
+        super(engineParameters);
+
+        KernelBlock k = addKernel(
+            new CircularBufferKernel(makeKernelParameters(s_kernelName), bufferSize));
+
+        DFELink tocpu = addStreamToCPU("output");
+        tocpu <== k.getOutput("output");
+
+        DFELink data = addStreamFromCPU("data");
+        k.getInput("data") <== data;
+    }
+
+    private static EngineInterface modeDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes   dataType = CPUTypes.INT32;
+        int        size = dataType.sizeInBytes();
+
+        InterfaceParam  inN        = engine_interface.addParam("inN",  CPUTypes.INT);
+
+        engine_interface.setTicks(s_kernelName, inN + bufferSize);
+        engine_interface.setScalar(s_kernelName, "streamSize", inN);
+        engine_interface.setStream("data",    dataType, inN * size);
+        engine_interface.setStream("output",  dataType, inN * size);
+        return engine_interface;
+    }
+
+    public static void main(String[] args) {
+        CircularBufferManager manager =
+            new CircularBufferManager(new EngineParameters(args));
+
+        manager.createSLiCinterface(modeDefault());
+        manager.build();
+    }
+}

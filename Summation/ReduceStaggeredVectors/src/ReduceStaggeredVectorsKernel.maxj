@@ -1,0 +1,63 @@
+/***
+    This kernel shows how to add multiple vectors staggered in time.
+    Here we take an input stream and produce several derived streams
+    with a lag from each other, and pass them to ReduceStaggeredVectors
+    as an input.
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
+
+
+class ReduceStaggeredVectorsKernel extends Kernel {
+
+    private static final int     counterWidth = 32;
+    private static final DFEType dataType   = dfeFloat(11, 53); // C double
+    private static final DFEType scalarType = dfeUInt(counterWidth);
+
+    private DFEVar blackBoxComputeKernel(DFEVar input, int fifoBufferCapacity)
+    {
+        /***
+            This FIFO queue models some non-trivial computation with
+            its own latency and data buffering: something that static
+            scheduling of MaxJ cannot hide.
+
+            Here we push new entries at every cycle; members of FIFO queue
+            are shifted at each cycle as well, so the first input entry
+            is popped out exactly fifoBufferCapacity cycles after.
+        */
+        DFEVar alwaysEnable = constant.var(dfeBool(), 1);
+        FifoAsShiftRegister fifo = new FifoAsShiftRegister(this, fifoBufferCapacity, dataType);
+        return fifo.popPush(alwaysEnable, 2*input);
+    }
+
+    protected ReduceStaggeredVectorsKernel(KernelParameters parameters, int timeOffset, int numVectors)
+    {
+        super(parameters);
+
+        DFEVar cycleCounter = control.count.simpleCounter(counterWidth);
+        DFEVar N     = io.scalarInput("N", scalarType);
+
+        DFEVector<DFEVar> enable = new DFEVectorType<DFEVar>(dfeBool(), numVectors).newInstance(this);
+        for (int i = 0; i < numVectors; i++)
+        {
+            enable[i] <== (cycleCounter >= i*timeOffset) & (cycleCounter < i*timeOffset + N);
+        }
+
+        DFEVar input = enable[0]? io.input("input",   dataType, enable[0]) : 0;
+
+        DFEVector<DFEVar> inputs = new DFEVectorType<DFEVar>(dataType, numVectors).newInstance(this);
+        inputs[0] <== input;
+        for (int i = 1; i < numVectors; i++)
+        {
+            inputs[i] <== blackBoxComputeKernel(inputs[i-1], timeOffset);
+        }
+
+        ReduceStaggeredVectors r = new ReduceStaggeredVectors(this, enable, inputs, numVectors, timeOffset, dataType);
+
+        io.output("output", r.getOutput(), dataType, r.isOutputValid());
+    }
+
+}

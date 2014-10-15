@@ -26,7 +26,7 @@ int main(void)
   }
 
   std::cout << "Running on DFE." << std::endl;
-  Demo(inSize, &a[0], &b[0], &out[0]);
+  %%%ProjectName%%%(inSize, &a[0], &b[0], &out[0]);
 
 
   /***

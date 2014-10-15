@@ -1,0 +1,70 @@
+Col 1 - Longest path through line.
+Col 2 - Sum of all node output latencies for line.
+
+       |       |/***
+       |       |    This kernel implements accumulation of a (large) floating point stream
+       |       |    in two stages: first it is reduced to few (loopLength) partial sums,
+       |       |    then these partial sums are reduced to a final sum via balanced adder
+       |       |    tree.
+       |       |
+       |       |    This code is copied from the corresponding kernel in Summation/ directory
+       |       |    to illustrate latency annotation of some computation.
+       |       |*/
+       |       |import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+       |       |import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+       |       |import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+       |       |import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+       |       |
+       |       |class LatencyAnnotationKernel extends Kernel {
+       |       |
+       |       |    private static final int     counterWidth = 32;
+       |       |    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+       |       |    private static final DFEType scalarType = dfeUInt(counterWidth);
+       |       |
+       |       |    protected LatencyAnnotationKernel(KernelParameters parameters,
+       |       |                                              int              loopLength,
+       |       |                                              int              minStreamLength)
+       |       |    {
+       |       |        super(parameters);
+       |       |
+       |       |        DFEVar index = control.count.simpleCounter(counterWidth);
+     5 |     5 |        DFEVar input = io.input("input", dataType);
+       |       |        DFEVar N     = io.scalarInput("N", scalarType);
+       |       |
+    58 |    92 |        DFEVar finalSum = summation(input, index, N, loopLength);
+       |       |
+       |       |        // we cannot output just one value: PCIe stream length must be multiple
+       |       |        // of 16 bytes. The last (4th) item in this stream is the total sum.
+     2 |     2 |        io.output("output", finalSum, dataType, index >= N - minStreamLength);
+       |       |    }
+       |       |
+       |       |    private DFEVar summation(DFEVar newTerm, DFEVar termNum, DFEVar totalTerms,  int loopLength)
+       |       |    {
+       |       |        DFEVar carriedSum = dataType.newInstance(this); // sourceless stream
+     1 |     2 |        DFEVar sum    = (termNum < loopLength) ? 0.0 : carriedSum;
+    14 |    14 |        DFEVar newSum = newTerm + sum;
+       |       |
+       |       |        carriedSum <== stream.offset(newSum, -loopLength);
+       |       |
+       |       |        // streaming partial sums, for comparison and cross-validation only
+     2 |     2 |        io.output("partial", newSum, dataType, termNum >= totalTerms - loopLength );
+       |       |
+    42 |    90 |        DFEVar finalSum = summationTree(newSum, 0, loopLength-1);
+       |       |        return finalSum;
+       |       |    }
+       |       |
+       |       |
+       |       |    // Recursively produce binary tree of additions. Leaf nodes are
+       |       |    // offsets to source stream.
+       |       |    private DFEVar summationTree(DFEVar src, int left, int right)
+       |       |    {
+       |       |        if (left == right)
+       |       |        {
+       |       |            return stream.offset(src, -left);
+       |       |        }
+       |       |        int middle = left + (right - left)/2;
+    28 |    58 |        DFEVar leftVal  = summationTree(src, left, middle);
+    28 |   -62 |        DFEVar rightVal = summationTree(src, middle + 1, right);
+    42 |   210 |        return leftVal + rightVal;
+       |       |    }
+       |       |}

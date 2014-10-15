@@ -1,3 +1,5 @@
+# Usage: type 'make help'
+
 # ---- Project settings ----
 
 WHEREISROOT=%%%ProjectRoot%%%

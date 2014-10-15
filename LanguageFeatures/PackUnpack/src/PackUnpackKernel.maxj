@@ -1,0 +1,60 @@
+/***
+    This kernel shows how to
+
+        - pack/unpack data into raw bits and back undestructively
+        - store binary state of a variable of type A in a variable of type B.
+
+    Use case: storing complex types in a state machine.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStructType.*;
+
+class PackUnpackKernel extends Kernel {
+
+    private static final StructFieldType fieldA  = DFEStructType.sft("a", dfeInt(32));
+    private static final StructFieldType fieldB  = DFEStructType.sft("b", dfeInt(32));
+    private static final DFEStructType PairType  = new DFEStructType(fieldA, fieldB);
+
+    protected PackUnpackKernel(KernelParameters parameters)
+    {
+        super(parameters);
+
+
+        DFEVar a = io.input("a", dfeInt(32));
+        DFEVar b = io.input("b", dfeInt(32));
+
+        // pack 2 integers to a struct
+        DFEStruct pair = PairType.newInstance(this);
+        pair.get("a") <== a;
+        pair.get("b") <== b;
+
+        // do some computation on the struct
+        DFEStruct updatedPair = doSomeWork(pair);
+
+        // pack struct into DFERawBits and unpack it to a single signed integer
+        DFEVar packed = dfeInt(64).unpack( updatedPair.pack() );
+
+        // store integer in a FIFO of depth 2 (so it's stored for 2 cycles)
+        int bufferCapacity = 2;
+        FifoAsShiftRegister fifo = new FifoAsShiftRegister(this, bufferCapacity, dfeInt(64));
+        DFEVar stored = fifo.popPush(constant.var(true), packed);
+
+        // pack stored integer to DFERawBits and unpack them to a struct.
+        DFEStruct dataOut = PairType.unpack( stored.pack() );
+
+        io.output("output", (DFEVar)dataOut.get("a") + (DFEVar)dataOut.get("b"), dfeInt(32));
+    }
+
+    protected DFEStruct doSomeWork(DFEStruct src)
+    {
+        DFEStruct dest = PairType.newInstance(this);
+        dest.get("a") <== src.get("a");
+        dest.get("b") <== (DFEVar)src.get("b") + 5;
+        return dest;
+    }
+
+}

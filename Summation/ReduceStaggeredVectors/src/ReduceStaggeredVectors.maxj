@@ -1,0 +1,97 @@
+/***
+    This code implements add-reduction circuit for a collection of
+    input vectors, staggered in time from each other.
+
+    Setting: let some circuit produces an output vector of length n, and at each
+    cycle it outputs new vector entry. Let one instantiates m copies of the
+    above circuit and enables their work at 0, k, 2k, ... cycles accordingly,
+    where k is the offset in cycles. All together they produce m vectors of same
+    length n (but different content) with corresponding entries output with regular
+    lag in cycles from each other.
+    Problem: add these vectors element-wise.
+
+    This code adds all these vectors element-wise despite of time lags.
+
+    To complicate things, this code allows new vector entries not to come
+    each cycle, but with some irregular cycle gaps. E.g. the above circuit
+    may spend some irregular number of cycles internally for computing
+    next vector entry.  However, it is assumed that in average new vector
+    entries are produced regularly. Otherwise the buffers necessary for
+    intermediate data storage overfill.
+
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStructType.*;
+
+
+class ReduceStaggeredVectors extends KernelLib
+{
+    private DFEStructType pairType;
+
+    private DFEVar output;
+    private DFEVar outputValid;
+
+    public  DFEVar getOutput()       {   return output;        }
+    public  DFEVar isOutputValid()   {   return outputValid;   }
+
+    /***
+        @ param     inputEnable         Ordered sequence of boolean flags each saying whether a corresponding entry input[i] is a correct new entry of i-th input vector.
+        @ param     input               Ordered sequence of input vector entries, enabled by inputEnable.
+        @ param     numTerms            Number of input vectors to be add-reduced.
+        @ param     maxOffset           Maximum time lag between each consecutive vector get's enabled.
+        @ param     dataType            underlying data type of add-reduced data
+    */
+    protected ReduceStaggeredVectors(KernelLib owner,
+                                     DFEVector<DFEVar> inputEnable, DFEVector<DFEVar> input,
+                                     int numTerms, int maxOffset, DFEType dataType)
+    {
+        super(owner);
+
+        StructFieldType entry  = DFEStructType.sft("entry",  dataType);
+        StructFieldType enable = DFEStructType.sft("enable", dfeBool());
+        pairType = new DFEStructType(entry, enable);
+
+        DFEStruct result = addReductionTree(inputEnable, input, 0, numTerms-1, maxOffset, dataType);
+
+        output      = result.get("entry");
+        outputValid = result.get("enable");
+    }
+
+    /***
+        Recursively unroll binary add-reduction tree for the entries of input DFEVector
+        within the window [left, right], assuming each next vector entry comes up to
+        maxOffset cycles after the previous vector entry.
+    */
+    private DFEStruct addReductionTree(DFEVector<DFEVar> enable, DFEVector<DFEVar> input,
+                                       int left, int right, int maxOffset, DFEType dataType)
+    {
+        DFEStruct result = pairType.newInstance(this);
+
+        if (left == right)
+        {
+            result.get("entry")  <== input[left];
+            result.get("enable") <== enable[left];
+            return result;
+        }
+
+        int middle = left + (right - left)/2;
+
+        DFEStruct leftSubTree  = addReductionTree(enable, input, left,    middle, maxOffset, dataType);
+        DFEStruct rightSubTree = addReductionTree(enable, input, middle+1, right, maxOffset, dataType);
+
+        VectorStoreReduce adder =
+                new VectorStoreReduce(this,
+                                      (DFEVar)leftSubTree.get("enable"),  (DFEVar)leftSubTree.get("entry"),
+                                      (DFEVar)rightSubTree.get("enable"), (DFEVar)rightSubTree.get("entry"),
+                                      dataType, (right - left)*maxOffset);
+
+        result.get("entry")  <== adder.getOutput();
+        result.get("enable") <== adder.isOutputValid();
+
+        return result;
+    }
+
+}
