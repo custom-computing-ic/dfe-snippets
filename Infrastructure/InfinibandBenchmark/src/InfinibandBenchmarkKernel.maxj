@@ -11,9 +11,10 @@ class InfinibandBenchmarkKernel extends Kernel {
     protected InfinibandBenchmarkKernel(KernelParameters parameters) {
         super(parameters);
 
-        DFEVar a = io.input("a", dfeInt(32));
-        DFEVar b = io.input("b", dfeInt(32));
-        io.output("output", a + b, dfeInt(32));
+        DFEVar a = io.input("a", dfeInt(64));
+        DFEVar b = io.input("b", dfeInt(64));
+        io.output("output1", a + b, dfeInt(64));
+	      io.output("output2", a - b, dfeInt(64));
     }
 
 }

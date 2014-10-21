@@ -8,7 +8,7 @@
 #include <iostream>
 #include <cmath>
 
-#include "Maxfiles.h"
+#include "InfinibandBenchmark.h"
 #include "MaxSLiCInterface.h"
 
 using namespace std;
@@ -21,8 +21,8 @@ const double MB = pow(1024, 2);
 /** Maxmimum possible bandwidth at given clock speed*/
 void printMaxInfinbandBandwidth() {
     double clock = 150.0;
-    double inBytesPerCycle = sizeof(int) * 2;
-    double outBytesPerCycle = sizeof(int);
+    double inBytesPerCycle = sizeof(long) * 2;
+    double outBytesPerCycle = sizeof(long) * 2;
     double max = (inBytesPerCycle + outBytesPerCycle) * clock * 1E6 / GB;
     cout << "Max possible bandwidth (@150 MHz Stream Clock): " << max << " GB/s" << endl;
 }
@@ -36,10 +36,10 @@ double measuredInifibandBandwidth(long sizeInBytes, double runtimeS) {
 int main(void)
 {
 
-    const long inSize = 2 * 384 * 1E6;
-    const long dataSizeBytes = 3 * inSize * sizeof(int);
+    const long inSize = 2 * 384 * 1E5;
+    const long dataSizeBytes = 4 * inSize * sizeof(long);
 
-    std::vector<int> a(inSize), b(inSize), expected(inSize), out(inSize, 0);
+    std::vector<long> a(inSize), b(inSize), expected(inSize), out1(inSize, 0), out2(inSize, 0);
 
     for(long i = 0; i < inSize; ++i) {
         a[i] = i + 1;
@@ -52,7 +52,7 @@ int main(void)
 
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
-    InfinibandBenchmark(inSize, &a[0], &b[0], &out[0]);
+    InfinibandBenchmark(inSize, &a[0], &b[0], &out1[0], &out2[0]);
     gettimeofday(&tv2, NULL);
 
     double runtimeS = ((tv2.tv_sec-tv1.tv_sec) * (double)1E6 +
@@ -62,12 +62,19 @@ int main(void)
     cout << "Bandwidth " << measuredInifibandBandwidth(dataSizeBytes,  runtimeS);
     cout << " MB/s " << endl;
 
-    for (int i = 0; i < inSize; i++)
-        if (out[i] != expected[i]) {
+    for (int i = 0; i < inSize; i++) {
+        if (out1[i] != expected[i]) {
             printf("Output from DFE did not match CPU: %d : %d != %d\n",
-                   i, out[i], expected[i]);
+                   i, out1[i], expected[i]);
             return 1;
         }
+        if (out2[i] != 2) {
+            printf("Output from DFE did not match CPU: %d : %d != %d\n",
+                   i, out2[i], 2);
+            return 1;
+        }
+
+	  }
 
     std::cout << "Test passed!" << std::endl;
     return 0;
