@@ -1,27 +1,16 @@
-/***
-	TODO Add a descriptive comment!
-*/
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
-import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
-import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
-
-import com.maxeler.maxcompiler.v2.build.EngineParameters;
-import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.managers.standard.Manager;
 import com.maxeler.maxcompiler.v2.managers.standard.Manager.IOType;
 
 public class InfinibandBenchmarkManager {
 
     public static void main(String[] args) {
-			EngineParameters params = new EngineParameters(args);
-			Manager manager = new Manager(params);
-			manager.setKernel(new InfinibandBenchmarkKernel(manager.makeKernelParameters()));
-			manager.setIO(IOType.ALL_CPU);
-			manager.createSLiCinterface();
-			manager.build();
+        EngineParameters params = new EngineParameters(args);
+        Manager manager = new Manager(params);
+        manager.setKernel(new InfinibandBenchmarkKernel(manager.makeKernelParameters()));
+        manager.setIO(IOType.ALL_CPU);
+        manager.createSLiCinterface();
+        manager.build();
     }
 
 }
