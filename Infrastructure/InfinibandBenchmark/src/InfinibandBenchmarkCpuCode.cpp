@@ -33,17 +33,29 @@ double measuredInifibandBandwidth(long sizeInBytes, double runtimeS) {
 }
 
 
-int main(void)
-{
+int check(long got, long expected, int i, int streamNo) {
+    if (got != expected) {
+        printf("Output from DFE did not match CPU (stream: %d): %d : %d != %d\n",
+               streamNo, i, got, expected);
+        return 1;
+    }
+    return 0;
+}
 
-    const long inSize = 2 * 384 * 1E5;
+
+int main(void) {
+
+    const long inSize = 2 * 384 * 1E3;
     const long dataSizeBytes = 4 * inSize * sizeof(long);
 
-    std::vector<long> a(inSize), b(inSize), expected(inSize), out1(inSize, 0), out2(inSize, 0);
+    vector<long> a(inSize), b(inSize), c(inSize), d(inSize), expected(inSize);
+    vector<long> out1(inSize, 0), out2(inSize, 0), out3(inSize, 0), out4(inSize, 0);
 
     for(long i = 0; i < inSize; ++i) {
         a[i] = i + 1;
         b[i] = i - 1;
+        c[i] = i + 1;
+        d[i] = i - 1;
         expected[i] = 2 * i;
     }
 
@@ -52,7 +64,9 @@ int main(void)
 
     struct timeval tv1, tv2;
     gettimeofday(&tv1, NULL);
-    InfinibandBenchmark(inSize, &a[0], &b[0], &out1[0], &out2[0]);
+    InfinibandBenchmark(inSize,
+                        &a[0], &b[0], &c[0], &d[0],
+                        &out1[0], &out2[0], &out3[0], &out4[0]);
     gettimeofday(&tv2, NULL);
 
     double runtimeS = ((tv2.tv_sec-tv1.tv_sec) * (double)1E6 +
@@ -63,18 +77,11 @@ int main(void)
     cout << " MB/s " << endl;
 
     for (int i = 0; i < inSize; i++) {
-        if (out1[i] != expected[i]) {
-            printf("Output from DFE did not match CPU: %d : %d != %d\n",
-                   i, out1[i], expected[i]);
-            return 1;
-        }
-        if (out2[i] != 2) {
-            printf("Output from DFE did not match CPU: %d : %d != %d\n",
-                   i, out2[i], 2);
-            return 1;
-        }
-
-	  }
+        check(out1[i], expected[i], i, 1);
+        check(out2[i], 2, i, 2);
+        check(out3[i], expected[i], i, 3);
+        check(out4[i], 2, i, 4);
+    }
 
     std::cout << "Test passed!" << std::endl;
     return 0;
