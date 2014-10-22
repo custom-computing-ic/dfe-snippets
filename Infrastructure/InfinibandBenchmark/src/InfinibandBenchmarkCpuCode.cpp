@@ -21,8 +21,8 @@ const double MB = pow(1024, 2);
 /** Maxmimum possible bandwidth at given clock speed*/
 void printMaxInfinbandBandwidth() {
     double clock = 150.0;
-    double inBytesPerCycle = sizeof(long) * 2;
-    double outBytesPerCycle = sizeof(long) * 2;
+    double inBytesPerCycle = sizeof(long) * 4;
+    double outBytesPerCycle = sizeof(long) * 4;
     double max = (inBytesPerCycle + outBytesPerCycle) * clock * 1E6 / GB;
     cout << "Max possible bandwidth (@150 MHz Stream Clock): " << max << " GB/s" << endl;
 }
@@ -45,8 +45,8 @@ int check(long got, long expected, int i, int streamNo) {
 
 int main(void) {
 
-    const long inSize = 2 * 384 * 1E3;
-    const long dataSizeBytes = 4 * inSize * sizeof(long);
+    const long inSize = 4 * 384 * 1E5;
+    const long dataSizeBytes = 8 * inSize * sizeof(long);
 
     vector<long> a(inSize), b(inSize), c(inSize), d(inSize), expected(inSize);
     vector<long> out1(inSize, 0), out2(inSize, 0), out3(inSize, 0), out4(inSize, 0);
