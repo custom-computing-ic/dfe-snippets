@@ -107,13 +107,14 @@ def main():
 
     projectName = sys.argv[1]
     projectConcept = None if options.standalone else sys.argv[2]
-    projectRoot = "../../.."
-    dest = projectConcept + "/" + projectName
 
     # copy template to the target location
     if options.standalone:
         dest = projectName
         projectRoot = ".."
+    else:
+        dest = projectConcept + "/" + projectName
+        projectRoot = "../../.."
 
     files = CopyTemplateFiles(dest, options)
 
