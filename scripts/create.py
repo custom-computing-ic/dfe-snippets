@@ -4,7 +4,8 @@ import os
 import sys
 import shutil
 from os.path import basename, dirname
-from optparse import OptionParser
+
+import argparse
 
 
 PROJECT_NAME_MACRO = "%%%ProjectName%%%"
@@ -30,8 +31,8 @@ def ReplaceMacros(path, project_macros):
 
 def PrintSummary(files, dest, options):
     print 'Created {}{} project.'.format(
-        'standalone ' if options.standalone else '',
-        'C99' if options.clang else 'C++'
+        'standalone ' if options.language else '',
+        options.language
     )
     print '   Path:  {}'.format(dest)
     print '   Files: '
@@ -56,7 +57,13 @@ def CopyTemplateFiles(dest, options):
         'DemoKernel.maxj',
         'DemoManager.maxj'
     ]
-    files.append('DemoCpuCode.c' if options.clang else 'DemoCpuCode.cpp')
+    if options.language == 'python':
+        files += ['DemoCpuCode.py']
+    elif options.language == 'c99':
+        files += ['DemoCpuCode.c']
+    else:
+        files += ['DemoCpuCode.cpp']
+
     shutil.copytree(demo_project_path, dest)
 
     # remove extra source files
@@ -64,36 +71,42 @@ def CopyTemplateFiles(dest, options):
         if f not in files:
             os.remove(os.path.join(srcRoot, f))
 
-    if options.standalone:
+    if options.language:
         # For standalone projects, copy makefiles
-        for f in ['.common', '.Maia.hardware', '.Max3.hardware']:
+        for f in ['.Maia.hardware', '.Max3.hardware']:
             makefile = 'Makefile' + f
             shutil.copyfile(os.path.join(templates_path, makefile),
                             os.path.join(dest, makefile))
+
+        if options.language == 'python':
+            shutil.copyfile(os.path.join(templates_path, 'Makefile.py.common'),
+                            os.path.join(dest, 'Makefile.common'))
+        else:
+            shutil.copyfile(os.path.join(templates_path, 'Makefile.common'),
+                            os.path.join(dest, 'Makefile.common'))
 
     return files
 
 
 def main():
 
-    parser = OptionParser()
-    parser.add_option('-s', '--standalone', default=False, action='store_true',
-                      help="""Generate a completely standalone project. Use this
-                              when you want to create DFE projects for use
-                              outside of the dfe-snippets project.""")
-    parser.add_option('-c', '--clang', default=False, action='store_true',
-                      help="""Generate C99 for CPU code.""")
+    parser = argparse.ArgumentParser(
+        description='Project creation utility.')
+    parser.add_argument('-l', '--language',
+                        default='cpp',
+                        choices=['c99', 'c++', 'python'],
+                        help = """Generate a standalone project for the given language. Use this
+                                  when you want to create DFE projects for use
+                                  outside of dfe-snippets.""")
+    parser.add_argument('name', help='Name of the project')
+    parser.add_argument('-c', '--concept', help='Project concept')
+    args = parser.parse_args()
 
-    (options, args) = parser.parse_args()
-
-    if options.standalone:
+    if args.language:
         print "Creating standalone project."
-        if len(sys.argv) < 3:
-            print "Usage create.py <ProjectName> -s"
-            return
     else:
-        if len(sys.argv) < 3:
-            print "Usage scripts/create.py <ProjectName> <ProjectConcept>"
+        if not args.concept:
+            print "You must specify a concept"
             return
 
         script = sys.argv[0]
@@ -105,18 +118,18 @@ def main():
             print 'Run this script from the maxdfe-snippets root directory.'
             return
 
-    projectName = sys.argv[1]
-    projectConcept = None if options.standalone else sys.argv[2]
+    projectName = args.name
+    projectConcept = args.concept
 
     # copy template to the target location
-    if options.standalone:
+    if args.language:
         dest = projectName
         projectRoot = ".."
     else:
         dest = projectConcept + "/" + projectName
         projectRoot = "../../.."
 
-    files = CopyTemplateFiles(dest, options)
+    files = CopyTemplateFiles(dest, args)
 
     # replace macros and rename files based on project name
     macro_dict = {
@@ -126,7 +139,7 @@ def main():
     ProcessSourceFiles(files, dest, macro_dict)
 
     # printSummary
-    PrintSummary(files, dest, options)
+    PrintSummary(files, dest, args)
 
 if __name__ == '__main__':
     main()
