@@ -1,0 +1,79 @@
+/***
+    Simple circular buffer with BRAM storage of a compile-time determined size.
+    It maintains two independent pointers to circular buffer for pushes and pops.
+    No checks if the number of pops is greater than the number of pushes.
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.MathUtils;
+
+class CircularBuffer extends KernelLib
+{
+    protected Memory<DFEVar> buffer;
+    protected int bufferSize;
+    protected DFEType dataType;
+    protected DFEVar numElements;
+    protected DFEVar pushEnable;
+    protected DFEVar popEnable;
+    protected DFEType counterType;
+
+    public CircularBuffer(KernelLib owner, int pBufferSize, DFEType pDataType)
+    {
+        super(owner);
+
+        bufferSize  = pBufferSize;
+        dataType    = pDataType;
+        buffer      = mem.alloc(dataType, bufferSize);
+        counterType = dfeInt(MathUtils.bitsToAddress(bufferSize)+2);
+        numElements = counterType.newInstance(this);
+        pushEnable  = dfeBool().newInstance(this);
+        popEnable   = dfeBool().newInstance(this);
+    }
+
+    public void push(DFEVar enable, DFEVar dataIn)
+    {
+        Params params = control.count.makeParams( MathUtils.bitsToAddress(bufferSize) )
+                        .withMax( bufferSize )
+                        .withEnable( enable )
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        DFEVar address = control.count.makeCounter(params).getCount();
+
+        buffer.write(address, dataIn, enable);
+
+        pushEnable <== enable;
+    }
+
+    public DFEVar pop(DFEVar enable)
+    {
+        Params params = control.count.makeParams( MathUtils.bitsToAddress(bufferSize) )
+                        .withMax( bufferSize )
+                        .withEnable( enable )
+                        .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP);
+        DFEVar address = control.count.makeCounter(params).getCount();
+
+        DFEVar dataOut = enable? buffer.read(address) : constant.var(dataType, 0);
+
+        popEnable <== enable;
+
+        return dataOut;
+    }
+
+    public DFEVar size()
+    {
+        optimization.pushPipeliningFactor(0.0);
+            DFEVar pastNumElements = control.count.pulse(1)? 0 : stream.offset(numElements,-1);
+            numElements <== pastNumElements + pushEnable.cast(counterType) - popEnable.cast(counterType);
+        optimization.popPipeliningFactor();
+
+        return numElements;
+    }
+
+    public DFEVar outputValid()
+    {
+        return (numElements >= 0);
+    }
+}

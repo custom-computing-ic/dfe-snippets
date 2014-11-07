@@ -152,6 +152,11 @@ $(DFEMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
 	MAXAPPJCP=. MAXSOURCEDIRS='../src' $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(MPCX)
 	cp $(DFEMAXDIR)/$(PRJ).h $(DFEMAXDIR)/Maxfiles.h
+	rm $(DFEMAXDIR)/$(PRJ).h
+	rm $(DFEMAXDIR)/$(PRJ).max
+	cp $(DFEMAXDIR)/../scratch/$(PRJ).h $(DFEMAXDIR)/$(PRJ).h
+	cp $(DFEMAXDIR)/../scratch/$(PRJ).max $(DFEMAXDIR)/$(PRJ).max
+	rm -rf $(DFEMAXDIR)/../scratch
 
 $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
@@ -163,6 +168,7 @@ $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
 	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 build: $(PRJ)_dfe
+
 
 run:
 	SLIC_CONF=$(SLIC_CONF) LD_PRELOAD=$(MAXOS_HW) ./${PRJ}_dfe
@@ -196,3 +202,5 @@ debug:
 
 debughw:
 	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(DFEID) $(DFEMAXDIR)/$(PRJ).max
+
+.PHONY: debug

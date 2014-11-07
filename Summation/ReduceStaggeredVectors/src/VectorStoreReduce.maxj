@@ -1,0 +1,45 @@
+/***
+
+    This implements element-wise summation of two streams, assuming the second
+    stream comes with a time lag. The first stream is buffered while waiting for
+    the second stream values. It works correctly if the maximal lag between the
+    corresponding entries in both streams is less than the size of the buffer.
+    Does not check correctness!
+
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class VectorStoreReduce extends KernelLib
+{
+    private DFEVar output;
+    private DFEVar outputValid;
+
+    public  DFEVar getOutput()       {   return output;        }
+    public  DFEVar isOutputValid()   {   return outputValid;   }
+
+    /***
+        @ param     inputXEnable  boolean: whether inputX value is enabled
+        @ param     inputX        entry of input X stream, enabled by inputXEnable
+        @ param     inputYEnable  boolean: whether inputY value is enabled
+        @ param     inputY        entry of input Y stream, enabled by inputYEnable
+        @ param     dataType      underlying data type of add-reduced data
+        @ param     bufferSize    size of the buffer used to store values of inputX
+    */
+    public VectorStoreReduce(KernelLib owner, DFEVar inputXEnable, DFEVar inputX,
+                                              DFEVar inputYEnable, DFEVar inputY,
+                                              DFEType dataType, int bufferSize)
+    {
+        super(owner);
+
+        CircularBuffer buffer = new CircularBuffer(this, bufferSize, dataType);
+        buffer.push(inputXEnable, inputX);
+        DFEVar xBuffered = buffer.pop(inputYEnable);
+
+        //DFEVar size = buffer.size();
+
+        output      = inputYEnable? (xBuffered + inputY) : constant.var(dataType,0);
+        outputValid = inputYEnable;
+    }
+}

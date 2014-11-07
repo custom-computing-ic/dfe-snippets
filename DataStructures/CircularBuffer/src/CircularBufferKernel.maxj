@@ -1,0 +1,35 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class CircularBufferKernel extends Kernel
+{
+    private static final int dataWidth = 32;
+    private static final DFEType dataType  = dfeUInt(dataWidth);
+
+    protected CircularBufferKernel(KernelParameters parameters, int bufferSize)
+    {
+        super(parameters);
+
+        DFEVar streamSize  = io.scalarInput("streamSize", dataType);
+
+        DFEVar kernelTicks = control.count.simpleCounter(dataWidth);
+        DFEVar fetchEnable   = kernelTicks < streamSize;
+        DFEVar outputEnable  = control.count.pulse(bufferSize, false);
+
+        DFEVar dataIn        = io.input("data", dataType, fetchEnable );
+
+        CircularBuffer buffer = new CircularBuffer(this, bufferSize, dataType);
+        buffer.push(fetchEnable, dataIn);
+        DFEVar output = buffer.pop(outputEnable);
+
+        DFEVar size = buffer.size();
+
+        debug.simPrintf(control.count.pulse(1), "size:  ");
+        debug.simPrintf("%d ", size);
+
+        io.output("output", output, dataType, outputEnable);
+    }
+
+}

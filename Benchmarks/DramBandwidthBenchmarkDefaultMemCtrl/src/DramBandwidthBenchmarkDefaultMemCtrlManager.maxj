@@ -1,0 +1,111 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.Direction;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControllerConfig;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.DFEModel;
+
+
+public class DramBandwidthBenchmarkDefaultMemCtrlManager extends CustomManager{
+
+    private static final String s_kernelName        = "DramBandwidthBenchmarkDefaultMemCtrlKernel";
+    private static final int minimalPciStreamLength = 4;
+
+    DramBandwidthBenchmarkDefaultMemCtrlManager(EngineParameters ep)
+    {
+        super(ep);
+
+        /*** To use quarter rate mode in Maia, setMAx4qMode(true) before creating any streams / engine interfaces */
+
+        MemoryControllerConfig memCfg = new MemoryControllerConfig();
+        if (ep.getDFEModel()==DFEModel.MAIA)
+        {
+            memCfg.setMAX4qMode(true);
+            memCfg.setEnableParityMode(true, true, 72, false);
+            memCfg.setDataReadFIFOExtraPipelineRegInFabric(true);  // for easier meeting LMem timing
+        }
+        config.setMemoryControllerConfig(memCfg);
+
+        // Set clock frequency
+        config.setDefaultStreamClockFrequency(180);
+
+        // Set Lmem clock frequency
+        // MAX3: MAX3_300, MAX3_333, MAX3_350, MAX3_400
+        // MAIA: MAX4_333, MAX4_400, MAX4_533, MAX4MAIA_400, MAX4MAIA_533, MAX4MAIA_666, MAX4MAIA_733, MAX4MAIA_800
+        config.setOnCardMemoryFrequency(LMemFrequency.MAX4MAIA_733);
+
+
+        KernelBlock k = addKernel(
+                new DramBandwidthBenchmarkDefaultMemCtrlKernel(makeKernelParameters(s_kernelName))
+            );
+
+        DFELink fromCPU_vector = addStreamFromCPU("fromCPU_vector");
+        DFELink toDRAM_vector  = addStreamToOnCardMemory("toDRAM_vector", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+        toDRAM_vector        <== fromCPU_vector;
+
+        DFELink vector         = addStreamFromOnCardMemory("vector", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+        k.getInput("vector") <== vector;
+
+        DFELink sum = addStreamToCPU("sum");
+        sum       <== k.getOutput("sum");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+
+        CPUTypes   dataType  = CPUTypes.FLOAT;
+        int        dataBytes  = dataType.sizeInBytes();
+
+        InterfaceParam  vectorSize = engine_interface.addParam("vectorSize", CPUTypes.INT32);
+
+        engine_interface.setScalar(s_kernelName, "vectorSize", vectorSize);
+        engine_interface.setTicks(s_kernelName, vectorSize);
+        engine_interface.setStream("sum", dataType, minimalPciStreamLength * dataBytes);
+        engine_interface.setLMemLinear("vector", engine_interface.addConstant(0l), vectorSize * dataBytes);
+
+        engine_interface.ignoreAll(Direction.IN_OUT);
+        return engine_interface;
+    }
+
+
+    private static EngineInterface interfaceWrite(String name) {
+        EngineInterface engine_interface = new EngineInterface(name);
+
+        CPUTypes   dataType  = CPUTypes.FLOAT;
+        int        dataBytes  = dataType.sizeInBytes();
+
+        InterfaceParam  vectorSize = engine_interface.addParam("vectorSize",  CPUTypes.INT32);
+
+        engine_interface.setStream("fromCPU_vector", dataType, vectorSize * dataBytes);
+        engine_interface.setLMemLinear("toDRAM_vector", engine_interface.addConstant(0l), vectorSize * dataBytes);
+
+        engine_interface.ignoreAll(Direction.IN_OUT);
+        return engine_interface;
+    }
+
+    public static void main(String[] args) {
+        DramBandwidthBenchmarkDefaultMemCtrlManager manager =
+            new DramBandwidthBenchmarkDefaultMemCtrlManager(new EngineParameters(args));
+
+        BuildConfig c = new BuildConfig(BuildConfig.Level.FULL_BUILD);
+        c.setBuildEffort(BuildConfig.Effort.VERY_HIGH);
+        c.setMPPRCostTableSearchRange(1, 5);        // set to enable MPPR
+        c.setMPPRParallelism(5);                    // use 3 CPU threads
+
+        // this generates C defines in Maxfiles.h so that CPU code
+        // knows the constants
+        manager.addMaxFileConstant("minimalPciStreamLength", minimalPciStreamLength);
+        manager.createSLiCinterface(interfaceWrite("WriteLMem"));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.setBuildConfig(c);
+        manager.build();
+
+
+    }
+}
