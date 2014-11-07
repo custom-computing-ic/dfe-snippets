@@ -1,14 +1,51 @@
-dfe-snippets
-============
+# dfe-snippets
 
-_Collecting DFE snippets and scripts since... 2013!_
+`dfe-snippets` is a collection of building blocks for projects using Maxeler Dataflow Engines (DFEs).
 
-Please check our wiki to:
+## Requires
 
-1. [Get started](https://github.com/custom-computing-ic/dfe-snippets/wiki/Users)
+1. MaxCompiler 2013+
+2. Compatible [Maxeler](http://www.maxeler.com/products/) hardware
+3. python 2.7 (for running scripts)
 
-2. See a list of [projects](https://github.com/custom-computing-ic/dfe-snippets/wiki/Projects)
+## Structure
 
-3. See [Frequently Asked Questions](https://github.com/custom-computing-ic/dfe-snippets/wiki/FAQ)
+Implementations are grouped by concept (e.g. Summation, Infrastructure, Sorting) as shown below:
 
-4. [Contribute!](https://github.com/custom-computing-ic/dfe-snippets/wiki/Contributing)
+```
+scripts/          ---> Useful scripts  
+concept1/
+  implementation1/
+     src/          ---> source code
+     build         ---> build directory
+```
+
+## Use Scripts
+
+To use the scripts, first add the directory to your PATH:
+
+```
+PATH_TO_DFE_SNIPPETS="~/path/to/dfe-snippets"
+export PATH=${PATH}:"${PATH_TO_DFE_SNIPPETS}/scripts"
+```
+
+Note that python scripts require __python 2.7__ (check your version with `python -v`).
+
+### create.py
+
+Create a new project from a pass through template.
+
+To create and run a __new dfe-snippet__ from the snippets directory run:
+```
+./create.py <ProjectName> <ProjectConcept>
+cd <ProjectConcept>/<ProjectName>/build
+make runsim
+```
+
+To create an external, __stand-alone project__ run:
+
+```
+./create.py <ProjectName> -s
+cd <ProjectName>/build
+make runsim
+```
