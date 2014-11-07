@@ -1,0 +1,16 @@
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager;
+import com.maxeler.maxcompiler.v2.managers.standard.Manager.IOType;
+
+public class InfinibandBenchmarkManager {
+
+    public static void main(String[] args) {
+        EngineParameters params = new EngineParameters(args);
+        Manager manager = new Manager(params);
+        manager.setKernel(new InfinibandBenchmarkKernel(manager.makeKernelParameters()));
+        manager.setIO(IOType.ALL_CPU);
+        manager.createSLiCinterface();
+        manager.build();
+    }
+
+}

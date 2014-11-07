@@ -1,0 +1,56 @@
+/***
+    Streams data from CPU to the kernel. Note that for an input stream
+    of size N, the kernel will run for 3 * N cycles:
+
+    1. N cycles for loading the data into the local BRAM
+
+    2. N cycles for reading back, incrementing and writing the results back
+
+    3. N cycles for reading the final results back and streaming them
+    to CPU
+*/
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class BRAMCustomBitwidthROMManager extends CustomManager{
+
+    private static final String s_kernelName  = "BRAMCustomBitwidthROMKernel";
+
+    private static final int DATA_SIZE = 16;
+
+    BRAMCustomBitwidthROMManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel(new BRAMCustomBitwidthROMKernel(makeKernelParameters(s_kernelName),
+							  DATA_SIZE));
+
+        addStreamToCPU("output") <== k.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam sizeBytes = N * size;
+
+        engine_interface.setTicks(s_kernelName, N);
+
+        engine_interface.setStream("output", type, sizeBytes);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        BRAMCustomBitwidthROMManager manager = new BRAMCustomBitwidthROMManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.addMaxFileConstant("dataSize", DATA_SIZE);
+        manager.build();
+    }
+}

@@ -1,0 +1,55 @@
+/***
+    A simple kernel that:
+
+    1. takes some data from CPU to its local memory
+
+    2. adds each consecutive pair of 12bit wide integers from BRAM
+
+    3. sends the sums as 32bit wide integers to the CPU.
+
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
+
+class BRAMCustomBitwidthROMKernel extends Kernel {
+
+    private final DFEType INT = dfeUInt(12);
+    private final DFEVar ONE = constant.var(INT, 1);
+
+    protected BRAMCustomBitwidthROMKernel(KernelParameters parameters,
+                                  int dataSize) {
+        super(parameters);
+
+        DFEVar cycleCounter = control.count.simpleCounter(32);
+
+        Memory<DFEVar> memory = mem.alloc(INT, 2 * dataSize);
+        memory.mapToCPU("rom");
+
+        Params params1 = control.count.makeParams( MathUtils.bitsToAddress(2 * dataSize) )
+                        .withMax( 2 * dataSize )
+                        .withInc( 2 );
+        DFEVar address1 = control.count.makeCounter(params1).getCount();
+
+        Params params2 = control.count.makeParams( MathUtils.bitsToAddress(2 * dataSize) )
+                        .withMax( 2 * dataSize )
+                        .withInc( 2 )
+                        .withInitValue ( 1 );
+        DFEVar address2 = control.count.makeCounter(params2).getCount();
+
+        DFEVar memData1 = memory.read(address1);
+        DFEVar memData2 = memory.read(address2);
+
+        DFEVar sum = (memData1 + memData2).cast(dfeUInt(32));
+
+        debug.simPrintf("address1=%d, address2=%d, data1=%d, data2=%d, sum=%d\n ", address1, address2, memData1, memData2, sum);
+
+        io.output("output", sum, dfeUInt(32));
+    }
+
+}

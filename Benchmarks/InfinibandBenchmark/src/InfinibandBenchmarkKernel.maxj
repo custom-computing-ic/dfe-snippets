@@ -1,0 +1,20 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class InfinibandBenchmarkKernel extends Kernel {
+
+    protected InfinibandBenchmarkKernel(KernelParameters parameters) {
+        super(parameters);
+
+        DFEVar a = io.input("a", dfeInt(64));
+        DFEVar b = io.input("b", dfeInt(64));
+        DFEVar c = io.input("c", dfeInt(64));
+        DFEVar d = io.input("d", dfeInt(64));
+        io.output("output1", a + b, dfeInt(64));
+        io.output("output2", a - b, dfeInt(64));
+        io.output("output3", c + d, dfeInt(64));
+        io.output("output4", c - d, dfeInt(64));
+    }
+
+}
