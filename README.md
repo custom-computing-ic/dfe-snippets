@@ -13,7 +13,7 @@
 Implementations are grouped by concept (e.g. Summation, Infrastructure, Sorting) as shown below:
 
 ```
-scripts/          ---> Useful scripts  
+scripts/          ---> Useful scripts
 concept1/
   implementation1/
      src/          ---> source code
@@ -33,19 +33,17 @@ Note that python scripts require __python 2.7__ (check your version with `python
 
 ### create.py
 
-Create a new project from a pass through template.
+Use `create.py -h` for a list of available options.
 
 To create and run a __new dfe-snippet__ from the snippets directory run:
 ```
-./create.py <ProjectName> <ProjectConcept>
-cd <ProjectConcept>/<ProjectName>/build
-make runsim
+./create.py <ProjectName> -c <ProjectConcept>
+cd <ProjectConcept>/<ProjectName>/build && make runsim
 ```
 
 To create an external, __stand-alone project__ run:
 
 ```
-./create.py <ProjectName> -s
-cd <ProjectName>/build
-make runsim
+./create.py <ProjectName>
+cd <ProjectName>/build && make runsim
 ```
