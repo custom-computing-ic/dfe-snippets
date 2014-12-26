@@ -71,7 +71,7 @@ def CopyTemplateFiles(dest, options):
         if f not in files:
             os.remove(os.path.join(srcRoot, f))
 
-    if options.language:
+    if not options.concept:
         # For standalone projects, copy makefiles
         for f in ['.Maia.hardware', '.Max3.hardware']:
             makefile = 'Makefile' + f
@@ -92,42 +92,38 @@ def main():
 
     parser = argparse.ArgumentParser(
         description='Project creation utility.')
-    parser.add_argument('-l', '--language',
-                        default='cpp',
-                        choices=['c99', 'c++', 'python'],
-                        help = """Generate a standalone project for the given language. Use this
-                                  when you want to create DFE projects for use
-                                  outside of dfe-snippets.""")
+    parser.add_argument(
+        '-l', '--language',
+        default='cpp',
+        choices=['c99', 'c++', 'python'],
+        help = 'Generate a project for the given language.')
     parser.add_argument('name', help='Name of the project')
-    parser.add_argument('-c', '--concept', help='Project concept')
+    parser.add_argument(
+        '-c', '--concept', help='Required to create a new snippet')
     args = parser.parse_args()
 
-    if args.language:
-        print "Creating standalone project."
-    else:
-        if not args.concept:
-            print "You must specify a concept"
-            return
-
+    if args.concept:
+        print "Creating new snippet."
         script = sys.argv[0]
-
         # TODO Add a a more reliable way to check if at root (perhaps
         # based on the readme location?)
         if not (script.startswith('scripts') or
                 script.startswith('./scripts')):
             print 'Run this script from the maxdfe-snippets root directory.'
             return
+    else:
+        print "Creating new standalone project."
 
     projectName = args.name
     projectConcept = args.concept
 
     # copy template to the target location
-    if args.language:
-        dest = projectName
-        projectRoot = ".."
-    else:
+    if args.concept:
         dest = projectConcept + "/" + projectName
         projectRoot = "../../.."
+    else:
+        dest = projectName
+        projectRoot = ".."
 
     files = CopyTemplateFiles(dest, args)
 
