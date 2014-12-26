@@ -1,0 +1,66 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
+
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
+
+public class TerminationConditionManager extends CustomManager{
+
+    private static final String s_kernelName  = "TerminationConditionKernel";
+
+    private static final MemoryControlGroup.MemoryAccessPattern LINEAR = MemoryControlGroup.MemoryAccessPattern.LINEAR_1D;
+
+    TerminationConditionManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel(new TerminationConditionKernel(makeKernelParameters(s_kernelName)));
+
+        k.getInput("a") <== addStreamFromOnCardMemory("a", LINEAR);
+
+        addStreamToCPU("output") <== k.getOutput("output");
+
+        addStreamToOnCardMemory("cpu2lmem", LINEAR) <== addStreamFromCPU("fromcpu");
+    }
+
+    private static EngineInterface interfaceWrite (String name) {
+        EngineInterface ei = new EngineInterface(name);
+        CPUTypes TYPE = CPUTypes.INT;
+        InterfaceParam size = ei.addParam("size_bytes", TYPE);
+        InterfaceParam start = ei.addParam("start_bytes", TYPE);
+        ei.setStream("fromcpu", CPUTypes.UINT8, size);
+        ei.setLMemLinear("cpu2lmem", start, size);
+        ei.ignoreAll(Direction.IN_OUT);
+        return ei ;
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface ei = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = ei.addParam("N", CPUTypes.INT);
+        InterfaceParam sizeBytes = N * size;
+
+        ei.setTicks(s_kernelName, N);
+
+        ei.setStream("a", type, sizeBytes);
+        ei.setStream("output", type, sizeBytes);
+        ei.ignoreLMem("cpu2lmem");
+        ei.ignoreStream("fromcpu");
+        return ei;
+    }
+
+
+    public static void main(String[] args) {
+        TerminationConditionManager manager = new TerminationConditionManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.createSLiCinterface(interfaceWrite("writeDRAM"));
+        manager.build();
+    }
+}
