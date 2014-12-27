@@ -1,7 +1,8 @@
 # About
 
-This is a simple example of the Maxeler Accumulators. Unfortunately
-these do not support floating point (only fixed point types).
+This is a simple example of the Maxeler Accumulators. It tests
+that it supports fixed point accumulation and does not support
+floating point.
 
 # Input
 
