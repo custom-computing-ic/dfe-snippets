@@ -1,0 +1,28 @@
+/***
+    Using Memory object instantiated in some other Kernel.
+    DOES NOT COMPILE as naively expected.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+
+class LookupKernel extends Kernel {
+
+    protected LookupKernel(KernelParameters parameters, Memory<DFEVar> buffer)
+    {
+        super(parameters);
+
+        DFEVar value_in = io.input("in_data", dfeUInt(32));
+        DFEVar index    = io.input("index", dfeUInt(32));
+
+        int sizeBits   = 4;
+        DFEVar address = control.count.simpleCounter(sizeBits);
+        buffer.write(address, value_in, constant.var(true));
+
+        DFEVar value = buffer.read(index.cast(dfeUInt(4)));
+        io.output("output", value, dfeUInt(32));
+    }
+
+}

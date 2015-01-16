@@ -1,0 +1,31 @@
+/***
+    Doing nothing but instantialing Memory object and returning
+    a reference to it.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
+
+class MemoryDeclaringKernel extends Kernel {
+
+    private Memory<DFEVar> buffer;
+
+    public Memory<DFEVar> getBuffer() { return buffer; }
+
+    protected MemoryDeclaringKernel(KernelParameters parameters)
+    {
+        super(parameters);
+
+        int bufferSize = 16;
+        buffer = mem.alloc(dfeUInt(32), bufferSize);
+
+        // simple pass-through: to force Manager not to reject
+        // instantiating this Kernel as having no input/output
+        DFEVar value_in = io.input("in_data", dfeUInt(32));
+        io.output("output", value_in, dfeUInt(32));
+    }
+
+}
