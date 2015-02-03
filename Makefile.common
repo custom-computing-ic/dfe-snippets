@@ -92,7 +92,7 @@ ALL_FLAGS = $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS)
 DFEID=/dev/maxeler0
 
 # Files to remove on clean
-TRASH=*~ ../src/*~ *.o
+TRASH=*~ ../src/*~ *.o *.so *.so.0
 DIST_TRASH=Maxfiles.h *.class *.o debug* *.dot *.png *.so *.so.0
 
 help:
@@ -110,6 +110,7 @@ help:
 	@ echo "   debughw  -- debug a hardware design using MaxDebug (requires local access to DFE)"
 	@ echo "   gdbsim, gdbdfe -- build CPU code with debug symbols"
 	@ echo "   simlib   -- build an .so shared library with desgin built for simulation"
+	@ echo "   dfelib   -- build an .so shared library with design built for hardware"
 	@ echo "   cleansim, cleandfe, clean -- clean executables for simulation, hardware or both"
 	@ echo "   distcleansim, distcleanhw, distclean -- delete the entire sim, hw or both directories"
 	@ echo "   help     -- print this help message"
@@ -117,7 +118,7 @@ help:
 
 all: runsim build
 
-.PHONY: stopsim run cleansim cleandfe debug debughw simlib
+.PHONY: stopsim run cleansim cleandfe debug debughw simlib dfelib
 
 # ---- Simulation ----
 
@@ -175,6 +176,12 @@ $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
 	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 build: $(PRJ)_dfe
+
+lib$(PRJ)_dfe.so: $(PRJ)_dfe.o $(PRJ)_dfec.o
+	$(CPUCOMPILER) $(ALL_FLAGS) -shared -Wl,-soname,lib$(PRJ)_dfe.so.0 -o lib$(PRJ)_dfe.so $^ $(LFLAGS)
+
+lib: lib$(PRJ)_dfe.so
+	cp lib$(PRJ)_dfe.so lib$(PRJ)_dfe.so.0
 
 
 run:
