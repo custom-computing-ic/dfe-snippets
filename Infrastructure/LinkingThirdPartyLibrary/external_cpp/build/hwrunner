@@ -1,0 +1,8 @@
+#!/bin/bash
+
+HARDWARE_SO_DIR=../../build
+MAXOS_HW=/opt/maxeler/maxeleros/lib/libmaxeleros.so
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HARDWARE_SO_DIR
+
+LD_PRELOAD=${MAXOS_HW} $@
+
