@@ -159,11 +159,12 @@ simlib: lib$(PRJ)_sim.so
 $(DFEMAXDIR)/$(PRJ).max: $(ENGINEFILES)
 	$(MAXJC) $(JFLAGS) $(ENGINEFILES)
 	MAXAPPJCP=. MAXSOURCEDIRS='../src' $(MAXJAVARUN) -v -m 8192 $(MANAGER) DFEModel=$(DFEModel) maxFileName=$(PRJ) target='DFE' enableMPCX=$(MPCX)
+	cp $(DFEMAXDIR)/$(PRJ).max $(DFEMAXDIR)/t$(PRJ).max
+	rm $(DFEMAXDIR)/$(PRJ).max
+	mv $(DFEMAXDIR)/t$(PRJ).max $(DFEMAXDIR)/$(PRJ).max
 	cp $(DFEMAXDIR)/$(PRJ).h $(DFEMAXDIR)/Maxfiles.h
 	rm $(DFEMAXDIR)/$(PRJ).h
-	rm $(DFEMAXDIR)/$(PRJ).max
-	cp $(DFEMAXDIR)/../scratch/$(PRJ).h $(DFEMAXDIR)/$(PRJ).h
-	cp $(DFEMAXDIR)/../scratch/$(PRJ).max $(DFEMAXDIR)/$(PRJ).max
+	cp $(DFEMAXDIR)/Maxfiles.h $(DFEMAXDIR)/$(PRJ).h
 	rm -rf $(DFEMAXDIR)/../scratch
 
 $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
@@ -180,7 +181,7 @@ build: $(PRJ)_dfe
 lib$(PRJ)_dfe.so: $(PRJ)_dfe.o $(PRJ)_dfec.o
 	$(CPUCOMPILER) $(ALL_FLAGS) -shared -Wl,-soname,lib$(PRJ)_dfe.so.0 -o lib$(PRJ)_dfe.so $^ $(LFLAGS)
 
-lib: lib$(PRJ)_dfe.so
+dfelib: lib$(PRJ)_dfe.so
 	cp lib$(PRJ)_dfe.so lib$(PRJ)_dfe.so.0
 
 
