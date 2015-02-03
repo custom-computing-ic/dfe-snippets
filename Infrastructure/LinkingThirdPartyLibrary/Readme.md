@@ -37,26 +37,26 @@ while sample external projects use simplifies own makefiles.
 
 Compiling the .so files for simulation:
 
- cd LinkingThirdPartyLibrary/build/
- make simlib
+    cd LinkingThirdPartyLibrary/build/
+    make simlib
 
 Compiling the .so files for hardware:
 
- cd LinkingThirdPartyLibrary/build/
- make dfelib
+    cd LinkingThirdPartyLibrary/build/
+    make dfelib
 
 Compiling the executable for the external project :
 
- cd ..
- cd external_c/build
- make sim
+    cd ..
+    cd external_c/build
+    make sim
 
 or
 
- make dfe
+    make dfe
 
 Running external project (in the same directory external_c/build/):
 
- ./simrunner ./TargetCPUCode_sim
- ./hwrunner ./TargetCPUCode_dfe
+    ./simrunner ./TargetCPUCode_sim
+    ./hwrunner ./TargetCPUCode_dfe
 
