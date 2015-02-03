@@ -10,6 +10,7 @@
 #include "MaxSLiCInterface.h"
 
 // just in case we want to compile this using C++ compiler
+/*
 #ifdef __cplusplus
 extern "C"
 #endif
@@ -17,15 +18,16 @@ int hardwareAPI(int x);
 #ifdef __cplusplus
 }
 #endif
+*/
 
 int hardwareAPI(int x)
 {
   const int inSize = 384;
 
-  int *a = malloc(sizeof(int) * inSize);
-  int *b = malloc(sizeof(int) * inSize);
-  int *expected = malloc(sizeof(int) * inSize);
-  int *out = malloc(sizeof(int) * inSize);
+  int *a = (int*)malloc(sizeof(int) * inSize);
+  int *b = (int*)malloc(sizeof(int) * inSize);
+  int *expected = (int*)malloc(sizeof(int) * inSize);
+  int *out = (int*)malloc(sizeof(int) * inSize);
   memset(out, 0, sizeof(int) * inSize);
   for(int i = 0; i < inSize; ++i) {
     a[i] = i + 1 + x;
