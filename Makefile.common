@@ -82,7 +82,7 @@ LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpt
 
 # Add this on the command line to pass to make when compiling
 # Useful for debug/optimization flags
-EXTRA_CFLAGS?=
+EXTRA_CFLAGS?= -fPIC
 
 # This is set in the gdbsim/gdbdfe targets
 DEBUG_FLAGS?=
@@ -93,7 +93,7 @@ DFEID=/dev/maxeler0
 
 # Files to remove on clean
 TRASH=*~ ../src/*~ *.o
-DIST_TRASH=Maxfiles.h *.class *.o debug* *.dot *.png
+DIST_TRASH=Maxfiles.h *.class *.o debug* *.dot *.png *.so *.so.0
 
 help:
 	@ echo "Current configuration:"
@@ -109,6 +109,7 @@ help:
 	@ echo "   debug    -- debug a simulation design using MaxDebug"
 	@ echo "   debughw  -- debug a hardware design using MaxDebug (requires local access to DFE)"
 	@ echo "   gdbsim, gdbdfe -- build CPU code with debug symbols"
+	@ echo "   simlib   -- build an .so shared library with desgin built for simulation"
 	@ echo "   cleansim, cleandfe, clean -- clean executables for simulation, hardware or both"
 	@ echo "   distcleansim, distcleanhw, distclean -- delete the entire sim, hw or both directories"
 	@ echo "   help     -- print this help message"
@@ -116,7 +117,7 @@ help:
 
 all: runsim build
 
-.PHONY: stopsim run cleansim cleandfe debug debughw
+.PHONY: stopsim run cleansim cleandfe debug debughw simlib
 
 # ---- Simulation ----
 
@@ -145,6 +146,12 @@ stopsim:
 gdbsim:
 	DEBUG_FLAGS="-O0 -g" make $(PRJ)_sim
 	LD_PRELOAD=$(MAXOS_SIM) gdb $(PRJ)_sim
+
+lib$(PRJ)_sim.so: $(PRJ)_sim.o $(PRJ)_simc.o
+	$(CPUCOMPILER) $(ALL_FLAGS) -shared -Wl,-soname,lib$(PRJ)_sim.so.0 -o lib$(PRJ)_sim.so $^ $(LFLAGS)
+
+simlib: lib$(PRJ)_sim.so
+	cp lib$(PRJ)_sim.so lib$(PRJ)_sim.so.0
 
 # ---- DFE ----
 
