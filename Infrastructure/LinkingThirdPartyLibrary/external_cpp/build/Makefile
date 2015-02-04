@@ -10,7 +10,7 @@ SOFTWAREPRJ=TargetCPUCode
 COMPILER_CFLAGS = -fopenmp
 OPT_FLAGS = -march=native -O3
 CFLAGS= ${COMPILER_CFLAGS} ${OPT_FLAGS} -Wall
-LFLAGS= -L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -fPIC
+LFLAGS= -L${MAXELEROSDIR}/lib -lmaxeleros -fPIC #   -L${MAXCOMPILERDIR}/lib
 ALL_FLAGS = ${CFLAGS} ${EXTRA_CFLAGS}
 
 all: sim dfe
