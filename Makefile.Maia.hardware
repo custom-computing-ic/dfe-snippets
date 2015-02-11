@@ -3,4 +3,8 @@ DFEModel=MAIA
 
 MPCX=true
 DEVICENUM=MAIA
-SLIC_CONF="default_engine_resource = 192.168.0.10"
+
+# Uncomment to use mpcx01, mpcx02 or mpcx03 respectively
+SLIC_CONF = "default_engine_resource = 192.168.0.10"
+# SLIC_CONF = "default_engine_resource = 192.168.0.11"
+# SLIC_CONF = "default_engine_resource = 192.168.0.12"
