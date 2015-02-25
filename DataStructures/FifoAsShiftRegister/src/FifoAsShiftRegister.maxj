@@ -6,9 +6,6 @@
     Input value is put to the end of a buffer and will come out
     (return value) only after bufferCapacity enabled cycles.
     The output at first bufferCapacity cycles is undefined.
-
-    NB: this design can be a bottleneck to increasing kernel frequency
-    due to no pipelining. Known to work at 170Mhz on Max4.
 */
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
