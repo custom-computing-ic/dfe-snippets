@@ -209,7 +209,7 @@ double* read_rhs(FILE* g, int* n, int *nnzs) {
   MM_typecode vcode;
   read_mm_matrix_size(g, &vn, &vm, &vnnzs, &vcode);
 
-  double* rhs = malloc(sizeof(double) * vnnzs);
+  double* rhs = (double *)malloc(sizeof(double) * vnnzs);
   memset(rhs, 0, sizeof(double) * vnnzs);
   read_mm_array(g, vcode, vnnzs, rhs);
 
