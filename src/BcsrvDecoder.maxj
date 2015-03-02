@@ -1,0 +1,36 @@
+/** BCSRV decoding kernel. */
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+
+class BcsrvDecoder extends KernelLib {
+
+    private final DFEVar output;
+
+    protected BcsrvDecoder(KernelLib owner,
+                           boolean dbg,
+                           Memory<DFEVar> decoding,
+                           DFEVar index,
+                           DFEVar value,
+                           DFEVar compressionEnabled,
+                           int id) {
+        super(owner);
+
+        DFEVar cycleCounter = control.count.simpleCounter(32);
+        this.output = compressionEnabled ? decoding.read(index) : value;
+
+        if (dbg) {
+            debug.simPrintf("Pipe %d, Decoder: %d, compressed: %d index: %d value: %f\n",
+                            id, cycleCounter, compressionEnabled, index, output);
+            // debug.dfePrintf("%d, compressed: %d index: %d value: %f\n",
+            //                 cycleCounter, compressionEnabled, index, output);
+        }
+
+    }
+
+    public DFEVar getOutput() {
+        return output;
+    }
+}
+
