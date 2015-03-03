@@ -13,11 +13,11 @@ def main():
         print '}'
 
     i = 0
-    print 'IF (inReady(', i, ')) {'
+    print 'IF (inReady[', i, ']) {'
     print '  consume(', i, ');'
     print '}'
     for i in range(1, noutputs):
-        print 'ELSE IF (inReady(', i, ')) {'
+        print 'ELSE IF (inReady[', i, ']) {'
         print '   consume(', i, ');'
         print '}'
 

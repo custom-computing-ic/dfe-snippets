@@ -19,6 +19,9 @@ class fpgaNaiveKernel extends Kernel {
                               int id) {
         super(parameters);
 
+        optimization.pushPipeliningFactor(0.5);
+        optimization.pushDSPFactor(1);
+
         // How many outputs should this pipe write
         DFEVar outputs = io.scalarInput("outputs", dfeUInt(32));
         DFEVar n = io.scalarInput("n", dfeUInt(32));

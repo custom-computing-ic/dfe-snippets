@@ -49,21 +49,57 @@ class OutputControlSM extends ManagerStateMachine {
         }
 
         outValid.next <== false;
-        IF (inReady[0]) {
-            consume(0);
-        } ELSE IF (inReady[1]) {
-            consume(1);
+
+        // Generated using gen_sim.py
+        IF (inReady[ 0 ]) {
+            consume( 0 );
         }
-        // ELSE IF (inReady[2]) {
-        //     consume(2);
-        // } ELSE IF (inReady[3]) {
-        //     consume(3);
+        ELSE IF (inReady[ 1 ]) {
+            consume( 1 );
+        }
+        // ELSE IF (inReady[ 2 ]) {
+        //     consume( 2 );
         // }
-        // ELSE IF (inReady[4]) {
-        //     consume(4);
-        // } ELSE IF (inReady[5]) {
-        //     consume(5);
+        // ELSE IF (inReady[ 3 ]) {
+        //     consume( 3 );
         // }
+        // ELSE IF (inReady[ 4 ]) {
+        //     consume( 4 );
+        // }
+        // ELSE IF (inReady[ 5 ]) {
+        //     consume( 5 );
+        // }
+        // ELSE IF (inReady[ 6 ]) {
+        //     consume( 6 );
+        // }
+        // ELSE IF (inReady[ 7 ]) {
+        //     consume( 7 );
+        // }
+        // ELSE IF (inReady[ 8 ]) {
+        //     consume( 8 );
+        // }
+        // ELSE IF (inReady[ 9 ]) {
+        //     consume( 9 );
+        // }
+        // ELSE IF (inReady[ 10 ]) {
+        //     consume( 10 );
+        // }
+        // ELSE IF (inReady[ 11 ]) {
+        //     consume( 11 );
+        // }
+        // ELSE IF (inReady[ 12 ]) {
+        //     consume( 12 );
+        // }
+        // ELSE IF (inReady[ 13 ]) {
+        //     consume( 13 );
+        // }
+        // ELSE IF (inReady[ 14 ]) {
+        //     consume( 14 );
+        // }
+        // ELSE IF (inReady[ 15 ]) {
+        //     consume( 15 );
+        // }
+
     }
 
     @Override
@@ -72,21 +108,55 @@ class OutputControlSM extends ManagerStateMachine {
             in[i].read <== false;
         }
 
-        IF (inReady(0)) {
-            in[0].read <== true;
-        } ELSE IF(inReady(1)) {
-            in[1].read <== true;
+        IF (inReady( 0 )) {
+            in[ 0  ].read <== true;
         }
-        // ELSE IF(inReady(2)) {
-        //     in[2].read <== true;
-        // } ELSE IF(inReady(3)) {
-        //     in[3].read <== true;
+        ELSE IF (inReady( 1 )) {
+            in[ 1 ].read <== true;
+        }
+        // ELSE IF (inReady( 2 )) {
+        //     in[ 2 ].read <== true;
         // }
-        // ELSE IF(inReady(4)) {
-        //     in[4].read <== true;
-        // } ELSE IF(inReady(5)) {
-        //     in[5].read <== true;
+        // ELSE IF (inReady( 3 )) {
+        //     in[ 3 ].read <== true;
         // }
+        // ELSE IF (inReady( 4 )) {
+        //     in[ 4 ].read <== true;
+        // }
+        // ELSE IF (inReady( 5 )) {
+        //     in[ 5 ].read <== true;
+        // }
+        // ELSE IF (inReady( 6 )) {
+        //     in[ 6 ].read <== true;
+        // }
+        // ELSE IF (inReady( 7 )) {
+        //     in[ 7 ].read <== true;
+        // }
+        // ELSE IF (inReady( 8 )) {
+        //     in[ 8 ].read <== true;
+        // }
+        // ELSE IF (inReady( 9 )) {
+        //     in[ 9 ].read <== true;
+        // }
+        // ELSE IF (inReady( 10 )) {
+        //     in[ 10 ].read <== true;
+        // }
+        // ELSE IF (inReady( 11 )) {
+        //     in[ 11 ].read <== true;
+        // }
+        // ELSE IF (inReady( 12 )) {
+        //     in[ 12 ].read <== true;
+        // }
+        // ELSE IF (inReady( 13 )) {
+        //     in[ 13 ].read <== true;
+        // }
+        // ELSE IF (inReady( 14 )) {
+        //     in[ 14 ].read <== true;
+        // }
+        // ELSE IF (inReady( 15 )) {
+        //     in[ 15 ].read <== true;
+        // }
+
         out.valid <== outValid;
         out <== outData;
 
