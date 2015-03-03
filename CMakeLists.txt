@@ -40,7 +40,7 @@ endif (DFE_MODEL)
 set (PRJ "SpmvBase")
 set (MANAGER "fpgaNaiveManager")
 
-set (DFE_SOURCES ../src/*.maxj ../lib/lib-reductions/include/reductions/*.maxj)
+set (DFE_SOURCES ../lib/lib-reductions/include/reductions/*.maxj ../src/*.java)
 
 set (SIMMAXDIR "${PRJ}_${DFE_MODEL}_DFE_SIM/results")
 set (HWMAXDIR "${PRJ}_${DFE_MODEL}_DFE/results")
@@ -85,9 +85,9 @@ add_custom_target(
 
 add_custom_command(
   OUTPUT ${PRJ}_sim.o
-  DEPENDS src/*.maxj
+  DEPENDS src/*.java
   COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
-  C0OMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
+  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
   COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
   COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
   COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
@@ -99,7 +99,7 @@ add_custom_command(
   COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
   COMMAND mkdir -p "include" && cp "${MAXBUILD_DIR_HW}/results/${PRJ}.h" "include/Maxfiles.h"
   COMMAND sliccompile "${MAXBUILD_DIR_HW}/results/${PRJ}.max" ${PRJ}_sim.o
-  DEPENDS src/*.maxj
+  DEPENDS src/*.java
   )
 
 if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})

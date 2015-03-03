@@ -35,7 +35,7 @@ class CSRControlSM extends ManagerStateMachine {
         mode = state.enumerated(Mode.class, Mode.ReadRowLength);
 
         counter = state.value(dfeUInt(32), 0);
-
+        
         rowLength = state.value(dfeUInt(32));
         rowEnd = state.value(dfeUInt(32));
         itemCount = state.value(dfeUInt(32), 0);
