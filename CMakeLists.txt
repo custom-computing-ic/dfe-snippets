@@ -67,7 +67,7 @@ execute_process(
   )
 
 message(STATUS "Simulation Build DIR --> ${MAXBUILD_DIR_SIM}")
-message(STATUS "HardwaRE   Build DIR --> ${MAXBUILD_DIR_HW}")
+message(STATUS "Hardware   Build DIR --> ${MAXBUILD_DIR_HW}")
 
 add_custom_target(
   runsim
@@ -87,14 +87,15 @@ add_custom_command(
   OUTPUT ${PRJ}_sim.o
   DEPENDS src/*.maxj
   COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
-  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true
-  COMMAND mkdir -p "include" && cp "${MAXBUILD_DIR_SIM}/results/${PRJ}.h" "include/Maxfiles.h"
-  COMMAND sliccompile "${MAXBUILD_DIR_SIM}/results/${PRJ}.max" ${PRJ}_sim.o
+  C0OMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
+  COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
+  COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
+  COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
   )
 
 add_custom_command(
   OUTPUT ${PRJ}_dfe.o
-  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ../src/*.maxj
+  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
   COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
   COMMAND mkdir -p "include" && cp "${MAXBUILD_DIR_HW}/results/${PRJ}.h" "include/Maxfiles.h"
   COMMAND sliccompile "${MAXBUILD_DIR_HW}/results/${PRJ}.max" ${PRJ}_sim.o
@@ -134,5 +135,4 @@ add_executable(${PRJ}_sim src/fpgaNaiveCpuCode.cpp ${PRJ}_sim.o)
 target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL} spmv_commons_cpu)
 
 add_executable(${PRJ}_dfe src/main.cpp ${PRJ}_dfe.o)
-target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL})
-
+target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL} spmv_commons_cpu)
