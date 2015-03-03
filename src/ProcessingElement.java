@@ -37,7 +37,6 @@ public class ProcessingElement extends KernelLib {
         vRom.mapToCPU("vRom" + memId);
 
         // // --- compute
-        optimization.pushDSPFactor(1);
         Params params = control.count.makeParams(32)
             .withReset(rowFinished.eq(2) | rowFinished.eq(3))
             .withMax(rowLength + 1);

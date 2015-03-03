@@ -241,7 +241,7 @@ distribute_indptr(vector<int> adjusted_indptr,
 template <typename value_type>
 vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
                         vector<double> v,
-                        int num_pipes, int compression_enabled,
+                        int num_pipes,
                         int num_repeat) {
 
   int empty_rows = m.get_empty_rows();
@@ -291,7 +291,6 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   cout << "         value_size = " << value_size << " bytes " << endl;
   cout << "        indptr_size = " << indptr_size << " bytes " << endl;
   cout << "adjusted_indptr_size = " << adjusted_indptr_size << " bytes" << endl;
-  cout << "compression_enabled =  " << compression_enabled << endl;
 
   start_time = high_resolution_clock::now();
 
@@ -305,23 +304,17 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   start_time = high_resolution_clock::now();
 
-  vector<double> decoding(256, 0);
   SpmvBase_setBRAMs(0, // will be updated in the main compute call
                     0,
                     0,
-                    &decoding[0],
                     &v[0],
                     &v[0]);
 
   print_clock_diff("Writing to BRAMs ", start_time);
 
-
-
   vector<double> b(m.n * 2, 0);
   start_time = high_resolution_clock::now();
-  int bcsrv_index_size = compression_enabled ? value_size : 0;
-  value_size = compression_enabled ? 0 : value_size;
-
+  
   if (values.size() % num_pipes != 0)
     cout << "ERROR! This cannot happen!!!" << endl;
   if (adjusted_indptr.size() % num_pipes != 0)
@@ -339,7 +332,7 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   print_vector(indptr_size_per_pipe);
   for (int i = 0; i < num_repeat; i++)
   {
-      SpmvBase(bcsrv_index_size,
+      SpmvBase(
                 values.size() / num_pipes,
                 adjusted_indptr_size,
                 m.n,
@@ -347,7 +340,6 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
                 value_size,
                 &csr_size_per_pipe[0],
                 &indptr_size_per_pipe[0],
-                compression_enabled,
                 &b[0]
             );
   }
@@ -363,7 +355,7 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   //  double expected = (double)ticks / freq; // FPGA expected (secs.)
   //  cout << "SpMV (DFE) GFLOPS (theoretical) " << 2.0 * nnzs / expected << endl;
 
-  std::string message = std::string("SpMV ") + std::string((compression_enabled)? "Compressed (DFE)" : "Uncompressed (DFE)");
+  std::string message = std::string("SpMV ");
 
   print_clock_diff(message, end_time, start_time);
   print_spmv_gflops(message, m.nnzs, end_time, start_time);
@@ -426,7 +418,7 @@ int main(int argc, char** argv) {
 
   // find expected result
   vector<double> bExp = SpMV_MKL_ge((char *)path.c_str(), v);
-  auto b = SpMV_DFE(original_matrix, v, numPipes, 0, num_repeat);
+  auto b = SpMV_DFE(original_matrix, v, numPipes, num_repeat);
 
   cout << "Ran SPMV " << endl;
 

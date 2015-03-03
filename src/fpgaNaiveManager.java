@@ -63,7 +63,6 @@ public class fpgaNaiveManager extends CustomManager {
         KernelBlock readBcsrvControl = addKernel(new ReadBcsrvControl(makeKernelParameters("ReadBcsrvControl"), ep, numPipes));
         readControl.getInput("indptr") <== addStreamFromOnCardMemory("indptr", LINEAR);
         readBcsrvControl.getInput("bcsrv_values") <== addStreamFromOnCardMemory("value", LINEAR);
-        readBcsrvControl.getInput("bcsrv_index") <== addStreamFromOnCardMemory("bcsrv_index", LINEAR);
 
         ManagerStateMachine outStateMachine = new OutputControlSM(this, ep.getDebugOutputSm());
         StateMachineBlock outputControl = addStateMachine("OutputControlSM", outStateMachine);
@@ -113,7 +112,7 @@ public class fpgaNaiveManager extends CustomManager {
     private EngineInterface interfaceBRAMs (String name) {
         EngineInterface ei = new EngineInterface(name);
 
-        ei.ignoreScalar("ReadBcsrvControl","compression_enabled");
+        //        ei.ignoreScalar("ReadBcsrvControl","compression_enabled");
         ei.ignoreScalar("ReadBcsrvControl","bcsrv_read_ticks");
 
         for (int i = 0; i < numPipes; i++) {
@@ -136,9 +135,6 @@ public class fpgaNaiveManager extends CustomManager {
         ei.ignoreLMem("cpu2lmem");
         ei.ignoreLMem("indptr");
         ei.ignoreLMem("value");
-        ei.ignoreLMem("bcsrv_index");
-
-
         return ei;
     }
 
@@ -152,7 +148,6 @@ public class fpgaNaiveManager extends CustomManager {
         InterfaceParam n = ei.addParam("n", CPUTypes.INT); // matrix rank
         InterfaceParam valueSize = ei.addParam("value_size_bytes", CPUTypes.INT);
         InterfaceParam indptrSize = ei.addParam("indptr_size_bytes", CPUTypes.INT);
-        InterfaceParam bcsrvIndexSize = ei.addParam("bcsrv_index_size_bytes", CPUTypes.INT);
         InterfaceParam ticksPerPipe = ei.addParam("ticks_per_pip", CPUTypes.INT);
         InterfaceParam bcsrvReadTicks = ei.addParam("bcsrv_read_ticks", CPUTypes.INT);
 
@@ -178,18 +173,14 @@ public class fpgaNaiveManager extends CustomManager {
 
         ei.setLMemLinear("indptr", ei.addConstant(0l), indptrSize);
         ei.setLMemLinear("value", indptrSize, valueSize);
-        ei.setLMemLinear("bcsrv_index", indptrSize, bcsrvIndexSize);
 
         ei.setStream("b", resultType, 2 * n * resultType.sizeInBytes());
         ei.ignoreLMem("cpu2lmem");
         ei.ignoreStream("fromcpu");
 
-        for (int i = 0; i < numPipes; i++)
-        {
+        for (int i = 0; i < numPipes; i++) {
             int romId = vRomPortSharing? (i/2) : i;
-            int decodingId = decoderRomPortSharing? (i/2) : i;
             ei.ignoreMem(s_kernelName + i, "vRom" + romId, Direction.IN);
-            ei.ignoreMem("ReadBcsrvControl", "decoding_" + decodingId, Direction.IN);
         }
 
         return ei;
