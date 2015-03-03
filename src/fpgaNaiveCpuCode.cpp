@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <chrono>
 #include <string>
+#include <fstream>
 
 #include <boost/align/aligned_allocator.hpp>
 #include <boost/lexical_cast.hpp>
@@ -92,15 +93,14 @@ vector<double> SpMV_MKL_sym(char *path,
   return r;
 }
 
-char* check_file(char **argv) {
-  FILE *f;
-  char *path = argv[3];
-  if ((f = fopen(argv[3], "r")) == NULL) {
+string check_file(char **argv) {
+  string path = string(argv[2]);
+  ifstream f{path};
+  if (!f) {
     cout << "Error opening input file" << endl;
     exit(1);
   }
-  fclose(f);
-  return argv[3];
+  return path;
 }
 
 vector<double> SpMV_CPU(char *path, vector<double> v, bool symmetric) {
@@ -141,12 +141,13 @@ int count_empty_rows(int *row_ptr, int n) {
   return empty_rows;
 }
 
-// distributes the adjusted indptr array to multiple processing
-// elements
+// distributes the adjusted indptr array to multiple processing elements
 template <typename value_type>
 tuple<vector<int>, vector<value_type>, vector<int>, vector<int> >
-distribute_indptr(vector<int> adjusted_indptr, vector<value_type> values,
-                  int n, int nnzs, int npes) {
+distribute_indptr(vector<int> adjusted_indptr,
+                  vector<value_type> values,
+                  int n, 
+                  int npes) {
 
   if (n % npes != 0)
     cout << "ERROR: Cannot distribute rows evenly to PEs" << endl;
@@ -239,22 +240,45 @@ distribute_indptr(vector<int> adjusted_indptr, vector<value_type> values,
 
 template <typename value_type>
 vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
-                        int num_pipes,
+                        vector<double> v,
+                        int num_pipes, int compression_enabled,
                         int num_repeat) {
 
   int empty_rows = m.get_empty_rows();
 
   auto start_time = high_resolution_clock::now();
 
+  // -- Distribute values to PEs
+  cout << "Distributing data to PEs..." << endl;
+  auto res = distribute_indptr<value_type>(m.adjusted_ind, m.values, m.n, num_pipes);
+  auto adjusted_indptr = get<0>(res);
+  auto values = get<1>(res);
+  auto pipe_input_count = get<2>(res);
+//  cout << "Done" << endl;
+  print_clock_diff("Done: ", start_time);
+
+  // cout << "adjusted_indptr = ";
+  // print_vector(adjusted_indptr);
+  // cout << "values = ";
+
+  // for (auto v : values)
+  //   cout << (int)v << " ";
+  // cout << endl;
+
+  // cout << "valuesb = ";
+  // print_vector(values);
+  // cout << endl;
+
   // -- dimensions in bytes for the encoding streams
-  int index_size = align(m.adjusted_ind.size(), 384);
-  int value_size = align(m.values.size() * sizeof(value_type), 384);
+  int index_size = align(adjusted_indptr.size(), 384);
+  int value_size = align(values.size() * sizeof(value_type), 384);
 
   // stream size must be multiple of 16 bytes
   // padding bytes are ignored in the actual kernel
   int nnzs_bytes = m.nnzs * sizeof(value_type);
   int indptr_size  = align(nnzs_bytes, 384);
   int row_ptr_size = align(m.n * sizeof(int), 384);
+  int adjusted_indptr_size = align(adjusted_indptr.size() * sizeof(int), 384);
 
   // --- Running whole SpMV design
   cout << "      Running on DFE." << endl;
@@ -262,40 +286,46 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   cout << "                  n = " << m.n << endl;
   cout << "               nnzs = " << m.nnzs << endl;
   cout << "         empty rows = " << empty_rows << endl;
-  cout << "             ticks  = " << m.values.size() / num_pipes << endl;
+  cout << "             ticks  = " << values.size() / num_pipes << endl;
   cout << "       total cycles = " << m.nnzs + empty_rows << endl;
   cout << "         value_size = " << value_size << " bytes " << endl;
   cout << "        indptr_size = " << indptr_size << " bytes " << endl;
+  cout << "adjusted_indptr_size = " << adjusted_indptr_size << " bytes" << endl;
+  cout << "compression_enabled =  " << compression_enabled << endl;
 
   start_time = high_resolution_clock::now();
-  SpmvBase_writeDRAM(index_size,
-                     0,
-                     (uint8_t *)&m.adjusted_ind[0]);
+
+  SpmvBase_writeDRAM(adjusted_indptr_size,
+                      0,
+                      (uint8_t *)&adjusted_indptr[0]);
   SpmvBase_writeDRAM(value_size,
-                     index_size,
-                     (uint8_t*)&m.values[0]);
+                      adjusted_indptr_size,
+                      (uint8_t*)&values[0]);
   print_clock_diff("Writing to DRAM ", start_time);
 
   start_time = high_resolution_clock::now();
 
-  // SpmvBase_setBRAMs( 0, // will be updated in the main compute call
-  //                    0,
-  //                    0,
-  //                    &v[0],
-  //                    &v[0]
-  //                    );
+  vector<double> decoding(256, 0);
+  SpmvBase_setBRAMs(0, // will be updated in the main compute call
+                    0,
+                    0,
+                    &decoding[0],
+                    &v[0],
+                    &v[0]);
 
   print_clock_diff("Writing to BRAMs ", start_time);
 
+
+
   vector<double> b(m.n * 2, 0);
-
   start_time = high_resolution_clock::now();
-  if (m.values.size() % num_pipes != 0)
-    cout << "ERROR! This cannot happen!!!" << endl;
-  if (m.adjusted_ind.size() % num_pipes != 0)
-    cout << "ERROR! This cannot happen!!!" << endl;
+  int bcsrv_index_size = compression_enabled ? value_size : 0;
+  value_size = compression_enabled ? 0 : value_size;
 
-  auto res = distribute_indptr(m.adjusted_ind, m.values, m.n, m.nnzs, num_pipes);
+  if (values.size() % num_pipes != 0)
+    cout << "ERROR! This cannot happen!!!" << endl;
+  if (adjusted_indptr.size() % num_pipes != 0)
+    cout << "ERROR! This cannot happen!!!" << endl;
 
   vector<int64_t> indptr_size_per_pipe;
   for (auto val : get<2>(res))
@@ -307,34 +337,43 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   cout << "Indptr_size_per_pipe" << endl;
   print_vector(indptr_size_per_pipe);
-  // for (int i = 0; i < num_repeat; i++)
-  //   {
-  //     SpmvBase(bcsrv_index_size,
-  //              values.size() / num_pipes,
-  //              adjusted_indptr_size,
-  //              m.n,
-  //              values.size() / num_pipes,
-  //              value_size,
-  //              &csr_size_per_pipe[0],
-  //              &indptr_size_per_pipe[0],
-  //              compression_enabled,
-  //              &b[0]
-  //              );
-  //   }
+  for (int i = 0; i < num_repeat; i++)
+  {
+      SpmvBase(bcsrv_index_size,
+                values.size() / num_pipes,
+                adjusted_indptr_size,
+                m.n,
+                values.size() / num_pipes,
+                value_size,
+                &csr_size_per_pipe[0],
+                &indptr_size_per_pipe[0],
+                compression_enabled,
+                &b[0]
+            );
+  }
 
   auto end_time = high_resolution_clock::now();
 
   printf("\nDone %d runs of SpMV. _Adjust run times accordingly_\n", num_repeat);
 
-  // print_clock_diff(message, end_time, start_time);
-  // print_spmv_gflops(message, m.nnzs, end_time, start_time);
+  //  print_clock_diff("SpMV (DFE)", end_time, start_time);
+  //  print_spmv_gflops("SpMV (DFE)", nnzs, end_time, start_time);
+  //  int ticks = nnzs + empty_rows;
+  //  double freq = 0.15; // FPGA frequency (GHz)
+  //  double expected = (double)ticks / freq; // FPGA expected (secs.)
+  //  cout << "SpMV (DFE) GFLOPS (theoretical) " << 2.0 * nnzs / expected << endl;
+
+  std::string message = std::string("SpMV ") + std::string((compression_enabled)? "Compressed (DFE)" : "Uncompressed (DFE)");
+
+  print_clock_diff(message, end_time, start_time);
+  print_spmv_gflops(message, m.nnzs, end_time, start_time);
 
   vector<pair<double, double> > r;
   for (int i = 0; i < b.size(); i+=2) {
     // cout << "Tag: " << b[i] << " value: " << b[i + 1] << endl;
     r.push_back(make_pair(b[i], b[i + 1]));
   }
-
+  
   sort(r.begin(), r.end());
   // cout << "After sort" << endl;
   vector<double> r2;
@@ -348,9 +387,12 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
 int main(int argc, char** argv) {
 
-  char* path = check_file(argv);
-  int num_repeat = boost::lexical_cast<int>(argv[4]);
+  cout << "Program arguments:" << endl;
+  for (int i = 0; i < argc; i++)
+    cout << "   " << argv[i] << endl;
 
+  string path = check_file(argv);
+  int num_repeat = boost::lexical_cast<int>(argv[3]);
 
   // -- Design Parameters
   int fpL = SpmvBase_fpL;  // adder latency
@@ -361,7 +403,8 @@ int main(int argc, char** argv) {
   int n, nnzs;
   double* values;
   int *col_ind, *row_ptr;
-  read_ge_mm_csr(path, &n, &nnzs, &col_ind, &row_ptr, &values);
+
+  read_ge_mm_csr((char *)path.c_str(), &n, &nnzs, &col_ind, &row_ptr, &values);
 
   // adjust from 1 indexed CSR (used by MKL) to 0 indexed CSR
   for (int i = 0; i < nnzs; i++)
@@ -372,23 +415,20 @@ int main(int argc, char** argv) {
   for (int i = 1; i <=n; i++)
     v[i - 1] = i;
 
+  cout << "HERE" << endl;
   AdjustedCsrMatrix<double> original_matrix(n);
-      
-#ifdef DEBUG_PRINT_MATRICES
   original_matrix.load_from_csr(values, col_ind, row_ptr);
+    
+#ifdef DEBUG_PRINT_MATRICES
   original_matrix.print();
   original_matrix.print_dense();
 #endif
 
   // find expected result
-  vector<double> bExp = SpMV_MKL_ge(path, v);
+  vector<double> bExp = SpMV_MKL_ge((char *)path.c_str(), v);
+  auto b = SpMV_DFE(original_matrix, v, numPipes, 0, num_repeat);
 
-  //  printf("Running original uncompressed CSR matrix on DFE (compression = off):\n");
-  // original_matrix.load_from_csr(values, col_ind, row_ptr);
-  // auto c = SpMV_DFE(original_matrix, decoding, v, numPipes, 0, num_repeat);
-
-  // -- Run on FPGA
-  auto b = SpMV_DFE(original_matrix, numPipes, num_repeat);
+  cout << "Ran SPMV " << endl;
 
   int errors = 0;
   for (int i = 0; i < b.size(); i++)

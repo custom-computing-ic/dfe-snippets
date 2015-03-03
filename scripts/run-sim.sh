@@ -19,7 +19,7 @@ expressionFile=$(readlink -f expressions.in)
 marketFile=$(readlink -f market.in)
 # SLIC_CONF+="use_simulation=${USER}a" LD_PRELOAD=${MAXOS_SIM} ${prj} ${USER}a0:${USER}a $@ ${expressionFile} ${marketFile}
 
-SLIC_CONF+="use_simulation=${USER}a" LD_PRELOAD=${MAXOS_SIM} ${prj} ${USER}a0:${USER}a $@
+SLIC_CONF+="use_simulation=${USER}a" LD_PRELOAD=${MAXOS_SIM} ${prj} ${USER}a0:${USER}a $2 $3
 # set +o xtrace
 # maxcompilersim -n ${USER}a -c${DEVICENUM} stop
 

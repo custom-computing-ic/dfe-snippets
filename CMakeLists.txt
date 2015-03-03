@@ -1,6 +1,7 @@
 cmake_minimum_required (VERSION 2.6)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -march=native -funroll-loops -std=c++11")
+#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -march=native -funroll-loops -std=c++11")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
 # -- Boost
@@ -71,7 +72,14 @@ message(STATUS "HardwaRE   Build DIR --> ${MAXBUILD_DIR_HW}")
 add_custom_target(
   runsim
   COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
-  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} bin/${PRJ}_sim ${USER}a0:${USER}a dummy -s 384
+  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} bin/${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
+  DEPENDS ${PRJ}_sim
+  )
+
+add_custom_target(
+  gdbsim
+  COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
+  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} gdb --args bin/${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
   DEPENDS ${PRJ}_sim
   )
 
