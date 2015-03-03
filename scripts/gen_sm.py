@@ -1,4 +1,4 @@
-noutputs=16
+noutputs=32
 
 
 def main():
