@@ -1,0 +1,668 @@
+
+Total resource usage
+-----------------------------------------------------------------
+    LUTs     FFs   BRAMs    DSPs                            
+  524800 1049600    2567    1963  total available resources for FPGA
+  296413  388495    1495     140  total resources used      
+  56.48%  37.01%  58.24%   7.13%  % of available
+  226276  295657     511     140  used by kernels           
+  43.12%  28.17%  19.91%   7.13%  % of available
+   68663   90865     971       0  used by manager           
+  13.08%   8.66%  37.83%   0.00%  % of available
+  255368  345567    1200     140  stray resources           
+  48.66%  32.92%  46.75%   7.13%  % of available
+
+High level manager breakdown aggregated by type
+-----------------------------------------------------------------
+    LUTs     FFs   BRAMs    DSPs  Type                      Occurrences
+     656    1239       0       0  AddrGen                   3
+      39      37       1       0  ChecksumMappedDRP         1
+    3086    3083       0       0  DualAspectMux             2
+      13    7844       0       0  DualAspectReg             3
+    8210    7091     637       0  Fifo                      198
+  226276  295657     511     140  Kernel                    34
+     163     215       0       0  MAX4CPLD                  1
+     787    1063       2       0  MAX4PCIeSlaveInterface    1
+      34      54       0       0  MAXEvents                 1
+     195     182       0       0  ManagerStateMachine_CSRC  1
+     191     185       0       0  ManagerStateMachine_CSRC  1
+     193     184       0       0  ManagerStateMachine_CSRC  1
+     193     185       0       0  ManagerStateMachine_CSRC  1
+     191     185       0       0  ManagerStateMachine_CSRC  1
+     193     182       0       0  ManagerStateMachine_CSRC  1
+     193     184       0       0  ManagerStateMachine_CSRC  1
+     193     186       0       0  ManagerStateMachine_CSRC  1
+     193     182       0       0  ManagerStateMachine_CSRC  1
+     193     188       0       0  ManagerStateMachine_CSRC  1
+     193     186       0       0  ManagerStateMachine_CSRC  1
+     193     182       0       0  ManagerStateMachine_CSRC  1
+     191     184       0       0  ManagerStateMachine_CSRC  1
+     193     185       0       0  ManagerStateMachine_CSRC  1
+     193     185       0       0  ManagerStateMachine_CSRC  1
+     193     183       0       0  ManagerStateMachine_CSRC  1
+     193     182       0       0  ManagerStateMachine_CSRC  1
+     191     183       0       0  ManagerStateMachine_CSRC  1
+     191     184       0       0  ManagerStateMachine_CSRC  1
+     191     182       0       0  ManagerStateMachine_CSRC  1
+     191     184       0       0  ManagerStateMachine_CSRC  1
+     190     183       0       0  ManagerStateMachine_CSRC  1
+     191     185       0       0  ManagerStateMachine_CSRC  1
+     191     184       0       0  ManagerStateMachine_CSRC  1
+     191     183       0       0  ManagerStateMachine_CSRC  1
+     195     183       0       0  ManagerStateMachine_CSRC  1
+     191     183       0       0  ManagerStateMachine_CSRC  1
+     191     181       0       0  ManagerStateMachine_CSRC  1
+     193     186       0       0  ManagerStateMachine_CSRC  1
+     193     183       0       0  ManagerStateMachine_CSRC  1
+     193     180       0       0  ManagerStateMachine_CSRC  1
+     193     186       0       0  ManagerStateMachine_CSRC  1
+    1522     166       0       0  ManagerStateMachine_Outp  1
+     478      90       0       0  MappedElementSwitch       1
+     429    1073       6       0  MappedMemoriesController  1
+     139     143       0       0  MappedRegistersControlle  1
+    9334   24289     174       0  MemoryControllerPro       1
+    1692     919       6       0  PCIeBase                  1
+     955    1201      30       0  PCIeSlaveStreaming        1
+     276     395       0       0  PerfMonitor               1
+      18      23       0       0  ResetControl              2
+     152     186       0       0  SanityBlock               1
+      92      87       1       0  SignalForwardingAdapter   1
+   34433   35786     114       0  StratixVDDR3              6
+       2       1       0       0  StreamPullPushAdapter     1
+       0       0       0       0  Memory Controller         --
+       0       0       0       0  Other InterFPGA           --
+    2455    2755     137       0  Other MappedElements      --
+    2465    3468      38       0  Other PCIe                --
+
+Kernel breakdown
+-----------------------------------------------------------------
+    LUTs     FFs   BRAMs    DSPs  category
+  226276  295657     511     140  total for all kernels
+  43.12%  28.17%  19.91%   7.13%  % of total available
+
+Totals for each kernel
+    LUTs     FFs   BRAMs    DSPs  Kernel name
+     368    2909       1       0  ReadBcsrvControl (total)
+   0.07%   0.28%   0.04%   0.00%  % of total available
+     231     361       0       0  ReadBcsrvControl (user)
+   0.04%   0.03%   0.00%   0.00%  % of total available
+       0       0       0       0  ReadBcsrvControl (scheduling)
+   0.00%   0.00%   0.00%   0.00%  % of total available
+     137    2548       1       0  ReadBcsrvControl (other Kernel resources)
+   0.03%   0.24%   0.04%   0.00%  % of total available
+    1403    3323       0       0  ReadControl (total)
+   0.27%   0.32%   0.00%   0.00%  % of total available
+    1292     513       0       0  ReadControl (user)
+   0.25%   0.05%   0.00%   0.00%  % of total available
+       0       0       0       0  ReadControl (scheduling)
+   0.00%   0.00%   0.00%   0.00%  % of total available
+     111    2810       0       0  ReadControl (other Kernel resources)
+   0.02%   0.27%   0.00%   0.00%  % of total available
+    7005    8925      17       4  fpgaNaiveKernel0 (total)
+   1.33%   0.85%   0.66%   0.20%  % of total available
+    6753    8194      11       4  fpgaNaiveKernel0 (user)
+   1.29%   0.78%   0.43%   0.20%  % of total available
+      33     202       4       0  fpgaNaiveKernel0 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     219     529       2       0  fpgaNaiveKernel0 (other Kernel resources)
+   0.04%   0.05%   0.08%   0.00%  % of total available
+    7022    9040      15       4  fpgaNaiveKernel1 (total)
+   1.34%   0.86%   0.58%   0.20%  % of total available
+    6799    8240      11       4  fpgaNaiveKernel1 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      32     203       4       0  fpgaNaiveKernel1 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     191     597       0       0  fpgaNaiveKernel1 (other Kernel resources)
+   0.04%   0.06%   0.00%   0.00%  % of total available
+    6978    9035      16       4  fpgaNaiveKernel10 (total)
+   1.33%   0.86%   0.62%   0.20%  % of total available
+    6833    8264      11       4  fpgaNaiveKernel10 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      33     203       4       0  fpgaNaiveKernel10 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     568       1       0  fpgaNaiveKernel10 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    7005    9071      16       4  fpgaNaiveKernel11 (total)
+   1.33%   0.86%   0.62%   0.20%  % of total available
+    6860    8302      11       4  fpgaNaiveKernel11 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     203       4       0  fpgaNaiveKernel11 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     566       1       0  fpgaNaiveKernel11 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6973    9051      16       4  fpgaNaiveKernel12 (total)
+   1.33%   0.86%   0.62%   0.20%  % of total available
+    6828    8286      11       4  fpgaNaiveKernel12 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      33     205       4       0  fpgaNaiveKernel12 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     560       1       0  fpgaNaiveKernel12 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    7012    9101      16       4  fpgaNaiveKernel13 (total)
+   1.34%   0.87%   0.62%   0.20%  % of total available
+    6867    8318      11       4  fpgaNaiveKernel13 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     203       4       0  fpgaNaiveKernel13 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     580       1       0  fpgaNaiveKernel13 (other Kernel resources)
+   0.02%   0.06%   0.04%   0.00%  % of total available
+    7017    9062      16       4  fpgaNaiveKernel14 (total)
+   1.34%   0.86%   0.62%   0.20%  % of total available
+    6873    8296      11       4  fpgaNaiveKernel14 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     202       4       0  fpgaNaiveKernel14 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     564       1       0  fpgaNaiveKernel14 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6954    9012      16       6  fpgaNaiveKernel15 (total)
+   1.33%   0.86%   0.62%   0.31%  % of total available
+    6810    8242      11       6  fpgaNaiveKernel15 (user)
+   1.30%   0.79%   0.43%   0.31%  % of total available
+      32     200       4       0  fpgaNaiveKernel15 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     570       1       0  fpgaNaiveKernel15 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6943    9021      16       4  fpgaNaiveKernel16 (total)
+   1.32%   0.86%   0.62%   0.20%  % of total available
+    6798    8258      11       4  fpgaNaiveKernel16 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      33     201       4       0  fpgaNaiveKernel16 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     562       1       0  fpgaNaiveKernel16 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6977    9028      16       4  fpgaNaiveKernel17 (total)
+   1.33%   0.86%   0.62%   0.20%  % of total available
+    6832    8254      11       4  fpgaNaiveKernel17 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      32     205       4       0  fpgaNaiveKernel17 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     569       1       0  fpgaNaiveKernel17 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6966    9087      16       4  fpgaNaiveKernel18 (total)
+   1.33%   0.87%   0.62%   0.20%  % of total available
+    6821    8325      11       4  fpgaNaiveKernel18 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      33     198       4       0  fpgaNaiveKernel18 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     564       1       0  fpgaNaiveKernel18 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    7014    9062      16       4  fpgaNaiveKernel19 (total)
+   1.34%   0.86%   0.62%   0.20%  % of total available
+    6869    8289      11       4  fpgaNaiveKernel19 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     203       4       0  fpgaNaiveKernel19 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     570       1       0  fpgaNaiveKernel19 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    7027    9022      15       4  fpgaNaiveKernel2 (total)
+   1.34%   0.86%   0.58%   0.20%  % of total available
+    6804    8219      11       4  fpgaNaiveKernel2 (user)
+   1.30%   0.78%   0.43%   0.20%  % of total available
+      32     200       4       0  fpgaNaiveKernel2 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     191     603       0       0  fpgaNaiveKernel2 (other Kernel resources)
+   0.04%   0.06%   0.00%   0.00%  % of total available
+    6976    9052      16       4  fpgaNaiveKernel20 (total)
+   1.33%   0.86%   0.62%   0.20%  % of total available
+    6831    8273      11       4  fpgaNaiveKernel20 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      33     198       4       0  fpgaNaiveKernel20 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     581       1       0  fpgaNaiveKernel20 (other Kernel resources)
+   0.02%   0.06%   0.04%   0.00%  % of total available
+    7007    9090      16       4  fpgaNaiveKernel21 (total)
+   1.34%   0.87%   0.62%   0.20%  % of total available
+    6862    8313      11       4  fpgaNaiveKernel21 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     202       4       0  fpgaNaiveKernel21 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     575       1       0  fpgaNaiveKernel21 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    7010    9066      16       4  fpgaNaiveKernel22 (total)
+   1.34%   0.86%   0.62%   0.20%  % of total available
+    6866    8299      11       4  fpgaNaiveKernel22 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     201       4       0  fpgaNaiveKernel22 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     566       1       0  fpgaNaiveKernel22 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6951    9035      16       6  fpgaNaiveKernel23 (total)
+   1.32%   0.86%   0.62%   0.31%  % of total available
+    6806    8263      11       6  fpgaNaiveKernel23 (user)
+   1.30%   0.79%   0.43%   0.31%  % of total available
+      32     203       4       0  fpgaNaiveKernel23 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     569       1       0  fpgaNaiveKernel23 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    7072    9043      16       4  fpgaNaiveKernel24 (total)
+   1.35%   0.86%   0.62%   0.20%  % of total available
+    6835    8274      11       4  fpgaNaiveKernel24 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      32     200       4       0  fpgaNaiveKernel24 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     205     569       1       0  fpgaNaiveKernel24 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7108    9063      16       4  fpgaNaiveKernel25 (total)
+   1.35%   0.86%   0.62%   0.20%  % of total available
+    6870    8295      11       4  fpgaNaiveKernel25 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     201       4       0  fpgaNaiveKernel25 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     567       1       0  fpgaNaiveKernel25 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7109    9089      16       4  fpgaNaiveKernel26 (total)
+   1.35%   0.87%   0.62%   0.20%  % of total available
+    6871    8315      11       4  fpgaNaiveKernel26 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     198       4       0  fpgaNaiveKernel26 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     576       1       0  fpgaNaiveKernel26 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7046    9101      16       6  fpgaNaiveKernel27 (total)
+   1.34%   0.87%   0.62%   0.31%  % of total available
+    6808    8320      11       6  fpgaNaiveKernel27 (user)
+   1.30%   0.79%   0.43%   0.31%  % of total available
+      32     207       4       0  fpgaNaiveKernel27 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     574       1       0  fpgaNaiveKernel27 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7108    9076      16       4  fpgaNaiveKernel28 (total)
+   1.35%   0.86%   0.62%   0.20%  % of total available
+    6870    8310      11       4  fpgaNaiveKernel28 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     203       4       0  fpgaNaiveKernel28 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     563       1       0  fpgaNaiveKernel28 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7051    9003      16       6  fpgaNaiveKernel29 (total)
+   1.34%   0.86%   0.62%   0.31%  % of total available
+    6813    8241      11       6  fpgaNaiveKernel29 (user)
+   1.30%   0.79%   0.43%   0.31%  % of total available
+      32     196       4       0  fpgaNaiveKernel29 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     566       1       0  fpgaNaiveKernel29 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7078    9059      16       4  fpgaNaiveKernel3 (total)
+   1.35%   0.86%   0.62%   0.20%  % of total available
+    6840    8297      11       4  fpgaNaiveKernel3 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      32     200       4       0  fpgaNaiveKernel3 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     562       1       0  fpgaNaiveKernel3 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7046    9014      16       6  fpgaNaiveKernel30 (total)
+   1.34%   0.86%   0.62%   0.31%  % of total available
+    6808    8248      11       6  fpgaNaiveKernel30 (user)
+   1.30%   0.79%   0.43%   0.31%  % of total available
+      32     198       4       0  fpgaNaiveKernel30 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     568       1       0  fpgaNaiveKernel30 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7041    9004      16       6  fpgaNaiveKernel31 (total)
+   1.34%   0.86%   0.62%   0.31%  % of total available
+    6803    8230      11       6  fpgaNaiveKernel31 (user)
+   1.30%   0.78%   0.43%   0.31%  % of total available
+      32     201       4       0  fpgaNaiveKernel31 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     573       1       0  fpgaNaiveKernel31 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    7030    9035      15       4  fpgaNaiveKernel4 (total)
+   1.34%   0.86%   0.58%   0.20%  % of total available
+    6806    8238      11       4  fpgaNaiveKernel4 (user)
+   1.30%   0.78%   0.43%   0.20%  % of total available
+      32     201       4       0  fpgaNaiveKernel4 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     192     596       0       0  fpgaNaiveKernel4 (other Kernel resources)
+   0.04%   0.06%   0.00%   0.00%  % of total available
+    7071    9011      16       4  fpgaNaiveKernel5 (total)
+   1.35%   0.86%   0.62%   0.20%  % of total available
+    6833    8244      11       4  fpgaNaiveKernel5 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      32     198       4       0  fpgaNaiveKernel5 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     206     569       1       0  fpgaNaiveKernel5 (other Kernel resources)
+   0.04%   0.05%   0.04%   0.00%  % of total available
+    6974    9044      16       4  fpgaNaiveKernel6 (total)
+   1.33%   0.86%   0.62%   0.20%  % of total available
+    6829    8268      11       4  fpgaNaiveKernel6 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      33     206       4       0  fpgaNaiveKernel6 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     570       1       0  fpgaNaiveKernel6 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    7011    9077      16       4  fpgaNaiveKernel7 (total)
+   1.34%   0.86%   0.62%   0.20%  % of total available
+    6866    8307      11       4  fpgaNaiveKernel7 (user)
+   1.31%   0.79%   0.43%   0.20%  % of total available
+      32     203       4       0  fpgaNaiveKernel7 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     567       1       0  fpgaNaiveKernel7 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6946    9003      16       4  fpgaNaiveKernel8 (total)
+   1.32%   0.86%   0.62%   0.20%  % of total available
+    6801    8230      11       4  fpgaNaiveKernel8 (user)
+   1.30%   0.78%   0.43%   0.20%  % of total available
+      33     201       4       0  fpgaNaiveKernel8 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     112     572       1       0  fpgaNaiveKernel8 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+    6977    9043      16       4  fpgaNaiveKernel9 (total)
+   1.33%   0.86%   0.62%   0.20%  % of total available
+    6832    8274      11       4  fpgaNaiveKernel9 (user)
+   1.30%   0.79%   0.43%   0.20%  % of total available
+      32     205       4       0  fpgaNaiveKernel9 (scheduling)
+   0.01%   0.02%   0.16%   0.00%  % of total available
+     113     564       1       0  fpgaNaiveKernel9 (other Kernel resources)
+   0.02%   0.05%   0.04%   0.00%  % of total available
+
+
+Manager breakdown
+-----------------------------------------------------------------
+    LUTs     FFs   BRAMs    DSPs  Type                      Instance
+     195     182       0       0  ManagerStateMachine_CSRC  CSRControlSM0
+     193     184       0       0  ManagerStateMachine_CSRC  CSRControlSM10
+     193     185       0       0  ManagerStateMachine_CSRC  CSRControlSM11
+     191     185       0       0  ManagerStateMachine_CSRC  CSRControlSM12
+     193     182       0       0  ManagerStateMachine_CSRC  CSRControlSM13
+     193     184       0       0  ManagerStateMachine_CSRC  CSRControlSM14
+     193     186       0       0  ManagerStateMachine_CSRC  CSRControlSM15
+     193     182       0       0  ManagerStateMachine_CSRC  CSRControlSM16
+     193     188       0       0  ManagerStateMachine_CSRC  CSRControlSM17
+     193     186       0       0  ManagerStateMachine_CSRC  CSRControlSM18
+     193     182       0       0  ManagerStateMachine_CSRC  CSRControlSM19
+     191     185       0       0  ManagerStateMachine_CSRC  CSRControlSM1
+     193     185       0       0  ManagerStateMachine_CSRC  CSRControlSM20
+     193     185       0       0  ManagerStateMachine_CSRC  CSRControlSM21
+     193     183       0       0  ManagerStateMachine_CSRC  CSRControlSM22
+     193     182       0       0  ManagerStateMachine_CSRC  CSRControlSM23
+     191     183       0       0  ManagerStateMachine_CSRC  CSRControlSM24
+     191     184       0       0  ManagerStateMachine_CSRC  CSRControlSM25
+     191     182       0       0  ManagerStateMachine_CSRC  CSRControlSM26
+     191     184       0       0  ManagerStateMachine_CSRC  CSRControlSM27
+     190     183       0       0  ManagerStateMachine_CSRC  CSRControlSM28
+     191     185       0       0  ManagerStateMachine_CSRC  CSRControlSM29
+     191     184       0       0  ManagerStateMachine_CSRC  CSRControlSM2
+     191     183       0       0  ManagerStateMachine_CSRC  CSRControlSM30
+     195     183       0       0  ManagerStateMachine_CSRC  CSRControlSM31
+     191     184       0       0  ManagerStateMachine_CSRC  CSRControlSM3
+     191     183       0       0  ManagerStateMachine_CSRC  CSRControlSM4
+     191     181       0       0  ManagerStateMachine_CSRC  CSRControlSM5
+     193     186       0       0  ManagerStateMachine_CSRC  CSRControlSM6
+     193     183       0       0  ManagerStateMachine_CSRC  CSRControlSM7
+     193     180       0       0  ManagerStateMachine_CSRC  CSRControlSM8
+     193     186       0       0  ManagerStateMachine_CSRC  CSRControlSM9
+    1522     166       0       0  ManagerStateMachine_Outp  OutputControlSM
+     368    2909       1       0  Kernel                    ReadBcsrvControl
+    1403    3323       0       0  Kernel                    ReadControl
+      43      35       2       0  Fifo                      Stream_102
+      38      33       1       0  Fifo                      Stream_105
+      42      37       1       0  Fifo                      Stream_107
+      43      37       1       0  Fifo                      Stream_109
+      42      36       1       0  Fifo                      Stream_111
+      42      34       4       0  Fifo                      Stream_113
+      43      34       2       0  Fifo                      Stream_116
+      38      33       1       0  Fifo                      Stream_119
+      42      35       1       0  Fifo                      Stream_121
+      43      34       1       0  Fifo                      Stream_123
+      43      35       1       0  Fifo                      Stream_125
+      42      39       4       0  Fifo                      Stream_127
+      43      35       2       0  Fifo                      Stream_130
+      38      35       1       0  Fifo                      Stream_133
+      42      36       1       0  Fifo                      Stream_135
+      43      35       1       0  Fifo                      Stream_137
+      42      35       1       0  Fifo                      Stream_139
+      42      40       4       0  Fifo                      Stream_141
+      43      36       2       0  Fifo                      Stream_144
+      38      35       1       0  Fifo                      Stream_147
+      42      33       1       0  Fifo                      Stream_149
+      43      33       1       0  Fifo                      Stream_151
+      43      34       1       0  Fifo                      Stream_153
+      41      35       4       0  Fifo                      Stream_155
+      43      35       2       0  Fifo                      Stream_158
+      38      33       1       0  Fifo                      Stream_161
+      42      34       1       0  Fifo                      Stream_163
+      43      35       1       0  Fifo                      Stream_165
+      42      34       1       0  Fifo                      Stream_167
+      42      32       4       0  Fifo                      Stream_169
+      43      35       2       0  Fifo                      Stream_172
+      38      35       1       0  Fifo                      Stream_175
+      42      36       1       0  Fifo                      Stream_177
+      43      33       1       0  Fifo                      Stream_179
+      43      33       1       0  Fifo                      Stream_181
+      40      34       4       0  Fifo                      Stream_183
+      43      37       2       0  Fifo                      Stream_186
+      38      34       1       0  Fifo                      Stream_189
+      41      37       2       0  Fifo                      Stream_18
+      42      34       1       0  Fifo                      Stream_191
+      43      36       1       0  Fifo                      Stream_193
+      42      34       1       0  Fifo                      Stream_195
+      42      36       4       0  Fifo                      Stream_197
+      43      34       2       0  Fifo                      Stream_200
+      38      34       1       0  Fifo                      Stream_203
+      42      34       1       0  Fifo                      Stream_205
+      43      35       1       0  Fifo                      Stream_207
+      43      35       1       0  Fifo                      Stream_209
+      41      34       4       0  Fifo                      Stream_211
+      43      34       2       0  Fifo                      Stream_214
+      38      32       1       0  Fifo                      Stream_217
+      42      35       1       0  Fifo                      Stream_219
+      38      32       1       0  Fifo                      Stream_21
+      43      35       1       0  Fifo                      Stream_221
+      43      33       1       0  Fifo                      Stream_223
+      41      36       4       0  Fifo                      Stream_225
+      43      34       2       0  Fifo                      Stream_228
+      38      35       1       0  Fifo                      Stream_231
+      42      33       1       0  Fifo                      Stream_233
+      43      34       1       0  Fifo                      Stream_235
+      43      33       1       0  Fifo                      Stream_237
+      43      34       4       0  Fifo                      Stream_239
+      40      34       1       0  Fifo                      Stream_23
+      43      34       2       0  Fifo                      Stream_242
+      38      36       1       0  Fifo                      Stream_245
+      42      34       1       0  Fifo                      Stream_247
+      43      34       1       0  Fifo                      Stream_249
+      42      40       1       0  Fifo                      Stream_251
+      46      36       4       0  Fifo                      Stream_253
+      43      34       2       0  Fifo                      Stream_256
+      38      35       1       0  Fifo                      Stream_259
+      40      37       1       0  Fifo                      Stream_25
+      42      35       1       0  Fifo                      Stream_261
+      43      33       1       0  Fifo                      Stream_263
+      43      35       1       0  Fifo                      Stream_265
+      42      34       4       0  Fifo                      Stream_267
+      43      34       2       0  Fifo                      Stream_270
+      38      32       1       0  Fifo                      Stream_273
+      42      35       1       0  Fifo                      Stream_275
+      43      35       1       0  Fifo                      Stream_277
+      42      34       1       0  Fifo                      Stream_279
+      41      37       1       0  Fifo                      Stream_27
+      43      34       4       0  Fifo                      Stream_281
+      43      37       2       0  Fifo                      Stream_284
+      38      32       1       0  Fifo                      Stream_287
+      42      34       1       0  Fifo                      Stream_289
+      43      37       1       0  Fifo                      Stream_291
+      43      38       1       0  Fifo                      Stream_293
+      43      34       4       0  Fifo                      Stream_295
+      43      37       2       0  Fifo                      Stream_298
+      38      34       4       0  Fifo                      Stream_29
+       3    1539       0       0  DualAspectReg             Stream_2
+      38      34       1       0  Fifo                      Stream_301
+      42      34       1       0  Fifo                      Stream_303
+      43      34       1       0  Fifo                      Stream_305
+      42      36       1       0  Fifo                      Stream_307
+      43      36       4       0  Fifo                      Stream_309
+      43      35       2       0  Fifo                      Stream_312
+      38      37       1       0  Fifo                      Stream_315
+      42      33       1       0  Fifo                      Stream_317
+      43      34       1       0  Fifo                      Stream_319
+      43      33       1       0  Fifo                      Stream_321
+      42      35       4       0  Fifo                      Stream_323
+      43      35       2       0  Fifo                      Stream_326
+      38      32       1       0  Fifo                      Stream_329
+      41      34       2       0  Fifo                      Stream_32
+      42      36       1       0  Fifo                      Stream_331
+      43      33       1       0  Fifo                      Stream_333
+      43      33       1       0  Fifo                      Stream_335
+      42      35       4       0  Fifo                      Stream_337
+      43      34       2       0  Fifo                      Stream_340
+      38      34       1       0  Fifo                      Stream_343
+      42      34       1       0  Fifo                      Stream_345
+      43      33       1       0  Fifo                      Stream_347
+      43      35       1       0  Fifo                      Stream_349
+      42      38       4       0  Fifo                      Stream_351
+      41      34       2       0  Fifo                      Stream_354
+      38      35       1       0  Fifo                      Stream_357
+      40      34       1       0  Fifo                      Stream_359
+      38      34       1       0  Fifo                      Stream_35
+      40      35       1       0  Fifo                      Stream_361
+      41      35       1       0  Fifo                      Stream_363
+      44      36       4       0  Fifo                      Stream_365
+      41      37       2       0  Fifo                      Stream_368
+      38      32       1       0  Fifo                      Stream_371
+      40      35       1       0  Fifo                      Stream_373
+      40      36       1       0  Fifo                      Stream_375
+      41      36       1       0  Fifo                      Stream_377
+      43      36       4       0  Fifo                      Stream_379
+      40      34       1       0  Fifo                      Stream_37
+      41      39       2       0  Fifo                      Stream_382
+      38      34       1       0  Fifo                      Stream_385
+      40      34       1       0  Fifo                      Stream_387
+      40      35       1       0  Fifo                      Stream_389
+      41      38       1       0  Fifo                      Stream_391
+      42      36       4       0  Fifo                      Stream_393
+      41      35       2       0  Fifo                      Stream_396
+      38      33       1       0  Fifo                      Stream_399
+      40      35       1       0  Fifo                      Stream_39
+      40      33       1       0  Fifo                      Stream_401
+      40      35       1       0  Fifo                      Stream_403
+      41      34       1       0  Fifo                      Stream_405
+      43      35       4       0  Fifo                      Stream_407
+      41      35       2       0  Fifo                      Stream_410
+      38      34       1       0  Fifo                      Stream_413
+      40      34       1       0  Fifo                      Stream_415
+      40      35       1       0  Fifo                      Stream_417
+      41      34       1       0  Fifo                      Stream_419
+      41      35       1       0  Fifo                      Stream_41
+      42      37       4       0  Fifo                      Stream_421
+      41      35       2       0  Fifo                      Stream_424
+      38      32       1       0  Fifo                      Stream_427
+      40      35       1       0  Fifo                      Stream_429
+      40      37       1       0  Fifo                      Stream_431
+      41      36       1       0  Fifo                      Stream_433
+      43      37       4       0  Fifo                      Stream_435
+      41      35       2       0  Fifo                      Stream_438
+      38      33       4       0  Fifo                      Stream_43
+      38      32       1       0  Fifo                      Stream_441
+      40      35       1       0  Fifo                      Stream_443
+      40      34       1       0  Fifo                      Stream_445
+      41      35       1       0  Fifo                      Stream_447
+      43      34       4       0  Fifo                      Stream_449
+      41      35       2       0  Fifo                      Stream_452
+      38      34       1       0  Fifo                      Stream_455
+      40      34       1       0  Fifo                      Stream_457
+      40      34       1       0  Fifo                      Stream_459
+      41      34       1       0  Fifo                      Stream_461
+      41      36       4       0  Fifo                      Stream_463
+      72     127       4       0  Fifo                      Stream_466
+      41      37       2       0  Fifo                      Stream_46
+       6    1446       0       0  DualAspectReg             Stream_473
+    1031    1030       0       0  DualAspectMux             Stream_479
+    2055    2053       0       0  DualAspectMux             Stream_483
+      78     122       4       0  Fifo                      Stream_485
+       2       1       0       0  StreamPullPushAdapter     Stream_487
+      37      36      77       0  Fifo                      Stream_489
+      44      37      26       0  Fifo                      Stream_491
+      37      37     154       0  Fifo                      Stream_493
+      44      43      52       0  Fifo                      Stream_495
+      38      35       1       0  Fifo                      Stream_49
+      40      36       1       0  Fifo                      Stream_51
+      40      36       1       0  Fifo                      Stream_53
+      41      35       1       0  Fifo                      Stream_55
+      42      33       4       0  Fifo                      Stream_57
+      41      36       2       0  Fifo                      Stream_60
+      38      37       1       0  Fifo                      Stream_63
+      40      35       1       0  Fifo                      Stream_65
+      40      37       1       0  Fifo                      Stream_67
+      41      35       1       0  Fifo                      Stream_69
+      42      40       4       0  Fifo                      Stream_71
+      41      35       2       0  Fifo                      Stream_74
+      38      32       1       0  Fifo                      Stream_77
+      40      35       1       0  Fifo                      Stream_79
+      40      34       1       0  Fifo                      Stream_81
+      41      35       1       0  Fifo                      Stream_83
+      43      38       4       0  Fifo                      Stream_85
+      41      36       2       0  Fifo                      Stream_88
+      38      36       1       0  Fifo                      Stream_91
+      40      36       1       0  Fifo                      Stream_93
+      40      35       1       0  Fifo                      Stream_95
+      41      35       1       0  Fifo                      Stream_97
+      40      35       4       0  Fifo                      Stream_99
+       4    4859       0       0  DualAspectReg             Stream_9
+     219     408       0       0  AddrGen                   addrgen_cmd_cpu2lmem
+     219     414       0       0  AddrGen                   addrgen_cmd_indptr
+     218     417       0       0  AddrGen                   addrgen_cmd_value
+    7005    8925      17       4  Kernel                    fpgaNaiveKernel0
+    6978    9035      16       4  Kernel                    fpgaNaiveKernel10
+    7005    9071      16       4  Kernel                    fpgaNaiveKernel11
+    6973    9051      16       4  Kernel                    fpgaNaiveKernel12
+    7012    9101      16       4  Kernel                    fpgaNaiveKernel13
+    7017    9062      16       4  Kernel                    fpgaNaiveKernel14
+    6954    9012      16       6  Kernel                    fpgaNaiveKernel15
+    6943    9021      16       4  Kernel                    fpgaNaiveKernel16
+    6977    9028      16       4  Kernel                    fpgaNaiveKernel17
+    6966    9087      16       4  Kernel                    fpgaNaiveKernel18
+    7014    9062      16       4  Kernel                    fpgaNaiveKernel19
+    7022    9040      15       4  Kernel                    fpgaNaiveKernel1
+    6976    9052      16       4  Kernel                    fpgaNaiveKernel20
+    7007    9090      16       4  Kernel                    fpgaNaiveKernel21
+    7010    9066      16       4  Kernel                    fpgaNaiveKernel22
+    6951    9035      16       6  Kernel                    fpgaNaiveKernel23
+    7072    9043      16       4  Kernel                    fpgaNaiveKernel24
+    7108    9063      16       4  Kernel                    fpgaNaiveKernel25
+    7109    9089      16       4  Kernel                    fpgaNaiveKernel26
+    7046    9101      16       6  Kernel                    fpgaNaiveKernel27
+    7108    9076      16       4  Kernel                    fpgaNaiveKernel28
+    7051    9003      16       6  Kernel                    fpgaNaiveKernel29
+    7027    9022      15       4  Kernel                    fpgaNaiveKernel2
+    7046    9014      16       6  Kernel                    fpgaNaiveKernel30
+    7041    9004      16       6  Kernel                    fpgaNaiveKernel31
+    7078    9059      16       4  Kernel                    fpgaNaiveKernel3
+    7030    9035      15       4  Kernel                    fpgaNaiveKernel4
+    7071    9011      16       4  Kernel                    fpgaNaiveKernel5
+    6974    9044      16       4  Kernel                    fpgaNaiveKernel6
+    7011    9077      16       4  Kernel                    fpgaNaiveKernel7
+    6946    9003      16       4  Kernel                    fpgaNaiveKernel8
+    6977    9043      16       4  Kernel                    fpgaNaiveKernel9
+     787    1063       2       0  MAX4PCIeSlaveInterface    MAX4PCIeSlaveInterface_i
+       9      11       0       0  ResetControl              control_streams_rst_ctl
+     478      90       0       0  MappedElementSwitch       MappedElementSwitch_i
+     429    1073       6       0  MappedMemoriesController  MappedMemoriesController_i
+     139     143       0       0  MappedRegistersControlle  MappedRegistersController_i
+     276     395       0       0  PerfMonitor               perfm
+     152     186       0       0  SanityBlock               SanityBlock_i
+      92      87       1       0  SignalForwardingAdapter   SignalForwardingAdapter_i
+      39      37       1       0  ChecksumMappedDRP         checksum_mem_drp
+     955    1201      30       0  PCIeSlaveStreaming        dynpcie
+       9      12       0       0  ResetControl              reset_controller
+    9334   24289     174       0  MemoryControllerPro       memctrlpro_maia_sodimms
+    1692     919       6       0  PCIeBase                  PCIeBase_i
+     163     215       0       0  MAX4CPLD                  cpld_io_ext_inst
+      34      54       0       0  MAXEvents                 max_events
+    5668    5933      19       0  StratixVDDR3              ddr3_core
+    5670    5981      19       0  StratixVDDR3              ddr3_core
+    5682    5933      19       0  StratixVDDR3              ddr3_core
+    5690    5988      19       0  StratixVDDR3              ddr3_core
+    5693    5982      19       0  StratixVDDR3              ddr3_core
+    6030    5969      19       0  StratixVDDR3              ddr3_core
+
+Source files annotation report
+-----------------------------------------------------------------
+
+% of total used for each file (note: multiple files may share the same resources)
+    LUTs     FFs   BRAMs    DSPs  filename
+  67.69%  60.53%  21.40%  91.43%  ProcessingElement.java
+   0.00%   0.00%   0.00%   0.00%  ReadBcsrvControl.java
+   0.36%   0.04%   0.00%   0.00%  ReadControl.java
+  71.28%  65.13%  23.55% 100.00%  fpgaNaiveKernel.java
+  74.61%  70.03%  32.11% 100.00%  fpgaNaiveManager.java
+ 100.00% 100.00%  49.23% 100.00%  [ missing source files ]
