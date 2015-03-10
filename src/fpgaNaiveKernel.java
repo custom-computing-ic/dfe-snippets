@@ -13,13 +13,12 @@ class fpgaNaiveKernel extends Kernel {
                               SpmvEngineParams engineParams,
                               int fpL,
                               int cacheSize,
-                              int decodingTableSize,
                               int numPipes,
                               boolean dbg,
                               int id) {
         super(parameters);
 
-        optimization.pushPipeliningFactor(0.5);
+        optimization.pushPipeliningFactor(engineParams.getPipeliningFactor());
         optimization.pushDSPFactor(1);
 
         // How many outputs should this pipe write

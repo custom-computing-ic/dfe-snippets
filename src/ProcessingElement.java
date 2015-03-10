@@ -23,9 +23,6 @@ public class ProcessingElement extends KernelLib {
                                 boolean vRomPortSharing) {
         super(owner);
 
-        optimization.pushPipeliningFactor(0.5);
-        optimization.pushDSPFactor(1);
-
         DFEType FLOAT = dfeFloat(11, 53);
 
         // counter is set to 0 when row has finished

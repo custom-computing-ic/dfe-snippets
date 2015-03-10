@@ -388,7 +388,6 @@ int main(int argc, char** argv) {
 
   // -- Design Parameters
   int fpL = SpmvBase_fpL;  // adder latency
-  int max_size = SpmvBase_decodingTableSize;
   int numPipes = SpmvBase_numPipes;
 
   // -- Matrix Parameters

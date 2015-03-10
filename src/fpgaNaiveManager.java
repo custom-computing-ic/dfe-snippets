@@ -20,18 +20,16 @@ public class fpgaNaiveManager extends CustomManager {
 
     private static final MemoryControlGroup.MemoryAccessPattern LINEAR = MemoryControlGroup.MemoryAccessPattern.LINEAR_1D;
 
-    private final int fpL, cacheSize, decodingTableSize, numPipes, numVRoms;
-    private final boolean vRomPortSharing, decoderRomPortSharing, highEffort;
+    private final int fpL, cacheSize, numPipes, numVRoms;
+    private final boolean vRomPortSharing, highEffort;
 
     fpgaNaiveManager(SpmvEngineParams ep) {
         super(ep);
 
         this.fpL = ep.getFloatingPointLatency();
         this.cacheSize = ep.getVectorCacheSize();
-        this.decodingTableSize = ep.getDecodingTableBitWidth();
         this.numPipes = ep.getNumPipes();
         this.vRomPortSharing = ep.getEnableVRomPortSharing();
-        this.decoderRomPortSharing = ep.getEnableDecoderPortSharing();
         this.numVRoms = ep.getEnableVRomPortSharing()? (ep.getNumPipes() / 2) : ep.getNumPipes();
         this.highEffort = ep.getHighEffort();
 
@@ -39,23 +37,7 @@ public class fpgaNaiveManager extends CustomManager {
         this.getCurrentKernelConfig().debug.setEnableLatencyAnnotation(true);
 
         // Set clock frequency
-        config.setDefaultStreamClockFrequency(150);
-
-        // Set Lmem clock frequency
-        // MAX3: MAX3_300, MAX3_333, MAX3_350, MAX3_400
-        // MAIA: MAX4_333, MAX4_400, MAX4_533, MAX4MAIA_400, MAX4MAIA_533, MAX4MAIA_666, MAX4MAIA_733, MAX4MAIA_800
-        //        config.setOnCardMemoryFrequency(LMemFrequency.MAX4MAIA_400);
-
-/*
-        // In case any stream stalls this helps in maxdebug
-        DebugLevel debugLevel = new DebugLevel();
-        debugLevel.setHasMemoryControllerDebugRegisters(true);
-        debugLevel.setHasMemoryControllerExtraDebugRegisters(true);
-        debugLevel.setHasStreamStatus(true);
-        debug.setDebugLevel(debugLevel);
-*/
-
-
+        config.setDefaultStreamClockFrequency(ep.getStreamFrequency());
 
         // -- Read control kernel
         ReadControl rc = new ReadControl(makeKernelParameters("ReadControl"), numPipes);
@@ -64,13 +46,15 @@ public class fpgaNaiveManager extends CustomManager {
         readControl.getInput("indptr") <== addStreamFromOnCardMemory("indptr", LINEAR);
         readBcsrvControl.getInput("bcsrv_values") <== addStreamFromOnCardMemory("value", LINEAR);
 
-        ManagerStateMachine outStateMachine = new OutputControlSM(this, ep.getDebugOutputSm());
+        ManagerStateMachine outStateMachine = new OutputControlSM(this,
+                                                                  ep.getNumPipes(),
+                                                                  ep.getDebugOutputSm());
         StateMachineBlock outputControl = addStateMachine("OutputControlSM", outStateMachine);
 
         for (int i = 0; i < numPipes; i++) {
             KernelBlock compute = addKernel(new fpgaNaiveKernel(makeKernelParameters(s_kernelName + i),
                                                                 ep,
-                                                                fpL, cacheSize, decodingTableSize,
+                                                                fpL, cacheSize,
                                                                 numPipes, ep.getDebugKernel(), i));
             compute.getInput("sp_bcsrv_value_" + i) <== readBcsrvControl.getOutput("rc_bcsrv_value_" + i);
 
@@ -92,7 +76,6 @@ public class fpgaNaiveManager extends CustomManager {
         addStreamToOnCardMemory("cpu2lmem", LINEAR) <== addStreamFromCPU("fromcpu");
 
         addMaxFileConstant("fpL", fpL);
-        addMaxFileConstant("decodingTableSize", decodingTableSize);
         addMaxFileConstant("cacheSize", cacheSize);
         addMaxFileConstant("numPipes", numPipes);
     }
@@ -113,8 +96,6 @@ public class fpgaNaiveManager extends CustomManager {
         EngineInterface ei = new EngineInterface(name);
 
         //        ei.ignoreScalar("ReadBcsrvControl","compression_enabled");
-        ei.ignoreScalar("ReadBcsrvControl","bcsrv_read_ticks");
-
         for (int i = 0; i < numPipes; i++) {
             ei.ignoreScalar(s_kernelName + i,"outputs");
             ei.ignoreScalar(s_kernelName + i,"n");
@@ -191,13 +172,11 @@ public class fpgaNaiveManager extends CustomManager {
 
         fpgaNaiveManager manager = new fpgaNaiveManager(params);
 
-        if (params.getHighEffort())
-        {
-            BuildConfig c = new BuildConfig(BuildConfig.Level.FULL_BUILD);
-            c.setBuildEffort(BuildConfig.Effort.VERY_HIGH);
-            c.setMPPRCostTableSearchRange(1, 4);        // set to enable MPPR
+        if (params.getHighEffort()) {
+            BuildConfig c = manager.getBuildConfig();
+            c.setBuildEffort(BuildConfig.Effort.HIGH);
+            c.setMPPRCostTableSearchRange(1, 10);        // set to enable MPPR
             c.setMPPRParallelism(4);                    // use 4 CPU threads
-            manager.setBuildConfig(c);
         }
 
         manager.createSLiCinterface(manager.interfaceDefault());

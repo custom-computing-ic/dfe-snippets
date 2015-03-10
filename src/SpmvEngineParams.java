@@ -12,11 +12,10 @@ public class SpmvEngineParams extends EngineParameters {
     // -- Design Parameters
     private static final int numPipes = 2;
     private static final int floatingPointLatency = 16;
-    private static final int decodingTableBitWidth = 8;
-    private static final boolean doublePrecisionTable = true;
-    private static final boolean enableDecoderPortSharing = true;
     private static final boolean enableVRomPortSharing = true;
-    private static final int vectorCacheSize = 16 * 1024;
+    private static final int vectorCacheSize = 1024;
+    private static final int streamClockFrequency = 150;
+    private static final double pipeliningFactor = 0.5;
 
     // -- Build params
     private static final boolean highEffort = true;
@@ -35,25 +34,22 @@ public class SpmvEngineParams extends EngineParameters {
 
         declareParam("floatingPointLatency", DataType.INT, floatingPointLatency);
         declareParam("numPipes", DataType.INT, numPipes);
-        declareParam("decodingTableBitWidth", DataType.INT, decodingTableBitWidth);
-        declareParam("doublePrecisionTable", DataType.BOOL, doublePrecisionTable);
-        declareParam("enableDecoderPortSharing", DataType.BOOL, enableDecoderPortSharing);
         declareParam("enableVRomPortSharing", DataType.BOOL, enableVRomPortSharing);
         declareParam("vectorCacheSize", DataType.INT, vectorCacheSize);
+        declareParam("streamFrequency", DataType.INT, streamClockFrequency);
+        declareParam("pipeliningFactor", DataType.DOUBLE, pipeliningFactor);
 
         declareParam("highEffort", DataType.BOOL, highEffort);
     }
 
     public String getBuildName() {
 
-        // we don't label simulation builds
-        // if (getTarget() == Target.DFE_SIM)
-        //     return super.getBuildName();
-
         String base = getMaxFileName() + "_" + getDFEModel() + "_" + getTarget() + "_";
-        String params = getNumPipes() + "pipes_" + getDecodingTableBitWidth() + "decoding_bits_";
-        String prec = getDoublePrecisionTable() ? "dp" : "sp";
-        return base + params + prec + getHighEffort();
+        base += getNumPipes() + "pipes_";
+        base += getVectorCacheSize() + "cache_";
+        base += getStreamFrequency() + "MHz_";
+        base += getPipeliningFactor() + "pf";
+        return base;
     }
 
     public int getNumPipes() {
@@ -68,20 +64,12 @@ public class SpmvEngineParams extends EngineParameters {
         return getParam("floatingPointLatency");
     }
 
-    public int getDecodingTableBitWidth() {
-        return getParam("decodingTableBitWidth");
-    }
-
     public boolean getDebugKernel() {
         return getParam("debugKernel");
     }
 
     public boolean getDebugSm() {
         return getParam("debugSm");
-    }
-
-    public boolean getDebugDecoder() {
-        return getParam("debugDecoder");
     }
 
     public boolean getDebug() {
@@ -92,19 +80,19 @@ public class SpmvEngineParams extends EngineParameters {
         return getParam("debugOutputSm");
     }
 
-    public boolean getDoublePrecisionTable() {
-        return getParam("doublePrecisionTable");
-    }
-
-    public boolean getEnableDecoderPortSharing() {
-        return getParam("enableDecoderPortSharing");
-    }
-
     public boolean getEnableVRomPortSharing() {
         return getParam("enableVRomPortSharing");
     }
 
     public boolean getHighEffort() {
         return getParam("highEffort");
+    }
+
+    public int getStreamFrequency() {
+        return getParam("streamFrequency");
+    }
+
+    public double getPipeliningFactor() {
+        return getParam("pipeliningFactor");
     }
 }

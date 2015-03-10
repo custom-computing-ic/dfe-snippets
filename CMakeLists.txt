@@ -97,8 +97,9 @@ add_custom_command(
   OUTPUT ${PRJ}_dfe.o
   COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
   COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
-  COMMAND mkdir -p "include" && cp "${MAXBUILD_DIR_HW}/results/${PRJ}.h" "include/Maxfiles.h"
-  COMMAND sliccompile "${MAXBUILD_DIR_HW}/results/${PRJ}.max" ${PRJ}_sim.o
+  COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
+  COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
+  COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
   DEPENDS src/*.java
   )
 
