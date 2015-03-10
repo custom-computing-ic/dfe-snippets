@@ -5,6 +5,8 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
 import com.maxeler.maxcompiler.v2.utils.MathUtils;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 
 
 class fpgaNaiveKernel extends Kernel {
@@ -18,6 +20,7 @@ class fpgaNaiveKernel extends Kernel {
                               int id) {
         super(parameters);
 
+        DFEType FLOAT = dfeFloat(11, 53);
         optimization.pushPipeliningFactor(engineParams.getPipeliningFactor());
         optimization.pushDSPFactor(1);
 
@@ -32,12 +35,15 @@ class fpgaNaiveKernel extends Kernel {
         DFEVar rowFinished = io.input("rowEnd_in" + id, dfeUInt(32));
         DFEVar indptr = io.input("indptr_in" + id, dfeInt(32)).cast(dfeUInt(vRomAddressSizeBits)); // col ptr
 
+        int memId = engineParams.getEnableVRomPortSharing()? (id / 2) : id;
+        Memory<DFEVar> vRom = mem.alloc(FLOAT, cacheSize);
+        vRom.mapToCPU("vRom" + memId);
+        DFEVar vectorValue = vRom.read(indptr);
+
         value = rowFinished.eq(3) ? 0 : value;
 
         ProcessingElement pe = new ProcessingElement(this, fpL, dbg,
-                                        rowLength, rowFinished, indptr, value, id,
-                                        cacheSize, engineParams.getEnableVRomPortSharing());
-
+                                        rowLength, rowFinished, vectorValue, value, id);
         DFEVar rowEmpty = rowFinished.eq(2);
         DFEVar outputEnable = rowFinished.eq(1) | rowEmpty;
         Params params = control.count.makeParams(32)

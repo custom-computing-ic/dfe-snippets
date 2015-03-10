@@ -16,11 +16,10 @@ public class ProcessingElement extends KernelLib {
                                 boolean dbg,
                                 DFEVar rowLength,
                                 DFEVar rowFinished,
-                                DFEVar indptr,
+                                DFEVar vectorValue,
                                 DFEVar value,
-                                int id,
-                                int cacheSize,
-                                boolean vRomPortSharing) {
+                                int id
+                                ) {
         super(owner);
 
         DFEType FLOAT = dfeFloat(11, 53);
@@ -29,10 +28,6 @@ public class ProcessingElement extends KernelLib {
         // while counter is less than fpL, we can output results
         DFEVar counterReset = rowFinished.eq(1) | rowFinished.eq(2);
 
-        int memId = vRomPortSharing? (id / 2) : id;
-        Memory<DFEVar> vRom = mem.alloc(FLOAT, cacheSize);
-        vRom.mapToCPU("vRom" + memId);
-
         // // --- compute
         Params params = control.count.makeParams(32)
             .withReset(rowFinished.eq(2) | rowFinished.eq(3))
@@ -40,7 +35,7 @@ public class ProcessingElement extends KernelLib {
         DFEVar nnzCounter = control.count.makeCounter(params).getCount();
 
         DFEVar carriedSum = dfeFloat(11, 53).newInstance(this);
-        DFEVar newValue = value * vRom.read(indptr);
+        DFEVar newValue = value * vectorValue;
         DFEVar newSum = newValue + (nnzCounter < fpL ? 0 : carriedSum);
         carriedSum <== stream.offset(newSum, -fpL);
 
