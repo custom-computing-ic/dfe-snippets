@@ -52,6 +52,8 @@ class OutputControlSM extends ManagerStateMachine {
             inReady[i].next <== inReady(i);
         }
 
+        outValid.next <== false;
+
         DFEsmAssignableValue prevValue = assignable.value(dfeBool());
         prevValue <== false;
         for (int i = 0; i < numPipes; i++) {
@@ -60,8 +62,6 @@ class OutputControlSM extends ManagerStateMachine {
             }
             prevValue <== inReady[i] & ~prevValue;
         }
-
-        outValid.next <== false;
     }
 
     @Override
