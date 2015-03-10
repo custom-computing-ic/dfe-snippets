@@ -51,6 +51,12 @@ public class fpgaNaiveManager extends CustomManager {
                                                                   ep.getDebugOutputSm());
         StateMachineBlock outputControl = addStateMachine("OutputControlSM", outStateMachine);
 
+        KernelBlock memory = addKernel( new VectorCache(makeKernelParameters("Cache"), 
+                            ep.getNumPipes(),
+                            cacheSize,
+                            ep
+                            ));
+
         for (int i = 0; i < numPipes; i++) {
             KernelBlock compute = addKernel(new fpgaNaiveKernel(makeKernelParameters(s_kernelName + i),
                                                                 ep,
@@ -62,9 +68,12 @@ public class fpgaNaiveManager extends CustomManager {
             ManagerStateMachine stateMachine = new CSRControlSM(this, ep.getDebugSm(), i);
             StateMachineBlock control = addStateMachine("CSRControlSM" + i, stateMachine);
             control.getInput("indptr") <== readControl.getOutput("readControl_out" + i);
-
+    
+            // -- Resolve access to vector memory
+            memory.getInput("indptr_in" + i) <== control.getOutput("indptr_out");
+            
             // -- CSR Compute Pipe
-            compute.getInput("indptr_in" + i) <== control.getOutput("indptr_out");
+            compute.getInput("indptr_in" + i) <== memory.getOutput("vector_value_out" + i);
             compute.getInput("rowEnd_in" + i) <== control.getOutput("rowEnd_out");
             compute.getInput("rowLength_in" + i) <== control.getOutput("rowLength_out");
 
@@ -161,7 +170,7 @@ public class fpgaNaiveManager extends CustomManager {
 
         for (int i = 0; i < numPipes; i++) {
             int romId = vRomPortSharing? (i/2) : i;
-            ei.ignoreMem(s_kernelName + i, "vRom" + romId, Direction.IN);
+            ei.ignoreMem("Cache", "vRom" + i, Direction.IN);
         }
 
         return ei;

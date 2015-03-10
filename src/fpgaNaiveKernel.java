@@ -28,18 +28,10 @@ class fpgaNaiveKernel extends Kernel {
         DFEVar outputs = io.scalarInput("outputs", dfeUInt(32));
         DFEVar n = io.scalarInput("n", dfeUInt(32));
 
-        int vRomAddressSizeBits = MathUtils.bitsToAddress(cacheSize);
-
         DFEVar value = io.input("sp_bcsrv_value_" + id, dfeFloat(11, 53));
         DFEVar rowLength = io.input("rowLength_in" + id, dfeUInt(32));
         DFEVar rowFinished = io.input("rowEnd_in" + id, dfeUInt(32));
-        DFEVar indptr = io.input("indptr_in" + id, dfeInt(32)).cast(dfeUInt(vRomAddressSizeBits)); // col ptr
-
-        int memId = engineParams.getEnableVRomPortSharing()? (id / 2) : id;
-        Memory<DFEVar> vRom = mem.alloc(FLOAT, cacheSize);
-        vRom.mapToCPU("vRom" + memId);
-        DFEVar vectorValue = vRom.read(indptr);
-
+        DFEVar vectorValue = io.input("indptr_in" + id, FLOAT);
         value = rowFinished.eq(3) ? 0 : value;
 
         ProcessingElement pe = new ProcessingElement(this, fpL, dbg,
@@ -67,8 +59,8 @@ class fpgaNaiveKernel extends Kernel {
                   outputEnable2);
         if (dbg) {
             debug.simPrintf(
-                            "Pipe %d value_in %f, rowEnd_in %d, indptr_in %d, Output %f Tag %f rowLength: %d\n",
-                            id, value, rowFinished, indptr, output, tag, rowLength);
+                            "Pipe %d value_in %f, rowEnd_in %d, vectorValue %d, Output %f Tag %f rowLength: %d\n",
+                            id, value, rowFinished, vectorValue, output, tag, rowLength);
         }
     }
 }

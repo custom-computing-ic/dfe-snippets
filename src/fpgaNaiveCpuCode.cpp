@@ -307,6 +307,7 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   SpmvBase_setBRAMs(0, // will be updated in the main compute call
                     0,
                     0,
+                    0,
                     &v[0],
                     &v[0]);
 
@@ -340,6 +341,7 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
                 value_size,
                 &csr_size_per_pipe[0],
                 &indptr_size_per_pipe[0],
+                values.size() / num_pipes,
                 &b[0]
             );
   }
