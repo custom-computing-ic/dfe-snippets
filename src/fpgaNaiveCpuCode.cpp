@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <vector>
 #include <iostream>
-#include <cstdio>
 #include <iomanip>
 #include <cmath>
-#include <bitset>
 #include <algorithm>
 #include <chrono>
 #include <string>
@@ -15,7 +13,6 @@
 
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
-#include "mkl_spblas.h"
 
 #include <common.h>
 #include <utils.hpp>
@@ -29,70 +26,6 @@ using namespace std::chrono;
 
 template<class T> using aligned_vector = vector<T, boost::alignment::aligned_allocator<T, 16> >;
 
-void print_spmv_gflops(string item,
-                       int nnzs,
-                       high_resolution_clock::time_point end,
-                       high_resolution_clock::time_point start) {
-  cout << item << " est. GLOPS ";
-  cout << 2.0 * nnzs / duration_cast<duration<double> >(end - start).count() / 1E9;
-  cout << endl;
-}
-
-vector<double> SpMV_MKL_ge(char *path,
-                           vector<double> v) {
-  int n, nnzs;
-  double* values;
-  int *col_ind, *row_ptr;
-
-  read_ge_mm_csr(path, &n, &nnzs, &col_ind, &row_ptr, &values);
-
-  vector<double> r(n);
-  char tr = 'N';
-  auto start_time = high_resolution_clock::now();
-  mkl_dcsrgemv(&tr, &n, values, row_ptr, col_ind, &v[0], &r[0]);
-  auto end_time = high_resolution_clock::now();
-  print_clock_diff("SpMV (CPU)", end_time, start_time);
-  print_spmv_gflops("SpMV (CPU)", nnzs, end_time, start_time);
-  return r;
-}
-
-vector<double> SpMV_MKL_unsym(char *path,
-                              vector<double> v) {
-  FILE *f = fopen(path, "r");
-
-  int n, nnzs;
-  double* values;
-  int *col_ind, *row_ptr;
-  read_system_matrix_unsym_csr(f, &n, &nnzs, &col_ind, &row_ptr, &values);
-  printf("n: %d, nnzs: %d\n", n, nnzs);
-
-  vector<double> r(n);
-  char tr = 'N';
-  mkl_dcsrgemv(&tr, &n, values, row_ptr, col_ind, &v[0], &r[0]);
-
-  fclose(f);
-  return r;
-}
-
-vector<double> SpMV_MKL_sym(char *path,
-                            vector<double> v) {
-
-  FILE *f = fopen(path, "r");
-
-  int n, nnzs;
-  double* values;
-  int *col_ind, *row_ptr;
-  read_system_matrix_sym_csr(f, &n, &nnzs, &col_ind, &row_ptr, &values);
-  printf("n: %d, nnzs: %d\n", n, nnzs);
-
-  vector<double> r(n);
-  char tr = 'l';
-  mkl_dcsrsymv(&tr, &n, values, row_ptr, col_ind, &v[0], &r[0]);
-
-  fclose(f);
-  return r;
-}
-
 string check_file(char **argv) {
   string path = string(argv[2]);
   ifstream f{path};
@@ -101,22 +34,6 @@ string check_file(char **argv) {
     exit(1);
   }
   return path;
-}
-
-vector<double> SpMV_CPU(char *path, vector<double> v, bool symmetric) {
-  vector<double> r2 = SpMV_MKL_unsym(path, v);
-  if (symmetric) {
-    vector<double> r = SpMV_MKL_sym(path, v);
-    cout << "Checking sym/unsymmetric match...";
-    for (int i = 0; i < v.size(); i++) {
-      if (!almost_equal(r[i], r2[i])) {
-        printf(" r[%d] == %f != r[%d] == %f\n", i, r[i], i, r2[i]);
-        exit(1);
-      }
-    }
-    cout << "done!" << endl;
-  }
-  return r2;
 }
 
 void print_results(vector<double> bExp, vector<double> b) {
