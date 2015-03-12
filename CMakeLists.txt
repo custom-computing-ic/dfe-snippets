@@ -1,7 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 
-#SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -fopenmp -march=native -funroll-loops -std=c++11")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
 # -- Boost
 SET (BOOST_ROOT "/opt/boost/boost_1_57_0")
@@ -138,8 +137,6 @@ add_executable(${PRJ}_dfe src/main.cpp ${PRJ}_dfe.o)
 target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL} spmv_commons_cpu)
 
 include_directories(src/cpu/)
-add_executable(spmvTest src/cpu/main.cpp)
-target_link_libraries(spmvTest spmv_commons_cpu ${MKL})
 
 # -- Tests
 

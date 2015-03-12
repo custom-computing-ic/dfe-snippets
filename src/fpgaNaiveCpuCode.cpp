@@ -46,18 +46,6 @@ void print_results(vector<double> bExp, vector<double> b) {
   cout << endl;
 }
 
-int count_empty_rows(int *row_ptr, int n) {
-  int prev = row_ptr[0];
-  int empty_rows = 0;
-  for (int i = 1; i < n + 1; i++) {
-    if (prev == row_ptr[i]) {
-      empty_rows++;
-    }
-    prev = row_ptr[i];
-  }
-  return empty_rows;
-}
-
 // distributes the adjusted indptr array to multiple processing elements
 template <typename value_type>
 tuple<vector<int>, vector<value_type>, vector<int>, vector<int> >
