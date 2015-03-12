@@ -97,7 +97,6 @@ distribute_indptr(vector<int> adjusted_indptr,
       // stream to avoid consuming wrong data
       //      new_row_values.push_back(0);
       empty_rows_per_pe[pe]++;
-      //      cout << "ERROR - empty rows not handled!!!" << endl;
     } else {
       for (; i < m; i++) {
         new_row.push_back(adjusted_indptr[i]);
@@ -117,9 +116,6 @@ distribute_indptr(vector<int> adjusted_indptr,
 
       pe++; // move to next PE
     }
-
-    // cout << "k : " << k << " new_row: ";
-    // print_vector<int>(new_row);
   }
 
 #ifdef DEBUG_PARTITIONS
@@ -171,20 +167,7 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   auto adjusted_indptr = get<0>(res);
   auto values = get<1>(res);
   auto pipe_input_count = get<2>(res);
-//  cout << "Done" << endl;
   print_clock_diff("Done: ", start_time);
-
-  // cout << "adjusted_indptr = ";
-  // print_vector(adjusted_indptr);
-  // cout << "values = ";
-
-  // for (auto v : values)
-  //   cout << (int)v << " ";
-  // cout << endl;
-
-  // cout << "valuesb = ";
-  // print_vector(values);
-  // cout << endl;
 
   // -- dimensions in bytes for the encoding streams
   int index_size = align(adjusted_indptr.size(), 384);
@@ -263,14 +246,7 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   auto end_time = high_resolution_clock::now();
 
-  printf("\nDone %d runs of SpMV. _Adjust run times accordingly_\n", num_repeat);
-
-  //  print_clock_diff("SpMV (DFE)", end_time, start_time);
-  //  print_spmv_gflops("SpMV (DFE)", nnzs, end_time, start_time);
-  //  int ticks = nnzs + empty_rows;
-  //  double freq = 0.15; // FPGA frequency (GHz)
-  //  double expected = (double)ticks / freq; // FPGA expected (secs.)
-  //  cout << "SpMV (DFE) GFLOPS (theoretical) " << 2.0 * nnzs / expected << endl;
+  cout << "\nDone " << num_repeat << "runs of SpMV. _Adjust run times accordingly_\n";
 
   std::string message = std::string("SpMV ");
 
@@ -279,15 +255,12 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   vector<pair<double, double> > r;
   for (int i = 0; i < b.size(); i+=2) {
-    // cout << "Tag: " << b[i] << " value: " << b[i + 1] << endl;
     r.push_back(make_pair(b[i], b[i + 1]));
   }
   
   sort(r.begin(), r.end());
-  // cout << "After sort" << endl;
   vector<double> r2;
   for (auto p : r) {
-    //    cout << "Tag: " << p.first << " value: " << p.second << endl;
     r2.push_back(p.second);
   }
 
