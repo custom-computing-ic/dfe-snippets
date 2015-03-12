@@ -17,10 +17,10 @@ class ReadControl extends Kernel {
 
         for (int i = 0; i < numPipes; i++) {
             DFEVar value = bcsrv_values[i];
-            io.output("rc_bcsrv_value_" + i, value, dfeFloat(11, 53));
+            io.output("matrix_value" + i, value, dfeFloat(11, 53));
             DFEVar input_counts = io.scalarInput("input_count_" + i, dfeUInt(32));
             DFEVar enable = cycleCount < input_counts;
-            io.output("readControl_out" + i, regInput[i], dfeUInt(32), enable);
+            io.output("indptr" + i, regInput[i], dfeUInt(32), enable);
         }
     }
 

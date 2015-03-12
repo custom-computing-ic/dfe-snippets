@@ -22,10 +22,10 @@ class fpgaNaiveKernel extends Kernel {
         DFEVar outputs = io.scalarInput("outputs", dfeUInt(32));
         DFEVar n = io.scalarInput("n", dfeUInt(32));
 
-        DFEVar value = io.input("sp_bcsrv_value_" + id, dfeFloat(11, 53));
+        DFEVar value = io.input("matrix_value" + id, dfeFloat(11, 53));
         DFEVar rowLength = io.input("rowLength_in" + id, dfeUInt(32));
         DFEVar rowFinished = io.input("rowEnd_in" + id, dfeUInt(32));
-        DFEVar vectorValue = io.input("indptr_in" + id, FLOAT);
+        DFEVar vectorValue = io.input("vector_value" + id, FLOAT);
         value = rowFinished.eq(3) ? 0 : value;
 
         ProcessingElement pe = new ProcessingElement(this, engineParams,

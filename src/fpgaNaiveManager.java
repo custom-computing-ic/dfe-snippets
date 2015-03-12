@@ -51,18 +51,18 @@ public class fpgaNaiveManager extends CustomManager {
         for (int i = 0; i < numPipes; i++) {
             KernelBlock compute = addKernel(new fpgaNaiveKernel(makeKernelParameters(s_kernelName + i),
                                                                 ep, i));
-            compute.getInput("sp_bcsrv_value_" + i) <== readControl.getOutput("rc_bcsrv_value_" + i);
+            compute.getInput("matrix_value" + i) <== readControl.getOutput("matrix_value" + i);
 
             // -- CSR Control SM
             ManagerStateMachine stateMachine = new CSRControlSM(this, ep.getDebugSm(), i);
             StateMachineBlock control = addStateMachine("CSRControlSM" + i, stateMachine);
-            control.getInput("indptr") <== readControl.getOutput("readControl_out" + i);
+            control.getInput("indptr") <== readControl.getOutput("indptr" + i);
     
             // -- Resolve access to vector memory
             memory.getInput("indptr_in" + i) <== control.getOutput("indptr_out");
             
             // -- CSR Compute Pipe
-            compute.getInput("indptr_in" + i) <== memory.getOutput("vector_value_out" + i);
+            compute.getInput("vector_value" + i) <== memory.getOutput("vector_value_out" + i);
             compute.getInput("rowEnd_in" + i) <== control.getOutput("rowEnd_out");
             compute.getInput("rowLength_in" + i) <== control.getOutput("rowLength_out");
 
