@@ -36,16 +36,6 @@ string check_file(char **argv) {
   return path;
 }
 
-void print_results(vector<double> bExp, vector<double> b) {
-  cout << "CPU  = ";
-  for (size_t i = 0; i < bExp.size(); i++)
-    cout << bExp[i] << " ";
-  cout << endl << "FPGA = ";
-  for (size_t i = 0; i < b.size(); i++)
-    cout << b[i] << " ";
-  cout << endl;
-}
-
 // distributes the adjusted indptr array to multiple processing elements
 template <typename value_type>
 tuple<vector<int>, vector<value_type>, vector<int>, vector<int> >
@@ -159,11 +149,6 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   // -- dimensions in bytes for the encoding streams
   int value_size = align(values.size() * sizeof(value_type), 384);
-
-  // stream size must be multiple of 16 bytes
-  // padding bytes are ignored in the actual kernel
-  int nnzs_bytes = m.nnzs * sizeof(value_type);
-  int indptr_size  = align(nnzs_bytes, 384);
   int adjusted_indptr_size = align(adjusted_indptr.size() * sizeof(int), 384);
 
   // --- Running whole SpMV design
@@ -175,7 +160,6 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   cout << "             ticks  = " << values.size() / num_pipes << endl;
   cout << "       total cycles = " << m.nnzs + empty_rows << endl;
   cout << "         value_size = " << value_size << " bytes " << endl;
-  cout << "        indptr_size = " << indptr_size << " bytes " << endl;
   cout << "adjusted_indptr_size = " << adjusted_indptr_size << " bytes" << endl;
 
   start_time = high_resolution_clock::now();
@@ -191,7 +175,7 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   start_time = high_resolution_clock::now();
 
   SpmvBase_setBRAMs(
-                     &v[0],
+                    &v[0],
                     &v[0],
                     &v[0],
                     &v[0]);
@@ -217,7 +201,6 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   cout << "Indptr_size_per_pipe" << endl;
   print_vector(indptr_size_per_pipe);
   for (int i = 0; i < num_repeat; i++)
-  {
       SpmvBase(
                 adjusted_indptr_size,
                 m.n,
@@ -228,11 +211,10 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
                 values.size() / num_pipes,
                 &b[0]
             );
-  }
 
   auto end_time = high_resolution_clock::now();
 
-  cout << "\nDone " << num_repeat << "runs of SpMV. _Adjust run times accordingly_\n";
+  cout << "Done " << num_repeat << "runs of SpMV. _Adjust run times accordingly_\n";
 
   print_clock_diff("SpMV ", end_time, start_time);
   print_spmv_gflops("SpMV ", m.nnzs, end_time, start_time);
