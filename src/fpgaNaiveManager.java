@@ -10,7 +10,6 @@ import com.maxeler.maxcompiler.v2.statemachine.manager.ManagerStateMachine;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
 import com.maxeler.maxcompiler.v2.managers.BuildConfig;
-import com.maxeler.maxcompiler.v2.managers.DFEModel;
 
 
 public class fpgaNaiveManager extends CustomManager {
@@ -20,8 +19,7 @@ public class fpgaNaiveManager extends CustomManager {
 
     private static final MemoryControlGroup.MemoryAccessPattern LINEAR = MemoryControlGroup.MemoryAccessPattern.LINEAR_1D;
 
-    private final int fpL, cacheSize, numPipes, numVRoms;
-    private final boolean vRomPortSharing, highEffort;
+    private final int fpL, cacheSize, numPipes;
 
     fpgaNaiveManager(SpmvEngineParams ep) {
         super(ep);
@@ -29,9 +27,6 @@ public class fpgaNaiveManager extends CustomManager {
         this.fpL = ep.getFloatingPointLatency();
         this.cacheSize = ep.getVectorCacheSize();
         this.numPipes = ep.getNumPipes();
-        this.vRomPortSharing = ep.getEnableVRomPortSharing();
-        this.numVRoms = ep.getEnableVRomPortSharing()? (ep.getNumPipes() / 2) : ep.getNumPipes();
-        this.highEffort = ep.getHighEffort();
 
         // This line switches on latency annotation of the source code
         this.getCurrentKernelConfig().debug.setEnableLatencyAnnotation(true);
@@ -51,16 +46,11 @@ public class fpgaNaiveManager extends CustomManager {
         StateMachineBlock outputControl = addStateMachine("OutputControlSM", outStateMachine);
 
         KernelBlock memory = addKernel( new VectorCache(makeKernelParameters("Cache"), 
-                            ep.getNumPipes(),
-                            cacheSize,
-                            ep
-                            ));
+                                numPipes, cacheSize, ep ));
 
         for (int i = 0; i < numPipes; i++) {
             KernelBlock compute = addKernel(new fpgaNaiveKernel(makeKernelParameters(s_kernelName + i),
-                                                                ep,
-                                                                fpL, cacheSize,
-                                                                numPipes, ep.getDebugKernel(), i));
+                                                                ep, i));
             compute.getInput("sp_bcsrv_value_" + i) <== readControl.getOutput("rc_bcsrv_value_" + i);
 
             // -- CSR Control SM
@@ -102,19 +92,11 @@ public class fpgaNaiveManager extends CustomManager {
 
     private EngineInterface interfaceBRAMs (String name) {
         EngineInterface ei = new EngineInterface(name);
-
         for (int i = 0; i < numPipes; i++) {
             ei.ignoreScalar(s_kernelName + i,"outputs");
             ei.ignoreScalar(s_kernelName + i,"n");
             ei.ignoreScalar("CSRControlSM" + i,"output_count");
             ei.ignoreScalar("ReadControl", "input_count_" + i);
-//            ei.ignoreScalar(s_kernelName + i,"indptr_size_bytes");
-//            ei.ignoreScalar(s_kernelName + i,"bcsrv_index_size_bytes");
-
-            if (i % 2 == 0){
-                int romId = vRomPortSharing? (i/2) : i;
-                // ei.ignoreMem(s_kernelName + i, "vRom" + romId, Direction.IN);
-            }
         }
         ei.setTicks("ReadControl", 0);
         for (int i = 0; i < numPipes;i ++)
@@ -140,7 +122,6 @@ public class fpgaNaiveManager extends CustomManager {
         InterfaceParam valueSize = ei.addParam("value_size_bytes", CPUTypes.INT);
         InterfaceParam indptrSize = ei.addParam("indptr_size_bytes", CPUTypes.INT);
         InterfaceParam ticksPerPipe = ei.addParam("ticks_per_pip", CPUTypes.INT);
-        InterfaceParam bcsrvReadTicks = ei.addParam("bcsrv_read_ticks", CPUTypes.INT);
         InterfaceParamArray inputsPerPipe = ei.addParamArray("indptr_inputs_per_pipe", CPUTypes.INT);
         InterfaceParamArray csrInputsPerPipe = ei.addParamArray("csr_inputs_per_pipe", CPUTypes.INT);
 
@@ -168,7 +149,6 @@ public class fpgaNaiveManager extends CustomManager {
         ei.ignoreStream("fromcpu");
 
         for (int i = 0; i < numPipes; i++) {
-            int romId = vRomPortSharing? (i/2) : i;
             ei.ignoreMem("Cache", "vRom" + i, Direction.IN);
         }
 

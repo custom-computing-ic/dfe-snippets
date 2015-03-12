@@ -4,8 +4,6 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
-import com.maxeler.maxcompiler.v2.utils.MathUtils;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 
 
@@ -13,10 +11,6 @@ class fpgaNaiveKernel extends Kernel {
 
     protected fpgaNaiveKernel(KernelParameters parameters,
                               SpmvEngineParams engineParams,
-                              int fpL,
-                              int cacheSize,
-                              int numPipes,
-                              boolean dbg,
                               int id) {
         super(parameters);
 
@@ -34,7 +28,7 @@ class fpgaNaiveKernel extends Kernel {
         DFEVar vectorValue = io.input("indptr_in" + id, FLOAT);
         value = rowFinished.eq(3) ? 0 : value;
 
-        ProcessingElement pe = new ProcessingElement(this, fpL, dbg,
+        ProcessingElement pe = new ProcessingElement(this, engineParams,
                                         rowLength, rowFinished, vectorValue, value, id);
         DFEVar rowEmpty = rowFinished.eq(2);
         DFEVar outputEnable = rowFinished.eq(1) | rowEmpty;
@@ -46,18 +40,17 @@ class fpgaNaiveKernel extends Kernel {
 
         DFEVar output = rowEmpty ? 0 : pe.getReducedOut();
 
-        DFEVectorType<DFEVar> outType =
-            new DFEVectorType<DFEVar>(dfeFloat(11, 53), 2);
+        DFEVectorType<DFEVar> outType = Types.vdouble(2);
 
         DFEVector<DFEVar> out = outType.newInstance(this);
-        DFEVar tag =  (produced + id * n / numPipes).cast(dfeFloat(11, 53));
-        out[0] <== tag;
+        DFEVar tag =  (produced + id * n / engineParams.getNumPipes());
+        out[0] <== tag.cast(dfeFloat(11, 53));
         out[1] <== output;
         io.output("b" + id,
                   out,
                   outType,
                   outputEnable2);
-        if (dbg) {
+        if (engineParams.getDebugKernel()) {
             debug.simPrintf(
                             "Pipe %d value_in %f, rowEnd_in %d, vectorValue %d, Output %f Tag %f rowLength: %d\n",
                             id, value, rowFinished, vectorValue, output, tag, rowLength);

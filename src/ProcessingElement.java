@@ -2,8 +2,6 @@
 
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 
@@ -12,8 +10,7 @@ public class ProcessingElement extends KernelLib {
     private final DFEVar reducedOut;
 
     protected ProcessingElement(KernelLib owner,
-                                int fpL,
-                                boolean dbg,
+                                SpmvEngineParams ep,
                                 DFEVar rowLength,
                                 DFEVar rowFinished,
                                 DFEVar vectorValue,
@@ -23,6 +20,7 @@ public class ProcessingElement extends KernelLib {
         super(owner);
 
         DFEType FLOAT = dfeFloat(11, 53);
+        int fpL = ep.getFloatingPointLatency();
 
         // counter is set to 0 when row has finished
         // while counter is less than fpL, we can output results
@@ -51,7 +49,7 @@ public class ProcessingElement extends KernelLib {
         this.reducedOut = r.getOutput();
         optimization.popDSPFactor();
 
-        if (dbg) {
+        if (ep.getDebugKernel()) {
             DFEVar cycleCount = control.count.simpleCounter(32);
             debug.simPrintf("Pipe %d, cycle %d, validpartialSums %d, nnzcounter %d, output %f, enable %d\n",
                             id, cycleCount, validPartialSums, nnzCounter, reducedOut, counterReset);

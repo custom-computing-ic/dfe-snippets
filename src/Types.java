@@ -1,3 +1,4 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
@@ -19,4 +20,9 @@ class Types {
     static public DFEVectorType<DFEVar> vuint32(int size) {
          return new DFEVectorType<DFEVar>(KernelLib.dfeUInt(32), size);
     } 
+
+    static public DFEType dbl() {
+         return KernelLib.dfeFloat(11, 53);
+    } 
+
 }

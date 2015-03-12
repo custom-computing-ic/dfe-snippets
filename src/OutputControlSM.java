@@ -1,7 +1,6 @@
 import com.maxeler.maxcompiler.v2.managers.DFEManager;
 import com.maxeler.maxcompiler.v2.statemachine.*;
 import com.maxeler.maxcompiler.v2.statemachine.manager.*;
-import com.maxeler.maxcompiler.v2.statemachine.stdlib.Assignable;
 
 class OutputControlSM extends ManagerStateMachine {
 
