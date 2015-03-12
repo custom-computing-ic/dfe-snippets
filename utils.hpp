@@ -86,4 +86,8 @@ std::vector<std::vector<T> > zip_vectors(std::vector<std::vector<T> > in) {
   return zipped;
 }
 
+void print_spmv_gflops(std::string item,
+                       int nnzs,
+                       std::chrono::high_resolution_clock::time_point end,
+                       std::chrono::high_resolution_clock::time_point start); 
 #endif
