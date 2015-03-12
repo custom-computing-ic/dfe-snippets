@@ -1,4 +1,4 @@
- import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
@@ -42,9 +42,8 @@ public class fpgaNaiveManager extends CustomManager {
         // -- Read control kernel
         ReadControl rc = new ReadControl(makeKernelParameters("ReadControl"), numPipes);
         KernelBlock readControl = addKernel(rc);
-        KernelBlock readBcsrvControl = addKernel(new ReadBcsrvControl(makeKernelParameters("ReadBcsrvControl"), ep, numPipes));
         readControl.getInput("indptr") <== addStreamFromOnCardMemory("indptr", LINEAR);
-        readBcsrvControl.getInput("bcsrv_values") <== addStreamFromOnCardMemory("value", LINEAR);
+        readControl.getInput("bcsrv_values") <== addStreamFromOnCardMemory("value", LINEAR);
 
         ManagerStateMachine outStateMachine = new OutputControlSM(this,
                                                                   ep.getNumPipes(),
@@ -62,7 +61,7 @@ public class fpgaNaiveManager extends CustomManager {
                                                                 ep,
                                                                 fpL, cacheSize,
                                                                 numPipes, ep.getDebugKernel(), i));
-            compute.getInput("sp_bcsrv_value_" + i) <== readBcsrvControl.getOutput("rc_bcsrv_value_" + i);
+            compute.getInput("sp_bcsrv_value_" + i) <== readControl.getOutput("rc_bcsrv_value_" + i);
 
             // -- CSR Control SM
             ManagerStateMachine stateMachine = new CSRControlSM(this, ep.getDebugSm(), i);
@@ -104,7 +103,6 @@ public class fpgaNaiveManager extends CustomManager {
     private EngineInterface interfaceBRAMs (String name) {
         EngineInterface ei = new EngineInterface(name);
 
-        //        ei.ignoreScalar("ReadBcsrvControl","compression_enabled");
         for (int i = 0; i < numPipes; i++) {
             ei.ignoreScalar(s_kernelName + i,"outputs");
             ei.ignoreScalar(s_kernelName + i,"n");
@@ -118,7 +116,10 @@ public class fpgaNaiveManager extends CustomManager {
                 // ei.ignoreMem(s_kernelName + i, "vRom" + romId, Direction.IN);
             }
         }
-
+        ei.setTicks("ReadControl", 0);
+        for (int i = 0; i < numPipes;i ++)
+                ei.setTicks("fpgaNaiveKernel"+i, 0);
+        ei.setTicks("Cache", 0);
         ei.ignoreKernel("ReadControl");
         ei.ignoreStream("b");
         ei.ignoreStream("fromcpu");
@@ -140,7 +141,6 @@ public class fpgaNaiveManager extends CustomManager {
         InterfaceParam indptrSize = ei.addParam("indptr_size_bytes", CPUTypes.INT);
         InterfaceParam ticksPerPipe = ei.addParam("ticks_per_pip", CPUTypes.INT);
         InterfaceParam bcsrvReadTicks = ei.addParam("bcsrv_read_ticks", CPUTypes.INT);
-
         InterfaceParamArray inputsPerPipe = ei.addParamArray("indptr_inputs_per_pipe", CPUTypes.INT);
         InterfaceParamArray csrInputsPerPipe = ei.addParamArray("csr_inputs_per_pipe", CPUTypes.INT);
 
@@ -159,7 +159,6 @@ public class fpgaNaiveManager extends CustomManager {
         ei.setScalar(s_kernelName + (numPipes - 1), "outputs", n / numPipes + n % numPipes);
 
         ei.setTicks("ReadControl", indptrSize / (numPipes * 4)); // each pipe reads 4 bytes
-        ei.setTicks("ReadBcsrvControl", bcsrvReadTicks);
 
         ei.setLMemLinear("indptr", ei.addConstant(0l), indptrSize);
         ei.setLMemLinear("value", indptrSize, valueSize);

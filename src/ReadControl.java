@@ -9,15 +9,15 @@ class ReadControl extends Kernel {
                           int numPipes) {
         super(parameters);
 
-        // -- Read indptr values
-        DFEVectorType<DFEVar> mainVectorType =
-            new DFEVectorType<DFEVar>(dfeUInt(32), numPipes);
-
-        DFEVector<DFEVar> regInput = io.input("indptr", mainVectorType);
+        DFEVector<DFEVar> regInput = io.input("indptr", Types.vuint32(numPipes));
 
         DFEVar cycleCount = control.count.simpleCounter(32);
 
+        DFEVector<DFEVar> bcsrv_values  = io.input("bcsrv_values", Types.vdouble(numPipes));
+
         for (int i = 0; i < numPipes; i++) {
+            DFEVar value = bcsrv_values[i];
+            io.output("rc_bcsrv_value_" + i, value, dfeFloat(11, 53));
             DFEVar input_counts = io.scalarInput("input_count_" + i, dfeUInt(32));
             DFEVar enable = cycleCount < input_counts;
             io.output("readControl_out" + i, regInput[i], dfeUInt(32), enable);

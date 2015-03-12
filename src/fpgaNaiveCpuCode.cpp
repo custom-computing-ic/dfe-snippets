@@ -304,10 +304,9 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   start_time = high_resolution_clock::now();
 
-  SpmvBase_setBRAMs(0, // will be updated in the main compute call
-                    0,
-                    0,
-                    0,
+  SpmvBase_setBRAMs(
+//                    &v[0],
+ //                   &v[0],
                     &v[0],
                     &v[0]);
 
@@ -334,7 +333,6 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   for (int i = 0; i < num_repeat; i++)
   {
       SpmvBase(
-                values.size() / num_pipes,
                 adjusted_indptr_size,
                 m.n,
                 values.size() / num_pipes,
