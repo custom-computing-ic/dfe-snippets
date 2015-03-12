@@ -20,7 +20,7 @@ class VectorCache extends Kernel {
       DFEVar indptr = io.input("indptr_in" + i, dfeInt(32)).cast(dfeUInt(bits));
       Memory<DFEVar> vRom = mem.alloc(Types.dbl(), cacheSize);
       vRom.mapToCPU("vRom" + i);
-      DFEVar vectorValue = vRom.read(indptr);
       io.output("vector_value_out" + i, vRom.read(indptr), Types.dbl());
     }
-  }}
+  }
+}
