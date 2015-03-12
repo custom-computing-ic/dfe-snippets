@@ -70,14 +70,14 @@ message(STATUS "Hardware   Build DIR --> ${MAXBUILD_DIR_HW}")
 add_custom_target(
   runsim
   COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
-  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} bin/${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
+  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} ./${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
   DEPENDS ${PRJ}_sim
   )
 
 add_custom_target(
   gdbsim
   COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
-  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} gdb --args bin/${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
+  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} gdb --args ./${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
   DEPENDS ${PRJ}_sim
   )
 
