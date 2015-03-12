@@ -29,8 +29,8 @@ std::vector<T> zip_flatten(std::vector<std::vector<T> > in) {
     max_length = std::max(max_length, (int)v.size());
 
   std::vector<T> zf;
-  for (int i = 0; i < max_length; i++) {
-    for (int j = 0; j < in.size(); j++) {
+  for (size_t i = 0; i < static_cast<size_t>(max_length); i++) {
+    for (size_t j = 0; j < in.size(); j++) {
       T value = 0;
       if (i < in[j].size())
         value = in[j][i];

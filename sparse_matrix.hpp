@@ -67,9 +67,9 @@ std::vector<double> SpMV_CPU(char *path, std::vector<double> v, bool symmetric) 
   if (symmetric) {
     std::vector<double> r = SpMV_MKL_sym(path, v);
     std::cout << "Checking sym/unsymmetric match...";
-    for (int i = 0; i < v.size(); i++) {
+    for (size_t i = 0; i < v.size(); i++) {
       if (!almost_equal(r[i], r2[i])) {
-        printf(" r[%d] == %f != r[%d] == %f\n", i, r[i], i, r2[i]);
+        printf(" r[%ld] == %f != r[%ld] == %f\n", i, r[i], i, r2[i]);
         exit(1);
       }
     }
@@ -121,7 +121,7 @@ public:
 
   void print_dense() {
     int pos = 0;
-    for (int i = 0; i < adjusted_ind.size();) {
+    for (size_t i = 0; i < adjusted_ind.size();) {
       int row_length = adjusted_ind[i++];
       int seen = 0;
       for (int j = 0; j < n; j++) {
@@ -145,7 +145,7 @@ public:
 
     int pos = 0;
     int row = 0;
-    for (int i = 0; i < adjusted_ind.size();) {
+    for (size_t i = 0; i < adjusted_ind.size();) {
       int row_length = adjusted_ind[i++];
       int m = row_length + i;
       for (; i < m; i++) {
