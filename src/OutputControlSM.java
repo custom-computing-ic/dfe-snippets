@@ -59,7 +59,7 @@ class OutputControlSM extends ManagerStateMachine {
             IF (inReady[i] & ~prevValue) {
                 consume(i);
             }
-            prevValue <== inReady[i] & ~prevValue;
+            prevValue <== inReady[i] | prevValue;
         }
     }
 
@@ -69,7 +69,7 @@ class OutputControlSM extends ManagerStateMachine {
         prevValue <== false;
         for (int i = 0; i < numPipes; i++) {
             in[i].read <== inReady(i) & ~prevValue;
-            prevValue <== inReady(i) & ~prevValue;
+            prevValue <== inReady(i) | prevValue;
         }
 
         out.valid <== outValid;

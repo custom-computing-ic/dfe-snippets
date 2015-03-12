@@ -305,8 +305,8 @@ vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   start_time = high_resolution_clock::now();
 
   SpmvBase_setBRAMs(
-//                    &v[0],
- //                   &v[0],
+                     &v[0],
+                    &v[0],
                     &v[0],
                     &v[0]);
 
