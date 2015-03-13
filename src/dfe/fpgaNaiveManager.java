@@ -74,7 +74,7 @@ public class fpgaNaiveManager extends CustomManager {
         addStreamToOnCardMemory("cpu2lmem", LINEAR) <== addStreamFromCPU("fromcpu");
 
         addMaxFileConstant("fpL", fpL);
-        addMaxFileConstant("cacheSize", cacheSize);
+        addMaxFileConstant("vectorCacheSize", cacheSize);
         addMaxFileConstant("numPipes", numPipes);
     }
 

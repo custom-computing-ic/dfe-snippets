@@ -4,6 +4,8 @@
 #include <string>
 #include <fstream>
 
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/io.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "Maxfiles.h"
@@ -12,7 +14,7 @@
 #include <common.h>
 #include <sparse_matrix.hpp>
 #include <fpga.hpp>
-
+#include <partition.hpp>
 // #define DEBUG_PRINT_MATRICES
 // #define DEBUG_PARTITIONS
 
@@ -51,11 +53,33 @@ int main(int argc, char** argv) {
   for (int i = 0; i < nnzs; i++)
     col_ind[i]--;
 
+  using namespace boost::numeric;
   // generate multiplicand
   vector<double> v(n);
-  for (int i = 1; i <=n; i++)
+  ublas::vector<double> vu(n);
+  for (int i = 1; i <=n; i++) {
     v[i - 1] = i;
+    vu(i - 1) = i;
+  }
 
+
+  // -- load the CSR matrix
+  boost::numeric::ublas::compressed_matrix<double> inMatrix(n, n, nnzs); 
+  for (int i = 0; i < n; ++i)
+  {
+          int rowStart = row_ptr[i] - 1;
+          int rowEnd = row_ptr[i + 1] - 1;
+
+          for (int j = rowStart; j < rowEnd; ++j)
+          {
+                  int col = col_ind[j];
+                  inMatrix(i, col) = values[j];
+          }
+  }
+  auto res = ublas::prod(inMatrix, vu);
+
+  int partitionSize = SpmvBase_vectorCacheSize;
+  partition(inMatrix, partitionSize);
   AdjustedCsrMatrix<double> original_matrix(n);
   original_matrix.load_from_csr(values, col_ind, row_ptr);
     
@@ -68,6 +92,14 @@ int main(int argc, char** argv) {
   vector<double> bExp = SpMV_MKL_ge((char *)path.c_str(), v);
   auto b = SpMV_DFE(original_matrix, v, numPipes, num_repeat);
 
+  cout << "Checking ublas " << endl;
+  for (int i = 0; i < n; ++i)
+  {
+          if (!almost_equal(res(i), bExp[i])) {
+                  cerr << "Expected " << bExp[i] << " got: " << res(i) << endl;
+                  exit(1);
+          }
+  }
   cout << "Ran SPMV " << endl;
 
   int errors = 0;
