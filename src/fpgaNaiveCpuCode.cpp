@@ -11,7 +11,7 @@
 
 #include <common.h>
 #include <sparse_matrix.hpp>
-#include <Fpga.h>
+#include <fpga.hpp>
 
 // #define DEBUG_PRINT_MATRICES
 // #define DEBUG_PARTITIONS
