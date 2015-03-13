@@ -38,7 +38,7 @@ endif (DFE_MODEL)
 set (PRJ "SpmvBase")
 set (MANAGER "fpgaNaiveManager")
 
-set (DFE_SOURCES ../lib/lib-reductions/include/reductions/*.maxj ../src/*.java)
+set (DFE_SOURCES ../lib/lib-reductions/include/reductions/*.maxj ../src/dfe/*.java)
 
 set (SIMMAXDIR "${PRJ}_${DFE_MODEL}_DFE_SIM/results")
 set (HWMAXDIR "${PRJ}_${DFE_MODEL}_DFE/results")
@@ -83,9 +83,9 @@ add_custom_target(
 
 add_custom_command(
   OUTPUT ${PRJ}_sim.o
-  DEPENDS src/*.java
+  DEPENDS src/dfe/*.java
   COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
-  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
+  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src/dfe' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
   COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
   COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
   COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
@@ -93,12 +93,12 @@ add_custom_command(
 
 add_custom_command(
   OUTPUT ${PRJ}_dfe.o
+  DEPENDS src/dfe/*.java
   COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
-  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
+  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src/dfe' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
   COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
   COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
   COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
-  DEPENDS src/*.java
   )
 
 if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
@@ -130,10 +130,10 @@ file(GLOB LibrarySources lib/spmv-commons-cpu/*.cpp)
 
 add_library(spmv_commons_cpu SHARED ${LibrarySources})
 
-add_executable(${PRJ}_sim src/fpgaNaiveCpuCode.cpp ${PRJ}_sim.o)
+add_executable(${PRJ}_sim src/cpu/main.cpp ${PRJ}_sim.o)
 target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL} spmv_commons_cpu)
 
-add_executable(${PRJ}_dfe src/main.cpp ${PRJ}_dfe.o)
+add_executable(${PRJ}_dfe src/cpu/main.cpp ${PRJ}_dfe.o)
 target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL} spmv_commons_cpu)
 
 include_directories(src/cpu/)
