@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 
 
   // -- load the CSR matrix
-  boost::numeric::ublas::compressed_matrix<double> inMatrix(n, n, nnzs); 
+  CsrMatrix<> inMatrix(n, n, nnzs);
   for (int i = 0; i < n; ++i)
   {
           int rowStart = row_ptr[i] - 1;
@@ -80,9 +80,14 @@ int main(int argc, char** argv) {
 
   int partitionSize = SpmvBase_vectorCacheSize;
   partition(inMatrix, partitionSize);
+
   AdjustedCsrMatrix<double> original_matrix(n);
-  original_matrix.load_from_csr(values, col_ind, row_ptr);
-    
+  original_matrix.load_from_csr(
+                  &inMatrix.value_data()[0],
+                  &inMatrix.index2_data()[0],
+                  &inMatrix.index1_data()[0]
+                  );
+
 #ifdef DEBUG_PRINT_MATRICES
   original_matrix.print();
   original_matrix.print_dense();
