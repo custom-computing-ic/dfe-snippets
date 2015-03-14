@@ -7,6 +7,17 @@
 #include "mkl_spblas.h"
 #include <utils.hpp>
 
+#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/numeric/ublas/io.hpp>
+
+template<typename T = double> using CsrMatrix = boost::numeric::ublas::compressed_matrix<
+        T,
+        boost::numeric::ublas::row_major,
+        0,
+        boost::numeric::ublas::unbounded_array<unsigned int>
+        >;
+
+
 std::vector<double> SpMV_MKL_ge(char *path,
                 std::vector<double> v) {
         int n, nnzs;
@@ -157,7 +168,7 @@ public:
     return result;
   }
 
-  void load_from_csr(double* values, int* col_ind, int* row_ptr) {
+  void load_from_csr(double* values, unsigned int* col_ind, unsigned int* row_ptr) {
     std::vector<value_type> row_values;
     std::vector<int> n_col_ind;
 
