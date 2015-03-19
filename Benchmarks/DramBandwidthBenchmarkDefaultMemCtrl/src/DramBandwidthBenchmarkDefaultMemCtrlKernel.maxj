@@ -1,8 +1,7 @@
 /***
-    Here we benchmark how DRAM bandwidth (simple reads from DRAM
-    using default memory controller and linear access pattern)
-    scales with the number of single precision vector entries
-    read from an input stream.
+    Here we benchmark how DRAM bandwidth (simple reads from DRAM using default
+    memory controller and linear access pattern) scales with the number of 64bit
+    vector entries read from 2 input streams.
 */
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
@@ -14,9 +13,9 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
 
 class DramBandwidthBenchmarkDefaultMemCtrlKernel extends Kernel {
 
-    private static final DFEType dataType   = dfeFloat(8, 24); // C float
+    private static final DFEType dataType   = dfeUInt(64);
 
-    private static final int     numElements = 48*2;
+    private static final int     numElements = 1536/64;
     private static final DFEVectorType dataVectorType =
                                          new DFEVectorType<DFEVar> (dataType, numElements);
 
@@ -24,28 +23,31 @@ class DramBandwidthBenchmarkDefaultMemCtrlKernel extends Kernel {
     {
         super(parameters);
 
-        DFEVar totalVectorEntries   = io.scalarInput("vectorSize", dfeUInt(32));
-        DFEVar kernelTicks          = control.count.simpleCounter(32);
-        DFEVector<DFEVar> input     = io.input("vector", dataVectorType,
-                                                kernelTicks < totalVectorEntries/numElements);
+        DFEVar ticksToRun   = io.scalarInput("ticks", dfeUInt(64));
+        DFEVar kernelTicks          = control.count.simpleCounter(64);
+        DFEVector<DFEVar> input0     = io.input("vector0", dataVectorType,
+                                                kernelTicks < ticksToRun);
+        DFEVector<DFEVar> input1     = io.input("vector1", dataVectorType,
+                                                kernelTicks < ticksToRun);
 
         // we need to do some work to avoid optimising this kernel out completely.
-        DFEVar sum = summationTree(input, 0, numElements-1);
+        DFEVar sum0 = adderTree(input0, 0, numElements-1);
+        DFEVar sum1 = adderTree(input1, 0, numElements-1);
+        DFEVar sum = sum0 + sum1;
 
-        // we need to output something to avoid optimising it out, but we also want not
-        // to spoil perf. figures for memory reads => writing one PCIe burst (16 bytes).
-        io.output("sum", sum, dataType, control.count.pulse(4) );
+        // we need to output something to avoid optimising it out
+        io.output("sum", sum, dataType, control.count.pulse(16) );
     }
 
     // Recursively produce binary tree of additions. Leaf nodes are
     // offsets to source stream.
-    private DFEVar summationTree(DFEVector<DFEVar> src, int left, int right)
+    private DFEVar adderTree(DFEVector<DFEVar> src, int left, int right)
     {
         if (left == right)
         {
             return src[left];
         }
         int middle = left + (right - left)/2;
-        return summationTree(src, left, middle) + summationTree(src, middle + 1, right);
+        return adderTree(src, left, middle) + adderTree(src, middle + 1, right);
     }
 }

@@ -15,7 +15,7 @@ import com.maxeler.maxcompiler.v2.managers.DFEModel;
 public class DramBandwidthBenchmarkDefaultMemCtrlManager extends CustomManager{
 
     private static final String s_kernelName        = "DramBandwidthBenchmarkDefaultMemCtrlKernel";
-    private static final int minimalPciStreamLength = 4;
+    private static final int minimalPciStreamLength = 16; // in bytes
 
     DramBandwidthBenchmarkDefaultMemCtrlManager(EngineParameters ep)
     {
@@ -33,7 +33,7 @@ public class DramBandwidthBenchmarkDefaultMemCtrlManager extends CustomManager{
         config.setMemoryControllerConfig(memCfg);
 
         // Set clock frequency
-        config.setDefaultStreamClockFrequency(180);
+        config.setDefaultStreamClockFrequency(190);
 
         // Set Lmem clock frequency
         // MAX3: MAX3_300, MAX3_333, MAX3_350, MAX3_400
@@ -49,8 +49,8 @@ public class DramBandwidthBenchmarkDefaultMemCtrlManager extends CustomManager{
         DFELink toDRAM_vector  = addStreamToOnCardMemory("toDRAM_vector", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
         toDRAM_vector        <== fromCPU_vector;
 
-        DFELink vector         = addStreamFromOnCardMemory("vector", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
-        k.getInput("vector") <== vector;
+        k.getInput("vector0") <== addStreamFromOnCardMemory("vector0", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+        k.getInput("vector1") <== addStreamFromOnCardMemory("vector1", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
 
         DFELink sum = addStreamToCPU("sum");
         sum       <== k.getOutput("sum");
@@ -59,15 +59,16 @@ public class DramBandwidthBenchmarkDefaultMemCtrlManager extends CustomManager{
     private static EngineInterface interfaceDefault() {
         EngineInterface engine_interface = new EngineInterface();
 
-        CPUTypes   dataType  = CPUTypes.FLOAT;
-        int        dataBytes  = dataType.sizeInBytes();
+        CPUTypes   dataType  = CPUTypes.UINT64;
+        InterfaceParam  ticks = engine_interface.addParam("ticks", CPUTypes.UINT64);
+        engine_interface.setScalar(s_kernelName, "ticks", ticks);
+        engine_interface.setTicks(s_kernelName, ticks);
 
-        InterfaceParam  vectorSize = engine_interface.addParam("vectorSize", CPUTypes.INT32);
+        engine_interface.setStream("sum", dataType, dataType.sizeInBytes()*minimalPciStreamLength);
 
-        engine_interface.setScalar(s_kernelName, "vectorSize", vectorSize);
-        engine_interface.setTicks(s_kernelName, vectorSize);
-        engine_interface.setStream("sum", dataType, minimalPciStreamLength * dataBytes);
-        engine_interface.setLMemLinear("vector", engine_interface.addConstant(0l), vectorSize * dataBytes);
+        InterfaceParam  vectorSize = ticks*(1536/64)*dataType.sizeInBytes();
+        engine_interface.setLMemLinear("vector0", engine_interface.addConstant(0l), vectorSize);
+        engine_interface.setLMemLinear("vector1", engine_interface.addConstant(12*1024l*1024l*1024l), vectorSize);
 
         engine_interface.ignoreAll(Direction.IN_OUT);
         return engine_interface;
@@ -77,10 +78,10 @@ public class DramBandwidthBenchmarkDefaultMemCtrlManager extends CustomManager{
     private static EngineInterface interfaceWrite(String name) {
         EngineInterface engine_interface = new EngineInterface(name);
 
-        CPUTypes   dataType  = CPUTypes.FLOAT;
+        CPUTypes   dataType  = CPUTypes.UINT8;
         int        dataBytes  = dataType.sizeInBytes();
 
-        InterfaceParam  vectorSize = engine_interface.addParam("vectorSize",  CPUTypes.INT32);
+        InterfaceParam  vectorSize = engine_interface.addParam("vectorSize",  CPUTypes.UINT64);
 
         engine_interface.setStream("fromCPU_vector", dataType, vectorSize * dataBytes);
         engine_interface.setLMemLinear("toDRAM_vector", engine_interface.addConstant(0l), vectorSize * dataBytes);
@@ -95,8 +96,8 @@ public class DramBandwidthBenchmarkDefaultMemCtrlManager extends CustomManager{
 
         BuildConfig c = new BuildConfig(BuildConfig.Level.FULL_BUILD);
         c.setBuildEffort(BuildConfig.Effort.VERY_HIGH);
-        c.setMPPRCostTableSearchRange(1, 5);        // set to enable MPPR
-        c.setMPPRParallelism(5);                    // use 3 CPU threads
+        c.setMPPRCostTableSearchRange(1, 10);        // set to enable MPPR
+        c.setMPPRParallelism(5);                     // use 3 CPU threads
 
         // this generates C defines in Maxfiles.h so that CPU code
         // knows the constants
