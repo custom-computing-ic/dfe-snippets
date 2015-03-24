@@ -134,9 +134,10 @@ class FetchSubTuple extends KernelLib
         DFEVector<DFEVar> mask       = m_boolTupleType.newInstance(this);
         DFEVar shiftLoop             = tupleIndexType.newInstance(this);
 
-        DFEVar incomingData = m_pushAccepted? constant.var(m_indexType,m_tupleSize) : constant.var(m_indexType,0);
 
         optimization.pushPipeliningFactor(0.0);
+            DFEVar incomingData = m_pushAccepted? constant.var(m_indexType,m_tupleSize) : constant.var(m_indexType,0);
+
             DFEVar shift = control.count.pulse(1)? 0 : stream.offset(shiftLoop,-1);
             DFEVar pastNumElements = control.count.pulse(1)? 0 : stream.offset(m_numElementsStored,-1);
 
