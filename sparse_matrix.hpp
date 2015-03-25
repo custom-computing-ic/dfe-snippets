@@ -14,7 +14,7 @@ template<typename T = double> using CsrMatrix = boost::numeric::ublas::compresse
         T,
         boost::numeric::ublas::row_major,
         0,
-        boost::numeric::ublas::unbounded_array<unsigned int>
+        std::vector<unsigned int>
         >;
 
 
