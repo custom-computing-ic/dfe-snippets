@@ -62,40 +62,64 @@ int main(int argc, char** argv) {
     vu(i - 1) = i;
   }
 
-
   // -- load the CSR matrix
-  CsrMatrix<> inMatrix(n, n, nnzs);
+  CsrMatrix<> inMatrix(n, n);
+
   for (int i = 0; i < n; ++i)
   {
           int rowStart = row_ptr[i] - 1;
           int rowEnd = row_ptr[i + 1] - 1;
-
           for (int j = rowStart; j < rowEnd; ++j)
           {
-                  int col = col_ind[j];
-                  inMatrix(i, col) = values[j];
+                  inMatrix(i, col_ind[j]) = values[j];
           }
   }
+
+
   auto res = ublas::prod(inMatrix, vu);
+  vector<double> bExp = SpMV_MKL_ge((char *)path.c_str(), v);
 
-  int partitionSize = SpmvBase_vectorCacheSize;
-  partition(inMatrix, partitionSize);
+  int partitionSize = min(SpmvBase_vectorCacheSize, n);
+  vector<CsrMatrix<double>> partitions = partition(inMatrix, partitionSize);
+  vector<double> dfe_res(n, 0);
 
-  AdjustedCsrMatrix<double> original_matrix(n);
-  original_matrix.load_from_csr(
-                  &inMatrix.value_data()[0],
-                  &inMatrix.index2_data()[0],
-                  &inMatrix.index1_data()[0]
-                  );
+  AdjustedCsrMatrix<double> full_original_matrix(n);
+  full_original_matrix.load_from_csr(
+      &inMatrix.value_data()[0],
+      &inMatrix.index2_data()[0],
+      &inMatrix.index1_data()[0]);
 
 #ifdef DEBUG_PRINT_MATRICES
-  original_matrix.print();
-  original_matrix.print_dense();
+  cout << "Full original matrix " << endl;
+  full_original_matrix.print_dense();
+  cout << "Vector: " << endl;
+  print_vector(v);
 #endif
 
-  // find expected result
-  vector<double> bExp = SpMV_MKL_ge((char *)path.c_str(), v);
-  auto b = SpMV_DFE(original_matrix, v, numPipes, num_repeat);
+  int offset = 0;
+  for (int i = 0; i < partitions.size(); ++i) {
+    auto p = partitions[i];
+    AdjustedCsrMatrix<double> original_matrix(n);
+    original_matrix.load_from_csr(
+        &p.value_data()[0],
+        &p.index2_data()[0],
+        &p.index1_data()[0]
+        );
+
+#ifdef DEBUG_PRINT_MATRICES
+    original_matrix.print();
+    original_matrix.print_dense();
+#endif
+
+    // find expected result
+    vector<double> vblock(v.begin() + offset, v.begin() + offset + partitionSize);
+    auto b = SpMV_DFE(original_matrix, vblock, numPipes, num_repeat);
+    for (int j = 0; j < n; ++j)
+    {
+      dfe_res[j] += b[j];
+    }
+    offset += partitionSize;
+  }
 
   cout << "Checking ublas " << endl;
   for (int i = 0; i < n; ++i)
@@ -108,9 +132,9 @@ int main(int argc, char** argv) {
   cout << "Ran SPMV " << endl;
 
   int errors = 0;
-  for (size_t i = 0; i < b.size(); i++)
-    if (!almost_equal(bExp[i], b[i])) {
-      cerr << "Expected [ " << i << " ] " << bExp[i] << " got: " << b[i] << endl;
+  for (size_t i = 0; i < dfe_res.size(); i++)
+    if (!almost_equal(bExp[i], dfe_res[i])) {
+      cerr << "Expected [ " << i << " ] " << bExp[i] << " got: " << dfe_res[i] << endl;
       errors++;
     }
 

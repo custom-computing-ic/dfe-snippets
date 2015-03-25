@@ -36,31 +36,35 @@ public class fpgaNaiveManager extends CustomManager {
 
         // -- Read control kernel
         ReadControl rc = new ReadControl(makeKernelParameters("ReadControl"), numPipes);
+        ReadValueControl rvc = new ReadValueControl(
+            makeKernelParameters("ReadValueControl"),
+            numPipes);
         KernelBlock readControl = addKernel(rc);
         readControl.getInput("indptr") <== addStreamFromOnCardMemory("indptr", LINEAR);
-        readControl.getInput("bcsrv_values") <== addStreamFromOnCardMemory("value", LINEAR);
+        KernelBlock readValueControl = addKernel(rvc);
+        readValueControl.getInput("bcsrv_values") <== addStreamFromOnCardMemory("value", LINEAR);
 
         ManagerStateMachine outStateMachine = new OutputControlSM(this,
                                                                   ep.getNumPipes(),
                                                                   ep.getDebugOutputSm());
         StateMachineBlock outputControl = addStateMachine("OutputControlSM", outStateMachine);
 
-        KernelBlock memory = addKernel( new VectorCache(makeKernelParameters("Cache"), 
+        KernelBlock memory = addKernel( new VectorCache(makeKernelParameters("Cache"),
                                 numPipes, cacheSize, ep ));
 
         for (int i = 0; i < numPipes; i++) {
             KernelBlock compute = addKernel(new fpgaNaiveKernel(makeKernelParameters(s_kernelName + i),
                                                                 ep, i));
-            compute.getInput("matrix_value" + i) <== readControl.getOutput("matrix_value" + i);
+            compute.getInput("matrix_value" + i) <== readValueControl.getOutput("matrix_value" + i);
 
             // -- CSR Control SM
             ManagerStateMachine stateMachine = new CSRControlSM(this, ep.getDebugSm(), i);
             StateMachineBlock control = addStateMachine("CSRControlSM" + i, stateMachine);
             control.getInput("indptr") <== readControl.getOutput("indptr" + i);
-    
+
             // -- Resolve access to vector memory
             memory.getInput("indptr_in" + i) <== control.getOutput("indptr_out");
-            
+
             // -- CSR Compute Pipe
             compute.getInput("vector_value" + i) <== memory.getOutput("vector_value_out" + i);
             compute.getInput("rowEnd_in" + i) <== control.getOutput("rowEnd_out");
@@ -99,6 +103,7 @@ public class fpgaNaiveManager extends CustomManager {
             ei.ignoreScalar("ReadControl", "input_count_" + i);
         }
         ei.setTicks("ReadControl", 0);
+        ei.setTicks("ReadValueControl", 0);
         for (int i = 0; i < numPipes;i ++)
                 ei.setTicks("fpgaNaiveKernel"+i, 0);
         ei.setTicks("Cache", 0);
@@ -140,6 +145,8 @@ public class fpgaNaiveManager extends CustomManager {
         ei.setScalar(s_kernelName + (numPipes - 1), "outputs", n / numPipes + n % numPipes);
 
         ei.setTicks("ReadControl", indptrSize / (numPipes * 4)); // each pipe reads 4 bytes
+        ei.setTicks("ReadValueControl",
+            valueSize / (numPipes * CPUTypes.DOUBLE.sizeInBytes()));
 
         ei.setLMemLinear("indptr", ei.addConstant(0l), indptrSize);
         ei.setLMemLinear("value", indptrSize, valueSize);
