@@ -48,11 +48,11 @@ void print_vector(std::vector<T> in) {
   std::cout << std::endl;
 }
 
-void print_char_vector(std::vector<char> in) {
-  for (auto v : in)
-    std::cout << (int)v << " ";
-  std::cout << std::endl;
-}
+// void print_char_vector(std::vector<char> in) {
+//   for (auto v : in)
+//     std::cout << (int)v << " ";
+//   std::cout << std::endl;
+// }
 
 template <typename T>
 std::vector<std::vector<T> > split_vector(std::vector<T> in, int chunk_size) {
