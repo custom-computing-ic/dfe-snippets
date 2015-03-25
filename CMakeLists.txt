@@ -141,5 +141,3 @@ include_directories(src/cpu/)
 # -- Tests
 
 enable_testing()
-add_executable(test_partition src/cpu/test_partition.cpp)
-add_test(partition test_partition)
