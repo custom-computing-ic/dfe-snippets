@@ -1,3 +1,11 @@
+/*
+    Latency of adder (on Maia):
+         default pipelining:  15
+         pipeline factor 0.5: 11
+         pipeline factor 0.4: 10
+         pipeline factor 0.2: 9
+         pipeline factor 0.1: 8
+*/
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
@@ -11,9 +19,12 @@ class FullSummationBalancedTreeKernel extends Kernel {
 
     protected FullSummationBalancedTreeKernel(KernelParameters parameters,
                                               int              loopLength,
-                                              int              minStreamLength)
+                                              int              minStreamLength,
+                                              double           pipeliningFactor)
     {
         super(parameters);
+
+        optimization.pushPipeliningFactor(pipeliningFactor);
 
         DFEVar index = control.count.simpleCounter(counterWidth);
         DFEVar input = io.input("input", dataType);
@@ -24,6 +35,8 @@ class FullSummationBalancedTreeKernel extends Kernel {
         // we cannot output just one value: PCIe stream length must be multiple
         // of 16 bytes. The last (4th) item in this stream is the total sum.
         io.output("output", finalSum, dataType, index >= N - minStreamLength);
+
+        optimization.popPipeliningFactor();
     }
 
     private DFEVar summation(DFEVar newTerm, DFEVar termNum, DFEVar totalTerms,  int loopLength)

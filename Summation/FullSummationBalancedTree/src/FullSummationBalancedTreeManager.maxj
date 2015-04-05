@@ -11,6 +11,7 @@ public class FullSummationBalancedTreeManager extends CustomManager{
     private static final String s_kernelName  = "FullSummationBalancedTreeKernel";
     private static final int    sumLoopLength = 16;
     private static final int    minimalPciStreamLength = 4;
+    private static final double pipeliningFactor = 0.5;
 
     FullSummationBalancedTreeManager(EngineParameters ep)
     {
@@ -19,7 +20,8 @@ public class FullSummationBalancedTreeManager extends CustomManager{
         KernelBlock k = addKernel(
             new FullSummationBalancedTreeKernel(makeKernelParameters(s_kernelName),
                                                 sumLoopLength,
-                                                minimalPciStreamLength));
+                                                minimalPciStreamLength,
+                                                pipeliningFactor));
 
         DFELink x = addStreamFromCPU("input");
         k.getInput("input") <== x;
