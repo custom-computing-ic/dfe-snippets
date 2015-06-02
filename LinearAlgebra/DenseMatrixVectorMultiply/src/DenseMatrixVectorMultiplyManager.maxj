@@ -1,0 +1,98 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
+
+
+public class DenseMatrixVectorMultiplyManager extends CustomManager{
+
+    private static final String s_kernelName  = "DenseMatrixVectorMultiplyKernel";
+    private static final int WIDTH = 48;
+
+    DenseMatrixVectorMultiplyManager(EngineParameters ep) {
+        super(ep);
+
+        KernelBlock k = addKernel(new DenseMatrixVectorMultiplyKernel(
+              makeKernelParameters(s_kernelName),
+              WIDTH));
+
+        addStreamToOnCardMemory("cpu2lmem", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== addStreamFromCPU("fromcpu");
+
+        k.getInput("a") <== addStreamFromOnCardMemory("a", MemoryControlGroup.MemoryAccessPattern.STRIDE_2D);
+        k.getInput("prevb") <== addStreamFromOnCardMemory("prevb", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+//        k.getInput("prevb") <== addStreamFromOnCardMemory("inB", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+        addStreamToOnCardMemory("newb", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== k.getOutput("newb");
+        addStreamToCPU("b") <== k.getOutput("b");
+        k.getInput("v") <== addStreamFromCPU("v");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface ei = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = ei.addParam("N", CPUTypes.INT);
+        InterfaceParam zero = ei.addConstant(0l);
+
+        InterfaceParam bsize = N * CPUTypes.DOUBLE.sizeInBytes();
+        InterfaceParam stripeWidth = ei.addConstant(WIDTH);
+
+        ei.setLMemLinearWrapped(
+            "prevb",
+            zero,
+            bsize,
+            N * bsize / stripeWidth,
+            zero);
+        ei.setLMemLinearWrapped(
+            "newb",
+            zero,
+            bsize,
+            N * bsize / stripeWidth,
+            zero);
+        ei.setLMemStrided(
+            "a",
+            bsize,
+            bsize,
+            N,
+            ei.addConstant(1l));
+
+        ei.setScalar(s_kernelName, "striperows", N);
+        ei.setScalar(s_kernelName, "nstripes", N / stripeWidth);
+
+        ei.setStream("v", CPUTypes.DOUBLE, bsize);
+        ei.setStream("b", CPUTypes.DOUBLE, bsize);
+        ei.setTicks(s_kernelName, N * N / stripeWidth);
+
+        ei.ignoreLMem("cpu2lmem");
+        ei.ignoreStream("fromcpu");
+        return ei;
+    }
+
+
+    private static EngineInterface interfaceWrite (String name) {
+      EngineInterface ei = new EngineInterface(name);
+      CPUTypes TYPE = CPUTypes.INT;
+      InterfaceParam size = ei.addParam("size_bytes", TYPE);
+      InterfaceParam start = ei.addParam("start_bytes", TYPE);
+      ei.setStream("fromcpu", CPUTypes.UINT8, size);
+      ei.setLMemLinear("cpu2lmem", start, size);
+      ei.ignoreAll(Direction.IN_OUT);
+      return ei ;
+    }
+
+
+    public static void main(String[] args) {
+        DenseMatrixVectorMultiplyManager manager = new DenseMatrixVectorMultiplyManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.createSLiCinterface(interfaceWrite("write"));
+        DebugLevel dbgLevel = new DebugLevel();
+        dbgLevel.setHasStreamStatus(true);
+        manager.debug.setDebugLevel(dbgLevel);
+        manager.build();
+    }
+}
