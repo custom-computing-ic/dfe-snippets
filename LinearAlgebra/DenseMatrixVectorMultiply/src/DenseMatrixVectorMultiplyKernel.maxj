@@ -17,6 +17,8 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.CounterChain;
 
 import java.util.List;
 
+import com.custom_computing_ic.dfe_snippets.utils.Reductions;
+
 class DenseMatrixVectorMultiplyKernel extends Kernel {
     int cacheSize = 1024;
 
@@ -39,7 +41,7 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
         DFEVector<DFEVar> v = io.input("v", vtype, readEnable);
 
         DFEVector<DFEVar> mult = a * v;
-        DFEVar res = b + reduce(mult.getElementsAsList());
+        DFEVar res = b + Reductions.reduce(mult.getElementsAsList());
 
         io.output("newb", res, dfeFloat(11, 53));
         DFEVar writeEnable = stripeCount === (nstripes - 1);
@@ -60,13 +62,4 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
           //debug.simPrintf("%.1f ", v[i]);
         //debug.simPrintf("\n");
     }
-
-    DFEVar reduce(List<DFEVar> vector) {
-      if (vector.size() == 1)
-        return vector.get(0);
-      return
-        reduce(vector.subList(0, vector.size() / 2)) +
-        reduce(vector.subList(vector.size() / 2, vector.size()));
-    }
-
 }
