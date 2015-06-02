@@ -11,7 +11,6 @@
 # 3)    Usage: use project's makefile (navigate
 #       to project's directory and use makefile there)
 #
-
 # ---- Common Configuration Defaults ----
 
 NUMDEVICES ?= 1
@@ -76,7 +75,9 @@ MAXCOMPILERSIM=maxcompilersim
 MAXOS_HW=/opt/maxeler/maxeleros/lib/libmaxeleros.so
 MAXOS_SIM=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so
 
-JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar -1.6 -d .
+JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar:/homes/pg1709/workspaces/powersim/powersim-hk/tds-300-bus/stream-grid/dfe/StreamGrid/dfe-snippets/lib/: -1.6 -d .
+
+
 CFLAGS= $(COMPILER_CFLAGS) $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
 LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread
 
@@ -87,7 +88,7 @@ EXTRA_CFLAGS?= -fPIC
 # This is set in the gdbsim/gdbdfe targets
 DEBUG_FLAGS?=
 
-ALL_FLAGS = $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS)
+ALL_FLAGS = $(CFLAGS) $(EXTRA_CFLAGS) $(DEBUG_FLAGS) --std=c++11
 # ---- Default DFE ----
 DFEID=/dev/maxeler0
 
