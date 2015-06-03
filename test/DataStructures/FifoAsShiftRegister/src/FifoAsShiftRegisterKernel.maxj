@@ -2,6 +2,9 @@
     Here we provide two example use cases of a small FIFO buffer.
 */
 
+import com.custom_computing_ic.dfe_snippets.utils.FifoAsShiftRegister;
+
+
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;

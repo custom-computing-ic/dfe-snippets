@@ -1,3 +1,11 @@
+package com.custom_computing_ic.dfe_snippets.utils;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+
 /***
     This implements a FIFO buffer of fixed length as shift register.
     Push and Pop operations are performed same time. Data movements
@@ -7,14 +15,7 @@
     (return value) only after bufferCapacity enabled cycles.
     The output at first bufferCapacity cycles is undefined.
 */
-
-import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
-
-class FifoAsShiftRegister extends KernelLib
+public class FifoAsShiftRegister extends KernelLib
 {
     private DFEVector<DFEVar> buffer;
     private int capacity;
