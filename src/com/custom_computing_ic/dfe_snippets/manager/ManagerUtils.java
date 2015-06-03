@@ -8,7 +8,7 @@ import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControllerConfig;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
-import com.maxeler.maxcompiler.v1.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 
 public class ManagerUtils {
