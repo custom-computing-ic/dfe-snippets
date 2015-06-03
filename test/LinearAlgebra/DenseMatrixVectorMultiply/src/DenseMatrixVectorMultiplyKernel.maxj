@@ -14,22 +14,28 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.CounterChain;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.utils.MathUtils;
 
 import java.util.List;
 
 import com.custom_computing_ic.dfe_snippets.utils.Reductions;
 
 class DenseMatrixVectorMultiplyKernel extends Kernel {
-    int cacheSize = 1024;
 
-    protected DenseMatrixVectorMultiplyKernel(KernelParameters parameters, int width) {
+    protected DenseMatrixVectorMultiplyKernel(
+        KernelParameters parameters,
+        int width,
+        int maxBsize) {
         super(parameters);
+        optimization.pushDSPFactor(1);
+        optimization.pushPipeliningFactor(0.5);
         DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), width);
         DFEVar n = io.scalarInput("striperows", dfeUInt(32));
         DFEVar nstripes = io.scalarInput("nstripes", dfeUInt(32));
 
         // accumulated bs from previous iterations
-        DFEVar b = io.input("prevb", dfeFloat(11, 53));
         DFEVector<DFEVar> a = io.input("a", vtype);
 
         CounterChain chain = control.count.makeCounterChain();
@@ -40,10 +46,19 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
         DFEVar readEnable = row === 0;
         DFEVector<DFEVar> v = io.input("v", vtype, readEnable);
 
+        // Previous b values are accumulated in BRAMs
         DFEVector<DFEVar> mult = a * v;
-        DFEVar res = b + Reductions.reduce(mult.getElementsAsList());
+        Memory<DFEVar> bmem = mem.alloc(dfeFloat(11, 53), maxBsize);
+        DFEVar addr  = row.cast(dfeUInt(MathUtils.bitsToAddress(maxBsize)));
+        DFEVar prevb = bmem.read(addr);
 
-        io.output("newb", res, dfeFloat(11, 53));
+        DFEVar res = prevb + Reductions.reduce(mult.getElementsAsList());
+        bmem.write(
+           stream.offset(addr, -16),
+           stream.offset(res, -16),
+           stripeCount === stripeCount);
+
+  //        io.output("newb", res, dfeFloat(11, 53));
         DFEVar writeEnable = stripeCount === (nstripes - 1);
 
         // output results to CPU on the final column of the stripe
@@ -51,7 +66,7 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
 
         //debug.simPrintf("-------------------------------------");
         //debug.simPrintf("row: %d stripe: %d prevb %f newb %f\n",
-            //row, stripeCount, b, res);
+            //row, stripeCount, prevb, res);
         //debug.simPrintf("a = ");
         //for (int i = 0; i < width; i ++)
           //debug.simPrintf("%.1f ", a[i]);

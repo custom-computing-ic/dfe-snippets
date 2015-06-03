@@ -42,11 +42,11 @@ vec run_parallel(const Matrix& m, const vec& b, const int numThreads) {
 
 int main(void) {
 
-  long n = 96 * 96;
+  long n = 96 * 2;
   Matrix m(n);
   m.init_random();
   m.print_info();
-//  m.print();
+  m.print();
 
   vector<double> b(n, 0);
   vector<double> v(n, 1);
@@ -61,10 +61,13 @@ int main(void) {
 
   DenseMatrixVectorMultiply_write(
       bsizeBytes * n,
-      bsizeBytes,
+      0,
       (uint8_t *)m.linear_access_pointer());
 
-  DenseMatrixVectorMultiply(n, &v[0], &b[0]);
+  DenseMatrixVectorMultiply(
+      n,
+      &v[0],
+      &b[0]);
 
   for (int i = 0; i < n; ++i) {
     if (b[i] != exp[i]) {
