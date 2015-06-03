@@ -76,9 +76,10 @@ MAXOS_HW=/opt/maxeler/maxeleros/lib/libmaxeleros.so
 MAXOS_SIM=$(MAXELEROSDIR_SIM)/lib/libmaxeleros.so
 
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
-PATH_TO_DFE_SNIPPETS=$(shell dirname $(mkfile_path))/lib/
+PATH_TO_DFE_SNIPPETS=$(shell dirname $(mkfile_path))/../src/
+PATH_TO_DFE_HEADERS=$(shell dirname $(mkfile_path))/../include/
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar:$(PATH_TO_DFE_SNIPPETS) -1.6 -d .
-CFLAGS= $(COMPILER_CFLAGS) $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600
+CFLAGS= $(COMPILER_CFLAGS) $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600 -I$(PATH_TO_DFE_HEADERS)
 LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread
 
 # Add this on the command line to pass to make when compiling
