@@ -58,6 +58,18 @@ public class ManagerUtils {
     return ei;
   }
 
+  // A generic DRAM read interface
+  public static EngineInterface interfaceRead(String name, String toCpuStream, String lmem2cpuStream) {
+    EngineInterface ei = new EngineInterface(name);
+    CPUTypes TYPE = CPUTypes.INT;
+    InterfaceParam size = ei.addParam("size_bytes", TYPE);
+    InterfaceParam start = ei.addParam("start_bytes", TYPE);
+    ei.setStream(toCpuStream, CPUTypes.UINT8, size);
+    ei.setLMemLinear(lmem2cpuStream, start, size);
+    ei.ignoreAll(Direction.IN_OUT);
+    return ei;
+  }
+
   // Enable debugging with Stream Status for the given manager
   public static void debug(CustomManager manager) {
     DebugLevel dbgLevel = new DebugLevel();
