@@ -96,6 +96,7 @@ DFEID=/dev/maxeler0
 # Files to remove on clean
 TRASH=*~ ../src/*~ *.o *.so *.so.0
 DIST_TRASH=Maxfiles.h *.class *.o debug* *.dot *.png *.so *.so.0
+DFESNIPPETS_LIB_TRASH=com
 
 help:
 	@ echo "Current configuration:"
@@ -205,10 +206,10 @@ cleandfe:
 clean: cleansim cleandfe
 
 distcleansim: cleansim
-	rm -rf $(DIST_TRASH) $(PRJ)_$(DFEModel)_DFE_SIM
+	rm -rf $(DIST_TRASH) $(DFESNIPPETS_LIB_TRASH) $(PRJ)_$(DFEModel)_DFE_SIM 
 
 distcleandfe: cleandfe
-	rm -rf $(DIST_TRASH) $(PRJ)_$(DFEModel)_DFE
+	rm -rf $(DIST_TRASH) $(DFESNIPPETS_LIB_TRASH) $(PRJ)_$(DFEModel)_DFE
 
 distclean: distcleansim distcleandfe
 
