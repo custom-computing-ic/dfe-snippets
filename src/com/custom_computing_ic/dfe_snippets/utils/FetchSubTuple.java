@@ -1,5 +1,17 @@
+package com.custom_computing_ic.dfe_snippets.utils;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.SMIO;
+import com.maxeler.maxcompiler.v2.utils.*;
+
+
 /***
-    This implements a FIFO buffer which enables fetching irregular
+    This implements a FIFO buffer which enables fetching arbitrary
     amounts of data per cycle. The maximum number of entries fetchable
     per cycle is a compile time parameter (tupleSize). The number of
     entries to fetch can differ each cycle and vary from 0 to tupleSize.
@@ -19,17 +31,7 @@
 
 */
 
-import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
-import com.maxeler.maxcompiler.v2.kernelcompiler.SMIO;
-import com.maxeler.maxcompiler.v2.utils.*;
-
-
-class FetchSubTuple extends KernelLib
+public class FetchSubTuple extends KernelLib
 {
     // Black magic: don't decrease to avoid VHDL compile errors.
     // Doesn't make the difference for simulation though.

@@ -17,6 +17,9 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
 
+import com.custom_computing_ic.dfe_snippets.utils.FifoWrapperSM;
+import com.custom_computing_ic.dfe_snippets.utils.FetchSubTuple;
+
 class FetchSubTupleKernel extends Kernel
 {
     private static final DFEType floatType  = dfeFloat(11,53);
