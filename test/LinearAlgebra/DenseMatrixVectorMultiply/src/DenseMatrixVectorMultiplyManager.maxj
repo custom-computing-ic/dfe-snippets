@@ -8,6 +8,7 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
 
 import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
 
@@ -19,7 +20,7 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
 
     DenseMatrixVectorMultiplyManager(EngineParameters ep) {
         super(ep);
-        ManagerUtils.setDRAM800(this);
+        ManagerUtils.setDRAMFreq(this, ep, 800);
         KernelBlock k = addKernel(new DenseMatrixVectorMultiplyKernel(
               makeKernelParameters(s_kernelName),
               WIDTH,
@@ -66,6 +67,10 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
         manager.createSLiCinterface(interfaceDefault());
         manager.createSLiCinterface(ManagerUtils.interfaceWrite("write", "fromcpu", "cpu2lmem"));
 //        ManagerUtils.debug(manager);
+
+        // 4 cost tables, 2 parallel threads
+        ManagerUtils.setFullBuild(manager, BuildConfig.Effort.HIGH, 4, 2);
+
         manager.build();
     }
 }
