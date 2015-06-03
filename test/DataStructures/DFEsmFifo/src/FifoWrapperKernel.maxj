@@ -2,6 +2,8 @@
     Here we test thin wrapper around DFEsmFifo.
 */
 
+import com.custom_computing_ic.dfe_snippets.utils.FifoWrapperSM;
+
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.SMIO;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
@@ -12,7 +14,7 @@ class FifoWrapperKernel extends Kernel
 {
 
     private static final int     bitWidth   = 32;
-    private static final DFEType scalarType = dfeUInt(bitWidth);
+    private static final DFEType scalarType = dfeInt(bitWidth);
 
     protected FifoWrapperKernel(KernelParameters parameters) {
         super(parameters);
