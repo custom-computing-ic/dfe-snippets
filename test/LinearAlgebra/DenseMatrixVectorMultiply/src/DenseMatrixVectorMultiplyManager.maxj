@@ -8,7 +8,6 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
-import com.maxeler.maxcompiler.v2.managers.BuildConfig;
 
 import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
 
@@ -26,7 +25,7 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
               WIDTH,
               MAX_B));
         addStreamToOnCardMemory("cpu2lmem", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== addStreamFromCPU("fromcpu");
-        k.getInput("a") <== addStreamFromOnCardMemory("a", MemoryControlGroup.MemoryAccessPattern.STRIDE_2D);
+        k.getInput("a") <== addStreamFromOnCardMemory("a", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
         addStreamToCPU("b") <== k.getOutput("b");
         k.getInput("v") <== addStreamFromCPU("v");
     }
@@ -42,12 +41,10 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
         InterfaceParam bsize = N * CPUTypes.DOUBLE.sizeInBytes();
         InterfaceParam stripeWidth = ei.addConstant(WIDTH);
 
-        ei.setLMemStrided(
+        ei.setLMemLinear(
             "a",
             zero,
-            bsize,
-            N,
-            ei.addConstant(1l));
+            N * bsize);
 
         ei.setScalar(s_kernelName, "striperows", N);
         ei.setScalar(s_kernelName, "nstripes", N / stripeWidth);
@@ -69,7 +66,7 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
 //        ManagerUtils.debug(manager);
 
         // 4 cost tables, 2 parallel threads
-        ManagerUtils.setFullBuild(manager, BuildConfig.Effort.HIGH, 4, 2);
+        ManagerUtils.setFullBuild(manager, 4, 2);
 
         manager.build();
     }

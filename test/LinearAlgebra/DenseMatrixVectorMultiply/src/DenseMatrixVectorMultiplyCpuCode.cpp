@@ -42,11 +42,11 @@ vec run_parallel(const Matrix& m, const vec& b, const int numThreads) {
 
 int main(void) {
 
-  long n = 96 * 2;
+  long n = 3 * (1 << 4);
   Matrix m(n);
   m.init_random();
   m.print_info();
-  m.print();
+ // m.print();
 
   vector<double> b(n, 0);
   vector<double> v(n, 1);
@@ -59,11 +59,13 @@ int main(void) {
   //std::cout << "Running on DFE." << std::endl;
   long bsizeBytes = sizeof(double) * n;
 
+  m.convert_to_strided_access(48);
   DenseMatrixVectorMultiply_write(
       bsizeBytes * n,
       0,
       (uint8_t *)m.linear_access_pointer());
 
+  cout << "Starting DFE run " << endl;
   DenseMatrixVectorMultiply(
       n,
       &v[0],
