@@ -14,11 +14,8 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.CounterChain;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
 import com.maxeler.maxcompiler.v2.utils.MathUtils;
-
-import java.util.List;
 
 import com.custom_computing_ic.dfe_snippets.utils.Reductions;
 

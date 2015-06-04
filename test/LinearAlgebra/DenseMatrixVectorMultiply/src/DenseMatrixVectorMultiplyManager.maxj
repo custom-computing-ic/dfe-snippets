@@ -1,13 +1,10 @@
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
 import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
 import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
-import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
 
 import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
 
@@ -32,8 +29,6 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
 
     private static EngineInterface interfaceDefault() {
         EngineInterface ei = new EngineInterface();
-        CPUTypes type = CPUTypes.INT32;
-        int size = type.sizeInBytes();
 
         InterfaceParam N = ei.addParam("N", CPUTypes.INT);
         InterfaceParam zero = ei.addConstant(0l);
