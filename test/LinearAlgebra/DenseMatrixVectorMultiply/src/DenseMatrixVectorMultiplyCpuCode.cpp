@@ -9,28 +9,18 @@
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
 #include <dfesnippets/blas/Blas.hpp>
+#include <dfesnippets/timing/Timing.hpp>
 
 using namespace std;
 using namespace std::chrono;
-
 using namespace dfesnippets::blas;
+using namespace dfesnippets::timing;
 
-void print_clock_diff(
-    string item,
-    high_resolution_clock::time_point start) {
-  auto end = high_resolution_clock::now();
-  cout << item << " took ";
-  cout << duration_cast<duration<double> >(end - start).count();
-  cout << " seconds." << endl;
-}
-
-vec run_parallel(const Matrix& m, const vec& b, const int numThreads) {
+vec run_cpu(const Matrix& m, const vec& b) {
   int n = m.size();
-  omp_set_num_threads(numThreads);
+  // omp_set_num_threads(numThreads);
   auto start_time = high_resolution_clock::now();
-  for (int i = 0; i < 10; i++) {
-    auto v = m * b;
-  }
+  auto v = m * b;
   stringstream ss;
   ss << "Parallel (";
   ss << omp_get_max_threads();
@@ -41,7 +31,7 @@ vec run_parallel(const Matrix& m, const vec& b, const int numThreads) {
 
 int main(void) {
 
-  long n = 3 * (1 << 12);
+  long n = 200 * 384; // 3 * (1 << 14);
   Matrix m(n);
   m.init_random();
   m.print_info();
@@ -49,15 +39,13 @@ int main(void) {
 
   vector<double> b(n, 0);
   vector<double> v(n, 1);
-  auto exp = run_parallel(m, v, 24);
-
-  //std::cout << "Running on DFE." << std::endl;
-  long bsizeBytes = sizeof(double) * n;
+  auto exp = run_cpu(m, v);
 
   auto start = high_resolution_clock::now();
   m.convert_to_strided_access(48);
-  print_clock_diff("Convert to strided took", start);
+  print_clock_diff("Convert to strided", start);
 
+  long bsizeBytes = sizeof(double) * n;
   start = high_resolution_clock::now();
   DenseMatrixVectorMultiply_write(
       bsizeBytes * n,
