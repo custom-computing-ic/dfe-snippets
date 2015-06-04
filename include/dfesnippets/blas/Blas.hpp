@@ -63,6 +63,25 @@ namespace dfesnippets {
         return data;
       }
 
+
+      // converts matrix data to a strided access pattern, with given stride width (in elements)
+      void convert_to_strided_access(int stride_width) {
+        auto new_data = new value_t[n * n];
+        if (n % stride_width != 0) {
+          cerr << "Error! n must be a multiple of stride_width" << endl;
+          return;
+        }
+        int nstrides = n / stride_width;
+        int idx = 0;
+        for (int i = 0; i < nstrides; i++)
+          for (int row = 0; row < n; row++)
+            for (int col = 0; col < stride_width; col++) {
+              new_data[idx++] = data[row * n + i * stride_width + col] ;
+            }
+        delete [] data;
+        data = new_data;
+      }
+
       inline int size() const {
         return n;
       }
