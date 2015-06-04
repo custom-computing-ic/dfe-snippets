@@ -30,7 +30,7 @@ namespace dfesnippets {
 
       vec operator* (const vec& v) const {
         vec r(n, 0);
-#pragma omp parallel for
+ #pragma omp parallel for
         for (long i = 0; i < n; i++)
           for (long j = 0; j < n; j++) {
             r[i] += v[j] * data[i * n + j];
@@ -73,7 +73,6 @@ namespace dfesnippets {
         }
         int nstrides = n / stride_width;
         int idx = 0;
-#pragma omp parallel for
         for (int i = 0; i < nstrides; i++)
           for (int row = 0; row < n; row++)
             for (int col = 0; col < stride_width; col++) {

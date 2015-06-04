@@ -51,8 +51,8 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
 
         DFEVar res = prevb + Reductions.reduce(mult.getElementsAsList());
         bmem.write(
-           stream.offset(addr, -16),
-           stream.offset(res, -16),
+           stream.offset(addr, -17),
+           stream.offset(res, -17),
            stripeCount === stripeCount);
 
   //        io.output("newb", res, dfeFloat(11, 53));
