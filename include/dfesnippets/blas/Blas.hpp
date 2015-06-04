@@ -8,10 +8,8 @@ namespace dfesnippets {
 
   namespace blas {
 
-    using namespace std;
-
     typedef double value_t;
-    typedef vector<value_t> vec;
+    typedef std::vector<value_t> vec;
 
     class Matrix {
       long n;
@@ -43,7 +41,7 @@ namespace dfesnippets {
       void print() {
         for (int i = 0; i < n; i ++ ) {
           for (int j = 0 ; j < n; j++)
-            cout << operator()(i, j) << " ";
+            std::cout << operator()(i, j) << " ";
           std::cout << std::endl;
         }
       }
@@ -57,9 +55,9 @@ namespace dfesnippets {
       }
 
       void print_info() {
-        cout << "Matrix "  << endl;
-        cout << "  Dense (" << n << " x " << n << ")" << endl;
-        cout << "  Size (GB) " << n * n  * 8 / (1024 * 1024 * 1024) << endl;
+        std::cout << "Matrix "  << std::endl;
+        std::cout << "  Dense (" << n << " x " << n << ")" << std::endl;
+        std::cout << "  Size (GB) " << n * n  * 8 / (1024 * 1024 * 1024) << std::endl;
       }
 
       value_t* linear_access_pointer() {
@@ -71,7 +69,7 @@ namespace dfesnippets {
       void convert_to_strided_access(int stride_width) {
         auto new_data = new value_t[n * n];
         if (n % stride_width != 0) {
-          cerr << "Error! n must be a multiple of stride_width" << endl;
+          std::cerr << "Error! n must be a multiple of stride_width" << std::endl;
           return;
         }
         int nstrides = n / stride_width;
