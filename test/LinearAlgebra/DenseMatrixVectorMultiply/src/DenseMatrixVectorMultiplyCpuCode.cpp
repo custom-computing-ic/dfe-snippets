@@ -45,6 +45,8 @@ int main(void) {
   m.convert_to_strided_access(48);
   print_clock_diff("Convert to strided", start);
 
+  max_config_set_int64(MAX_CONFIG_PCIE_TIMEOUT, 120);
+
   long bsizeBytes = sizeof(double) * n;
   start = high_resolution_clock::now();
   DenseMatrixVectorMultiply_write(

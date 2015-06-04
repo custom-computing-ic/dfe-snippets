@@ -62,7 +62,7 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
 //        ManagerUtils.debug(manager);
 
         // 4 cost tables, 2 parallel threads
-        ManagerUtils.setFullBuild(manager, 4, 2);
+        ManagerUtils.setFullBuild(manager, 6, 6);
 
         manager.build();
     }
