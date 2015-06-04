@@ -2,6 +2,7 @@
 #define BLAS_HPP_LTJDDIGU
 
 #include <iostream>
+#include <omp.h>
 
 namespace dfesnippets {
 
@@ -31,6 +32,7 @@ namespace dfesnippets {
 
       vec operator* (const vec& v) const {
         vec r(n, 0);
+#pragma omp parallel for
         for (long i = 0; i < n; i++)
           for (long j = 0; j < n; j++) {
             r[i] += v[j] * data[i * n + j];
@@ -47,6 +49,7 @@ namespace dfesnippets {
       }
 
       void init_random() {
+#pragma omp parallel for
         for (long i = 0; i < n; i ++ )
           for (long j = 0 ; j < n; j++)
             //        data[i * n + j] = ((j / 48) + 1) * 10 + i % 10;
@@ -55,7 +58,7 @@ namespace dfesnippets {
 
       void print_info() {
         cout << "Matrix "  << endl;
-        cout << "  Dense" << endl;
+        cout << "  Dense (" << n << " x " << n << ")" << endl;
         cout << "  Size (GB) " << n * n  * 8 / (1024 * 1024 * 1024) << endl;
       }
 
