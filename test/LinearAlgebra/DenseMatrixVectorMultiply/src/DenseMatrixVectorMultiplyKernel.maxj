@@ -47,7 +47,7 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
         DFEVector<DFEVar> mult = a * v;
         Memory<DFEVar> bmem = mem.alloc(dfeFloat(11, 53), maxBsize);
         DFEVar addr  = row.cast(dfeUInt(MathUtils.bitsToAddress(maxBsize)));
-        DFEVar prevb = bmem.read(addr);
+        DFEVar prevb = stripeCount === 0 ? 0 : bmem.read(addr);
 
         DFEVar res = prevb + Reductions.reduce(mult.getElementsAsList());
         bmem.write(
