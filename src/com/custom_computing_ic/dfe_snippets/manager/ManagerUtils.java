@@ -87,5 +87,10 @@ public class ManagerUtils {
     m.setBuildConfig(c);
   }
 
+  // Setting up basic build parameters for a given manager
+  public static void setFullBuild(CustomManager m, int numCostTables, int numThreads)
+  {
+    setFullBuild(m, BuildConfig.Effort.HIGH, numCostTables, numThreads);
+  }
 }
 
