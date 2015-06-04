@@ -27,7 +27,7 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
         int maxBsize) {
         super(parameters);
         optimization.pushDSPFactor(1);
-        optimization.pushPipeliningFactor(0.5);
+//        optimization.pushPipeliningFactor(0.5);
         DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), width);
         DFEVar n = io.scalarInput("striperows", dfeUInt(32));
         DFEVar nstripes = io.scalarInput("nstripes", dfeUInt(32));

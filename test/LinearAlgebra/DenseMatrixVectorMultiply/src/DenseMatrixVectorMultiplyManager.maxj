@@ -17,6 +17,7 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
     DenseMatrixVectorMultiplyManager(EngineParameters ep) {
         super(ep);
         ManagerUtils.setDRAMFreq(this, ep, 800);
+        config.setDefaultStreamClockFrequency(185);
         KernelBlock k = addKernel(new DenseMatrixVectorMultiplyKernel(
               makeKernelParameters(s_kernelName),
               WIDTH,
