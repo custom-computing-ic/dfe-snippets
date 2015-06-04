@@ -206,7 +206,7 @@ cleandfe:
 clean: cleansim cleandfe
 
 distcleansim: cleansim
-	rm -rf $(DIST_TRASH) $(DFESNIPPETS_LIB_TRASH) $(PRJ)_$(DFEModel)_DFE_SIM 
+	rm -rf $(DIST_TRASH) $(DFESNIPPETS_LIB_TRASH) $(PRJ)_$(DFEModel)_DFE_SIM
 
 distcleandfe: cleandfe
 	rm -rf $(DIST_TRASH) $(DFESNIPPETS_LIB_TRASH) $(PRJ)_$(DFEModel)_DFE
@@ -220,5 +220,16 @@ debug:
 
 debughw:
 	maxdebug -v -g $(PRJ)Graph -s $(PRJ)Graph -c -k $(KERNEL) -d $(DFEID) $(DFEMAXDIR)/$(PRJ).max
+
+# NB only use this when the timing score is rather small (< 10K)
+# and you are quite confident you could get the design to meet timing
+forcebuild:
+	@echo "Old timing score"
+	@grep TIMING_SCORE $(DFEMAXDIR)/$(PRJ).max
+	sed  -i -e s/PARAM\(TIMING_SCORE\,.*\)/PARAM\(TIMING_SCORE,\ 0\)/ $(DFEMAXDIR)/$(PRJ).max
+	@echo "New timing score"
+	@grep TIMING_SCORE $(DFEMAXDIR)/$(PRJ).max
+	cp $(DFEMAXDIR)/$(PRJ).h $(DFEMAXDIR)/Maxfiles.h
+	make $(PRJ)_dfe
 
 .PHONY: debug
