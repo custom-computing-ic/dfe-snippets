@@ -50,7 +50,6 @@ namespace dfesnippets {
 #pragma omp parallel for
         for (long i = 0; i < n; i ++ )
           for (long j = 0 ; j < n; j++)
-            //        data[i * n + j] = ((j / 48) + 1) * 10 + i % 10;
             data[i * n + j] =  j / 48 + 1;
       }
 
@@ -74,6 +73,7 @@ namespace dfesnippets {
         }
         int nstrides = n / stride_width;
         int idx = 0;
+#pragma omp parallel for
         for (int i = 0; i < nstrides; i++)
           for (int row = 0; row < n; row++)
             for (int col = 0; col < stride_width; col++) {
