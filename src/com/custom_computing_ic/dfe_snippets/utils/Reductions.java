@@ -1,6 +1,5 @@
 package com.custom_computing_ic.dfe_snippets.utils;
 
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 
 import java.util.List;
