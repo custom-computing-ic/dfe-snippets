@@ -32,22 +32,32 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
         EngineInterface ei = new EngineInterface();
 
         InterfaceParam N = ei.addParam("N", CPUTypes.INT);
+        // number of iterations to perform
+        InterfaceParam iterations = ei.addParam("iter", CPUTypes.INT);
         InterfaceParam zero = ei.addConstant(0l);
 
         InterfaceParam bsize = N * CPUTypes.DOUBLE.sizeInBytes();
         InterfaceParam stripeWidth = ei.addConstant(WIDTH);
 
-        ei.setLMemLinear(
+        //ei.setLMemLinear(
+            //"a",
+            //zero,
+            //N * bsize);
+
+        ei.setLMemLinearWrapped(
             "a",
             zero,
-            N * bsize);
+            N * bsize,
+            iterations * N * bsize,
+            zero);
 
         ei.setScalar(s_kernelName, "striperows", N);
         ei.setScalar(s_kernelName, "nstripes", N / stripeWidth);
+        ei.setScalar(s_kernelName, "iterations", iterations);
 
-        ei.setStream("v", CPUTypes.DOUBLE, bsize);
-        ei.setStream("b", CPUTypes.DOUBLE, bsize);
-        ei.setTicks(s_kernelName, N * N / stripeWidth);
+        ei.setStream("v", CPUTypes.DOUBLE, bsize * iterations);
+        ei.setStream("b", CPUTypes.DOUBLE, bsize * iterations);
+        ei.setTicks(s_kernelName, N * N / stripeWidth * iterations);
 
         ei.ignoreLMem("cpu2lmem");
         ei.ignoreStream("fromcpu");

@@ -31,11 +31,13 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
         DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), width);
         DFEVar n = io.scalarInput("striperows", dfeUInt(32));
         DFEVar nstripes = io.scalarInput("nstripes", dfeUInt(32));
+        DFEVar iterations = io.scalarInput("iterations", dfeUInt(32));
 
         // accumulated bs from previous iterations
         DFEVector<DFEVar> a = io.input("a", vtype);
 
         CounterChain chain = control.count.makeCounterChain();
+        chain.addCounter(iterations, 1);
         DFEVar stripeCount = chain.addCounter(nstripes, 1);
         DFEVar row = chain.addCounter(n, 1);
 

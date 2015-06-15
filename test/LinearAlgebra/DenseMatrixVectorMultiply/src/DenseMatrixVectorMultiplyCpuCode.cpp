@@ -10,6 +10,7 @@
 #include "MaxSLiCInterface.h"
 #include <dfesnippets/blas/Blas.hpp>
 #include <dfesnippets/timing/Timing.hpp>
+#include <dfesnippets/VectorUtils.hpp>
 
 using namespace std;
 using namespace std::chrono;
@@ -31,13 +32,14 @@ vec run_cpu(const Matrix& m, const vec& b) {
 
 int main(void) {
 
-  long n = 200 * 384; // 3 * (1 << 14);
+  long n = 384; // 200 * 384; // 3 * (1 << 14);
+  long iterations = 10;
   Matrix m(n);
   m.init_random();
   m.print_info();
  // m.print();
 
-  vector<double> b(n, 0);
+  vector<double> b(n * iterations, 0);
   vector<double> v(n, 1);
   auto exp = run_cpu(m, v);
 
@@ -57,16 +59,21 @@ int main(void) {
 
   cout << "Starting DFE run " << endl;
   start = high_resolution_clock::now();
+  vector<double> copyv = dfesnippets::vectorutils::ncopy(v, iterations);
+
   DenseMatrixVectorMultiply(
       n,
-      &v[0],
+      iterations,
+      &copyv[0],
       &b[0]);
   print_clock_diff("FPGA run took", start);
 
-  for (int i = 0; i < n; ++i) {
-    if (b[i] != exp[i]) {
-      cout << "Wrong output " << endl;
-      return 1;
+  for (int j = 0; j < iterations; j++) {
+    for (int i = 0; i < n; ++i) {
+      if (b[j * n + i] != exp[i]) {
+        cout << "Wrong output, iteration " << j << endl;
+        return 1;
+      }
     }
   }
 
