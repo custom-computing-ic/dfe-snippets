@@ -1,0 +1,75 @@
+    LUTs     FFs   BRAMs    DSPs : fpgaNaiveKernel.maxj
+  108158  125959    1264      94 : resources used by this file
+  20.61%  12.00%  49.24%   4.79% : % of available
+  60.44%  54.53%  62.54% 100.00% : % of total used
+  92.41%  84.37%  91.73% 100.00% : % of user resources
+
+                                 : /*** Single pipe SpMV kernel. */
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
+                                 : import com.maxeler.maxcompiler.v2.utils.MathUtils;
+                                 : 
+                                 : 
+                                 : class fpgaNaiveKernel extends Kernel {
+                                 : 
+                                 :     protected fpgaNaiveKernel(KernelParameters parameters,
+                                 :                               SpmvEngineParams engineParams,
+                                 :                               int fpL,
+                                 :                               int cacheSize,
+                                 :                               int decodingTableSize,
+                                 :                               int numPipes,
+                                 :                               boolean dbg,
+                                 :                               int id) {
+                                 :         super(parameters);
+                                 : 
+                                 :         optimization.pushPipeliningFactor(0.5);
+                                 :         optimization.pushDSPFactor(1);
+                                 : 
+                                 :         // How many outputs should this pipe write
+                                 :         DFEVar outputs = io.scalarInput("outputs", dfeUInt(32));
+                                 :         DFEVar n = io.scalarInput("n", dfeUInt(32));
+                                 : 
+                                 :         int vRomAddressSizeBits = MathUtils.bitsToAddress(cacheSize);
+                                 : 
+      16      16       0       0 :         DFEVar value = io.input("sp_bcsrv_value_" + id, dfeFloat(11, 53));
+      32      16       0       0 :         DFEVar rowLength = io.input("rowLength_in" + id, dfeUInt(32));
+      16       0       0       0 :         DFEVar rowFinished = io.input("rowEnd_in" + id, dfeUInt(32));
+      16      17       0       0 :         DFEVar indptr = io.input("indptr_in" + id, dfeInt(32)).cast(dfeUInt(vRomAddressSizeBits)); // col ptr
+                                 : 
+     112    1175       0       0 :         value = rowFinished.eq(3) ? 0 : value;
+                                 : 
+  103286  117439    1248      64 :         ProcessingElement pe = new ProcessingElement(this, fpL, dbg,
+                                 :                                         rowLength, rowFinished, indptr, value, id,
+                                 :                                         cacheSize, engineParams.getEnableVRomPortSharing());
+                                 : 
+      16      26       0       0 :         DFEVar rowEmpty = rowFinished.eq(2);
+      32      16       0       0 :         DFEVar outputEnable = rowFinished.eq(1) | rowEmpty;
+                                 :         Params params = control.count.makeParams(32)
+                                 :             .withEnable(outputEnable);
+    1109    1805       0       0 :         DFEVar produced = control.count.makeCounter(params).getCount();
+                                 : 
+     432      16       0       0 :         DFEVar outputEnable2 = outputEnable & produced < outputs;
+                                 : 
+       0    1024       0       0 :         DFEVar output = rowEmpty ? 0 : pe.getReducedOut();
+                                 : 
+                                 :         DFEVectorType<DFEVar> outType =
+                                 :             new DFEVectorType<DFEVar>(dfeFloat(11, 53), 2);
+                                 : 
+                                 :         DFEVector<DFEVar> out = outType.newInstance(this);
+    3075    4409      16      30 :         DFEVar tag =  (produced + id * n / numPipes).cast(dfeFloat(11, 53));
+                                 :         out[0] <== tag;
+                                 :         out[1] <== output;
+      16       0       0       0 :         io.output("b" + id,
+                                 :                   out,
+                                 :                   outType,
+                                 :                   outputEnable2);
+                                 :         if (dbg) {
+                                 :             debug.simPrintf(
+                                 :                             "Pipe %d value_in %f, rowEnd_in %d, indptr_in %d, Output %f Tag %f rowLength: %d\n",
+                                 :                             id, value, rowFinished, indptr, output, tag, rowLength);
+                                 :         }
+                                 :     }
+                                 : }

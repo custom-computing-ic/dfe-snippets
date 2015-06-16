@@ -1,0 +1,189 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParamArray;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.StateMachineBlock;
+import com.maxeler.maxcompiler.v2.statemachine.manager.ManagerStateMachine;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+
+
+public class fpgaNaiveManager extends CustomManager {
+
+    private static final String s_kernelName  = "fpgaNaiveKernel";
+
+
+    private static final MemoryControlGroup.MemoryAccessPattern LINEAR = MemoryControlGroup.MemoryAccessPattern.LINEAR_1D;
+
+    private final int fpL, cacheSize, numPipes;
+
+    fpgaNaiveManager(SpmvEngineParams ep) {
+        super(ep);
+
+        this.fpL = ep.getFloatingPointLatency();
+        this.cacheSize = ep.getVectorCacheSize();
+        this.numPipes = ep.getNumPipes();
+
+        // This line switches on latency annotation of the source code
+        this.getCurrentKernelConfig().debug.setEnableLatencyAnnotation(true);
+
+        // Set clock frequency
+        config.setDefaultStreamClockFrequency(ep.getStreamFrequency());
+
+        // -- Read control kernel
+        ReadControl rc = new ReadControl(makeKernelParameters("ReadControl"), numPipes);
+        ReadValueControl rvc = new ReadValueControl(
+            makeKernelParameters("ReadValueControl"),
+            numPipes);
+        KernelBlock readControl = addKernel(rc);
+        readControl.getInput("indptr") <== addStreamFromOnCardMemory("indptr", LINEAR);
+        KernelBlock readValueControl = addKernel(rvc);
+        readValueControl.getInput("bcsrv_values") <== addStreamFromOnCardMemory("value", LINEAR);
+
+        ManagerStateMachine outStateMachine = new OutputControlSM(this,
+                                                                  ep.getNumPipes(),
+                                                                  ep.getDebugOutputSm());
+        StateMachineBlock outputControl = addStateMachine("OutputControlSM", outStateMachine);
+
+        KernelBlock memory = addKernel( new VectorCache(makeKernelParameters("Cache"),
+                                numPipes, cacheSize, ep ));
+
+        for (int i = 0; i < numPipes; i++) {
+            KernelBlock compute = addKernel(new fpgaNaiveKernel(makeKernelParameters(s_kernelName + i),
+                                                                ep, i));
+            compute.getInput("matrix_value" + i) <== readValueControl.getOutput("matrix_value" + i);
+
+            // -- CSR Control SM
+            ManagerStateMachine stateMachine = new CSRControlSM(this, ep.getDebugSm(), i);
+            StateMachineBlock control = addStateMachine("CSRControlSM" + i, stateMachine);
+            control.getInput("indptr") <== readControl.getOutput("indptr" + i);
+
+            // -- Resolve access to vector memory
+            memory.getInput("indptr_in" + i) <== control.getOutput("indptr_out");
+
+            // -- CSR Compute Pipe
+            compute.getInput("vector_value" + i) <== memory.getOutput("vector_value_out" + i);
+            compute.getInput("rowEnd_in" + i) <== control.getOutput("rowEnd_out");
+            compute.getInput("rowLength_in" + i) <== control.getOutput("rowLength_out");
+
+            outputControl.getInput("oc_in_" + i) <== compute.getOutput("b" + i);
+        }
+
+        addStreamToCPU("b") <== outputControl.getOutput("b");
+
+        addStreamToOnCardMemory("cpu2lmem", LINEAR) <== addStreamFromCPU("fromcpu");
+
+        addMaxFileConstant("fpL", fpL);
+        addMaxFileConstant("vectorCacheSize", cacheSize);
+        addMaxFileConstant("numPipes", numPipes);
+    }
+
+    private EngineInterface interfaceWrite (String name) {
+        EngineInterface ei = new EngineInterface(name);
+        CPUTypes TYPE = CPUTypes.INT;
+        InterfaceParam size = ei.addParam("size_bytes", TYPE);
+        InterfaceParam start = ei.addParam("start_bytes", TYPE);
+        ei.setStream("fromcpu", CPUTypes.UINT8, size);
+        ei.setLMemLinear("cpu2lmem", start, size);
+        ei.ignoreAll(Direction.IN_OUT);
+        return ei ;
+    }
+
+
+    private EngineInterface interfaceBRAMs (String name) {
+        EngineInterface ei = new EngineInterface(name);
+        for (int i = 0; i < numPipes; i++) {
+            ei.ignoreScalar(s_kernelName + i,"outputs");
+            ei.ignoreScalar(s_kernelName + i,"n");
+            ei.ignoreScalar("CSRControlSM" + i,"output_count");
+            ei.ignoreScalar("ReadControl", "input_count_" + i);
+        }
+        ei.setTicks("ReadControl", 0);
+        ei.setTicks("ReadValueControl", 0);
+        for (int i = 0; i < numPipes;i ++)
+                ei.setTicks("fpgaNaiveKernel"+i, 0);
+        ei.setTicks("Cache", 0);
+        ei.ignoreKernel("ReadControl");
+        ei.ignoreStream("b");
+        ei.ignoreStream("fromcpu");
+        ei.ignoreLMem("cpu2lmem");
+        ei.ignoreLMem("indptr");
+        ei.ignoreLMem("value");
+        return ei;
+    }
+
+
+    /** Interface for the entire SpMV */
+    private EngineInterface interfaceDefault() {
+        EngineInterface ei = new EngineInterface();
+
+        CPUTypes resultType = CPUTypes.DOUBLE;
+
+        InterfaceParam n = ei.addParam("n", CPUTypes.INT); // matrix rank
+        InterfaceParam valueSize = ei.addParam("value_size_bytes", CPUTypes.INT);
+        InterfaceParam indptrSize = ei.addParam("indptr_size_bytes", CPUTypes.INT);
+        InterfaceParam ticksPerPipe = ei.addParam("ticks_per_pip", CPUTypes.INT);
+        InterfaceParamArray inputsPerPipe = ei.addParamArray("indptr_inputs_per_pipe", CPUTypes.INT);
+        InterfaceParamArray csrInputsPerPipe = ei.addParamArray("csr_inputs_per_pipe", CPUTypes.INT);
+
+        for (int i = 0; i < numPipes; i++) {
+            ei.setTicks(s_kernelName + i, ticksPerPipe);
+            ei.setScalar(s_kernelName + i, "n", n);
+            ei.setScalar("CSRControlSM" + i, "output_count", inputsPerPipe.get(i));
+            ei.setScalar("ReadControl", "input_count_" + i, csrInputsPerPipe.get(i));
+        }
+
+        for (int i = 0; i < numPipes - 1; i++) {
+            ei.setScalar(s_kernelName + i, "outputs", n / numPipes);
+        }
+
+        // the last PE has to produce more results than the other ones when n % numPipes != 0
+        ei.setScalar(s_kernelName + (numPipes - 1), "outputs", n / numPipes + n % numPipes);
+
+        ei.setTicks("ReadControl", indptrSize / (numPipes * 4)); // each pipe reads 4 bytes
+        ei.setTicks("ReadValueControl",
+            valueSize / (numPipes * CPUTypes.DOUBLE.sizeInBytes()));
+
+        ei.setLMemLinear("indptr", ei.addConstant(0l), indptrSize);
+        ei.setLMemLinear("value", indptrSize, valueSize);
+
+        ei.setStream("b", resultType, 2 * n * resultType.sizeInBytes());
+        ei.ignoreLMem("cpu2lmem");
+        ei.ignoreStream("fromcpu");
+
+        for (int i = 0; i < numPipes; i++) {
+            ei.ignoreMem("Cache", "vRom" + i, Direction.IN);
+        }
+
+        return ei;
+    }
+
+    public static void main(String[] args) {
+        SpmvEngineParams params = new SpmvEngineParams(args);
+
+        fpgaNaiveManager manager = new fpgaNaiveManager(params);
+
+        if (params.getHighEffort()) {
+            BuildConfig c = manager.getBuildConfig();
+            c.setBuildEffort(BuildConfig.Effort.HIGH);
+            c.setMPPRCostTableSearchRange(1, 10);        // set to enable MPPR
+            c.setMPPRParallelism(4);                    // use 4 CPU threads
+        }
+
+        manager.createSLiCinterface(manager.interfaceDefault());
+        manager.createSLiCinterface(manager.interfaceWrite("writeDRAM"));
+        manager.createSLiCinterface(manager.interfaceBRAMs("setBRAMs"));
+        manager.config.setAllowNonMultipleTransitions(true);
+
+        if (params.getDebug()) {
+            DebugLevel dbgLevel = new DebugLevel();
+            dbgLevel.setHasStreamStatus(true);
+            manager.debug.setDebugLevel(dbgLevel);
+        }
+        manager.build();
+    }
+}

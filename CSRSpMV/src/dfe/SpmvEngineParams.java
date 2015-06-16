@@ -1,0 +1,98 @@
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class SpmvEngineParams extends EngineParameters {
+
+    // -- Debug flags
+    private static final boolean debug = false;
+    private static final boolean debugSm = false;
+    private static final boolean debugKernel = false;
+    private static final boolean debugDecoder = false;
+    private static final boolean debugOutputSm = false;
+
+    // -- Design Parameters
+    private static final int numPipes = 2;
+    private static final int floatingPointLatency = 16;
+    private static final boolean enableVRomPortSharing = true;
+    private static final int vectorCacheSize = 1024;
+    private static final int streamClockFrequency = 150;
+    private static final double pipeliningFactor = 0.5;
+
+    // -- Build params
+    private static final boolean highEffort = true;
+
+    SpmvEngineParams(String... args) {
+        super(args);
+    }
+
+    @Override
+    protected void declarations() {
+        declareParam("debug", DataType.BOOL, debug);
+        declareParam("debugSm", DataType.BOOL, debugSm);
+        declareParam("debugKernel", DataType.BOOL, debugKernel);
+        declareParam("debugDecoder", DataType.BOOL, debugDecoder);
+        declareParam("debugOutputSm", DataType.BOOL, debugOutputSm);
+
+        declareParam("floatingPointLatency", DataType.INT, floatingPointLatency);
+        declareParam("numPipes", DataType.INT, numPipes);
+        declareParam("enableVRomPortSharing", DataType.BOOL, enableVRomPortSharing);
+        declareParam("vectorCacheSize", DataType.INT, vectorCacheSize);
+        declareParam("streamFrequency", DataType.INT, streamClockFrequency);
+        declareParam("pipeliningFactor", DataType.DOUBLE, pipeliningFactor);
+
+        declareParam("highEffort", DataType.BOOL, highEffort);
+    }
+
+    public String getBuildName() {
+
+        String base = getMaxFileName() + "_" + getDFEModel() + "_" + getTarget() + "_";
+        base += getNumPipes() + "pipes_";
+        base += getVectorCacheSize() + "cache_";
+        base += getStreamFrequency() + "MHz_";
+        base += getPipeliningFactor() + "pf";
+        return base;
+    }
+
+    public int getNumPipes() {
+        return getParam("numPipes");
+    }
+
+    public int getVectorCacheSize() {
+        return getParam("vectorCacheSize");
+    }
+
+    public int getFloatingPointLatency() {
+        return getParam("floatingPointLatency");
+    }
+
+    public boolean getDebugKernel() {
+        return getParam("debugKernel");
+    }
+
+    public boolean getDebugSm() {
+        return getParam("debugSm");
+    }
+
+    public boolean getDebug() {
+        return getParam("debug");
+    }
+
+    public boolean getDebugOutputSm() {
+        return getParam("debugOutputSm");
+    }
+
+    public boolean getEnableVRomPortSharing() {
+        return getParam("enableVRomPortSharing");
+    }
+
+    public boolean getHighEffort() {
+        return getParam("highEffort");
+    }
+
+    public int getStreamFrequency() {
+        return getParam("streamFrequency");
+    }
+
+    public double getPipeliningFactor() {
+        return getParam("pipeliningFactor");
+    }
+}
