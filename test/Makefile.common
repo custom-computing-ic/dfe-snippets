@@ -80,7 +80,7 @@ PATH_TO_DFE_SNIPPETS=$(shell dirname $(mkfile_path))/../src/
 PATH_TO_DFE_HEADERS=$(shell dirname $(mkfile_path))/../include/
 JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar:$(PATH_TO_DFE_SNIPPETS) -1.6 -d .
 CFLAGS= $(COMPILER_CFLAGS) $(OPT_FLAGS) -Wall -I${MAXCOMPILERDIR}/include -I${MAXCOMPILERDIR}/include/slic -I${MAXELEROSDIR}/include -D_XOPEN_SOURCE=600 -I$(PATH_TO_DFE_HEADERS)
-LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread
+LFLAGS=-L${MAXCOMPILERDIR}/lib -L${MAXELEROSDIR}/lib -lmaxeleros -lslic -lm -lpthread -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
 
 # Add this on the command line to pass to make when compiling
 # Useful for debug/optimization flags

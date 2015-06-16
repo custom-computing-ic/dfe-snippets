@@ -11,7 +11,7 @@
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
 
-#include <dfesnippets/sparse/common.h>
+#include <dfesnippets/sparse/common.hpp>
 #include <dfesnippets/sparse/sparse_matrix.hpp>
 #include <dfesnippets/sparse/sparse_matrix.hpp>
 #include <dfesnippets/sparse/partition.hpp>
