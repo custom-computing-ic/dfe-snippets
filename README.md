@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # dfe-snippets
 
 `dfe-snippets` is a collection of building blocks for projects using Maxeler Dataflow Engines (DFEs).
@@ -48,10 +47,3 @@ To create an external, __stand-alone project__ run:
 ./create.py <ProjectName>
 cd <ProjectName>/build && make runsim
 ```
-=======
-## spmv-commons-cpu
-
-Common CPU code required for SpMV implementations:
-- file I/O
-- MKL operations
->>>>>>> integrate-commons-cpu
