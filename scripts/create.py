@@ -118,11 +118,12 @@ def main():
     projectConcept = args.concept
 
     # copy template to the target location
+    dest = 'test/'
     if args.concept:
-        dest = projectConcept + "/" + projectName
+        dest += projectConcept + "/" + projectName
         projectRoot = "../../.."
     else:
-        dest = projectName
+        dest += projectName
         projectRoot = ".."
 
     files = CopyTemplateFiles(dest, args)
