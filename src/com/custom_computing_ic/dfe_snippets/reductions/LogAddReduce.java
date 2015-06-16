@@ -1,3 +1,4 @@
+package com.custom_computing_ic.dfe_snippets.reductions;
 /***
     This kernel implements add-reduce circuit with logarithmic
     number of adders (wrt to the maximum number of values in the stream
@@ -21,7 +22,7 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.utils.MathUtils;
 
-class LogAddReduce extends KernelLib
+public class LogAddReduce extends KernelLib
 {
     private DFEVar output;
     private DFEVar outputValid;
@@ -36,7 +37,7 @@ class LogAddReduce extends KernelLib
         @ param     maxTermsToReduce    indicates maximum number of terms this instance will be reducing correctly
         @ param     dataType            underlying data type of add-reduced data
     */
-    protected LogAddReduce(KernelLib owner, DFEVar inputEnable, DFEVar stopSignal,
+    public LogAddReduce(KernelLib owner, DFEVar inputEnable, DFEVar stopSignal,
                                             DFEVar newTerm, DFEType dataType, int maxTermsToReduce)
     {
         super(owner);

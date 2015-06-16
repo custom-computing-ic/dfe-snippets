@@ -11,6 +11,7 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 
+import com.custom_computing_ic.dfe_snippets.reductions.*;
 
 class LogAddReduceKernel extends Kernel {
 
@@ -30,7 +31,7 @@ class LogAddReduceKernel extends Kernel {
         Params  nnzParam = control.count.makeParams(counterWidth).withMax( nnz );
         Counter termNum  = control.count.makeCounter(nnzParam);
 
-        DFEVar inputAlwaysComes = constant.var(dfeBool(), 1); 
+        DFEVar inputAlwaysComes = constant.var(dfeBool(), 1);
         DFEVar flush = termNum.getCount().eq(nnz-1);
 
         LogAddReduce r = new LogAddReduce(this, inputAlwaysComes, flush, input, dataType, maxTermsToReduce);

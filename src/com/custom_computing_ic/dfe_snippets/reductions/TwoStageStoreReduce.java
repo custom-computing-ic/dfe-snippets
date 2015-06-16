@@ -1,3 +1,5 @@
+package com.custom_computing_ic.dfe_snippets.reductions;
+
 /***
     This implements a container and summator of 2 floating point numbers.
       * These numbers are pushed to container sequentially (at most one value per cycle).
@@ -50,7 +52,7 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
 
 
 
-class TwoStageStoreReduce extends KernelLib
+public class TwoStageStoreReduce extends KernelLib
 {
     private static final int counterWidth = 32;
 
