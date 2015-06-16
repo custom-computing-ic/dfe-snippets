@@ -1,3 +1,7 @@
+#ifndef COMMON_HPP_CJ1ONPFM
+#define COMMON_HPP_CJ1ONPFM
+
+
 #include "common.h"
 #include <stdio.h>
 #include "string.h"
@@ -5,6 +9,7 @@
 #include "mkl_cblas.h"
 #include "mkl_spblas.h"
 #include "mkl_service.h"
+#include "mmio.h"
 
 
 void print_array(const char* message, double *values, int size) {
@@ -123,7 +128,7 @@ void read_mm_unsym_matrix(FILE* f, MM_typecode mcode,
     printf("Market Market type: [%s]\n", mm_typecode_to_str(mcode));
     exit(1);
   }
-  
+
   // read Matrix Market matrix in COO format
   int* I = (int *) malloc(2 * (*nnzs) * sizeof(int));
   int *J = (int *) malloc(2 * (*nnzs) * sizeof(int));
@@ -138,7 +143,7 @@ void read_mm_unsym_matrix(FILE* f, MM_typecode mcode,
 
     // add symmetric entry
     if (J[i] != I[i]) {
-      I[(*nnzs)] = J[i]; 
+      I[(*nnzs)] = J[i];
       J[(*nnzs)] = I[i];
       val[(*nnzs)] = val[i];
       (*nnzs)++;
@@ -334,3 +339,5 @@ void elementwise_xty(const int n, const double *x, const double *y, double *z)
 
   cblas_dsbmv(order, uplo, n, k, alpha, x, lda, y, incx, beta, z, incy);
 }
+
+#endif /* end of include guard: COMMON_HPP_CJ1ONPFM */

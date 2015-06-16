@@ -6,7 +6,7 @@
 #include <iomanip>
 #include "mkl_spblas.h"
 #include <dfesnippets/sparse/utils.hpp>
-#include <common.h>
+#include <dfesnippets/sparse/common.hpp>
 
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/io.hpp>
