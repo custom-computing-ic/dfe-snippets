@@ -31,9 +31,9 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
     private static EngineInterface interfaceDefault() {
         EngineInterface ei = new EngineInterface();
 
-        InterfaceParam N = ei.addParam("N", CPUTypes.INT);
+        InterfaceParam N = ei.addParam("N", CPUTypes.INT64);
         // number of iterations to perform
-        InterfaceParam iterations = ei.addParam("iter", CPUTypes.INT);
+        InterfaceParam iterations = ei.addParam("iter", CPUTypes.INT64);
         InterfaceParam zero = ei.addConstant(0l);
 
         InterfaceParam bsize = N * CPUTypes.DOUBLE.sizeInBytes();
