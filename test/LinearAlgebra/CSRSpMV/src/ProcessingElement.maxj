@@ -5,6 +5,8 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 
+import com.custom_computing_ic.dfe_snippets.reductions.LogAddReduce;
+
 public class ProcessingElement extends KernelLib {
 
     private final DFEVar reducedOut;

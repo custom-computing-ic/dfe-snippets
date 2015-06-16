@@ -38,7 +38,7 @@ endif (DFE_MODEL)
 set (PRJ "SpmvBase")
 set (MANAGER "fpgaNaiveManager")
 
-set (DFE_SOURCES ../lib/lib-reductions/include/reductions/*.maxj ../src/dfe/*.java)
+set (DFE_SOURCES ../../../../src/com/custom_computing_ic/dfe_snippets/reductions/ ../src/dfe/*.java)
 
 set (SIMMAXDIR "${PRJ}_${DFE_MODEL}_DFE_SIM/results")
 set (HWMAXDIR "${PRJ}_${DFE_MODEL}_DFE/results")

@@ -5,9 +5,9 @@
 #include <iostream>
 #include <chrono>
 #include "Maxfiles.h"
-#include <sparse_matrix.hpp>
+#include <dfesnippets/sparse/sparse_matrix.hpp>
 
-#include <scheduling.hpp>
+#include "scheduling.hpp"
 
 template <typename value_type>
 std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
@@ -46,19 +46,17 @@ std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   start_time = high_resolution_clock::now();
 
-  SpmvBase_writeDRAM(adjusted_indptr_size,
+  fpgaNaive_writeDRAM(adjusted_indptr_size,
                       0,
                       (uint8_t *)&adjusted_indptr[0]);
-  SpmvBase_writeDRAM(value_size,
+  fpgaNaive_writeDRAM(value_size,
                       adjusted_indptr_size,
                       (uint8_t*)&values[0]);
   print_clock_diff("Writing to DRAM ", start_time);
 
   start_time = high_resolution_clock::now();
 
-  SpmvBase_setBRAMs(
-                    &v[0],
-                    &v[0],
+  fpgaNaive_setBRAMs(
                     &v[0],
                     &v[0]);
 
@@ -66,7 +64,7 @@ std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   std::vector<double> b(m.n * 2, 0);
   start_time = high_resolution_clock::now();
-  
+
   if (values.size() % num_pipes != 0)
     cout << "ERROR! This cannot happen!!!" << endl;
   if (adjusted_indptr.size() % num_pipes != 0)
@@ -83,7 +81,7 @@ std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   cout << "Indptr_size_per_pipe" << endl;
   print_vector(indptr_size_per_pipe);
   for (int i = 0; i < num_repeat; i++)
-      SpmvBase(
+      fpgaNaive(
                 adjusted_indptr_size,
                 m.n,
                 values.size() / num_pipes,
@@ -105,7 +103,7 @@ std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   for (size_t i = 0; i < b.size(); i+=2) {
     r.push_back(make_pair(b[i], b[i + 1]));
   }
-  
+
   sort(r.begin(), r.end());
   std::vector<double> r2;
   for (auto p : r) {

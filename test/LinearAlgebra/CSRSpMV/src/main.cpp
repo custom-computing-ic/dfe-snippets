@@ -11,10 +11,12 @@
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
 
-#include <common.h>
-#include <sparse_matrix.hpp>
-#include <fpga.hpp>
-#include <partition.hpp>
+#include <dfesnippets/sparse/common.h>
+#include <dfesnippets/sparse/sparse_matrix.hpp>
+#include <dfesnippets/sparse/sparse_matrix.hpp>
+#include <dfesnippets/sparse/partition.hpp>
+
+#include "fpga.hpp"
 // #define DEBUG_PRINT_MATRICES
 // #define DEBUG_PARTITIONS
 
@@ -40,7 +42,7 @@ int main(int argc, char** argv) {
   int num_repeat = boost::lexical_cast<int>(argv[3]);
 
   // -- Design Parameters
-  int numPipes = SpmvBase_numPipes;
+  int numPipes = fpgaNaive_numPipes;
 
   // -- Matrix Parameters
   int n, nnzs;
@@ -79,7 +81,7 @@ int main(int argc, char** argv) {
   auto res = ublas::prod(inMatrix, vu);
   vector<double> bExp = SpMV_MKL_ge((char *)path.c_str(), v);
 
-  int partitionSize = min(SpmvBase_vectorCacheSize, n);
+  int partitionSize = min(fpgaNaive_vectorCacheSize, n);
   vector<CsrMatrix<double>> partitions = partition(inMatrix, partitionSize);
   vector<double> dfe_res(n, 0);
 

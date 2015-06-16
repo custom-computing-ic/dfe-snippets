@@ -1,7 +1,7 @@
 #ifndef PARITION_HPP
 #define PARITION_HPP
 
-#include <sparse_matrix.hpp>
+#include <dfesnippets/sparse/sparse_matrix.hpp>
 
 // generate column based parititions of the original matrix
 template<typename T>

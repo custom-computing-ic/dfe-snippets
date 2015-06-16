@@ -42,15 +42,15 @@ public class SpmvEngineParams extends EngineParameters {
         declareParam("highEffort", DataType.BOOL, highEffort);
     }
 
-    public String getBuildName() {
+    //public String getBuildName() {
 
-        String base = getMaxFileName() + "_" + getDFEModel() + "_" + getTarget() + "_";
-        base += getNumPipes() + "pipes_";
-        base += getVectorCacheSize() + "cache_";
-        base += getStreamFrequency() + "MHz_";
-        base += getPipeliningFactor() + "pf";
-        return base;
-    }
+        //String base = getMaxFileName() + "_" + getDFEModel() + "_" + getTarget() + "_";
+        //base += getNumPipes() + "pipes_";
+        //base += getVectorCacheSize() + "cache_";
+        //base += getStreamFrequency() + "MHz_";
+        //base += getPipeliningFactor() + "pf";
+        //return base;
+    //}
 
     public int getNumPipes() {
         return getParam("numPipes");

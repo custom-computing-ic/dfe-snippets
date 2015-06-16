@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include "mkl_spblas.h"
-#include <utils.hpp>
+#include <dfesnippets/sparse/utils.hpp>
 #include <common.h>
 
 #include <boost/numeric/ublas/matrix_sparse.hpp>
