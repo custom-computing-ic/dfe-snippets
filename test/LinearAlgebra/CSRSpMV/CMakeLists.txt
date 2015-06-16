@@ -123,10 +123,10 @@ INCLUDE_DIRECTORIES( ${MKL_INCLUDE_DIR} )
 include_directories (include/eval)
 include_directories (src)
 include_directories (build/include)
-include_directories (lib/spmv-commons-cpu)
+include_directories (../../../include/dfesnippets/sparse)
 
 file(GLOB CppSources src/*.cpp)
-file(GLOB LibrarySources lib/spmv-commons-cpu/*.cpp)
+file(GLOB LibrarySources ../../../include/dfesnippets/sparse/*.cpp)
 
 add_library(spmv_commons_cpu SHARED ${LibrarySources})
 
