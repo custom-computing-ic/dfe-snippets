@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <omp.h>
+#include <string.h>
 
 namespace dfesnippets {
 
@@ -18,6 +19,12 @@ namespace dfesnippets {
       public:
       Matrix(long _n) : n(_n) {
         data = new value_t[n * n];
+      }
+
+      Matrix(const Matrix& other) {
+        n = other.n;
+        data = new value_t[n * n];
+        memcpy(data, other.data, sizeof(value_t) * n * n);
       }
 
       ~Matrix() {
