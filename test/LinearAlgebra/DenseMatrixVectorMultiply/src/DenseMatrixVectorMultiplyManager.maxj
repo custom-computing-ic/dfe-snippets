@@ -15,17 +15,24 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
     private static final int MAX_B = 84000;
 
     DenseMatrixVectorMultiplyManager(EngineParameters ep) {
-        super(ep);
-        ManagerUtils.setDRAMFreq(this, ep, 800);
-        config.setDefaultStreamClockFrequency(185);
-        KernelBlock k = addKernel(new DenseMatrixVectorMultiplyKernel(
-              makeKernelParameters(s_kernelName),
-              WIDTH,
-              MAX_B));
-        addStreamToOnCardMemory("cpu2lmem", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== addStreamFromCPU("fromcpu");
-        k.getInput("a") <== addStreamFromOnCardMemory("a", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
-        addStreamToCPU("b") <== k.getOutput("b");
-        k.getInput("v") <== addStreamFromCPU("v");
+      super(ep);
+      ManagerUtils.setDRAMFreq(this, ep, 800);
+      config.setDefaultStreamClockFrequency(185);
+      //KernelBlock k = addKernel(new DenseMatrixVectorMultiplyKernel(
+      //makeKernelParameters(s_kernelName),
+      //WIDTH,
+      //MAX_B));
+      KernelBlock k = addKernel(new DenseMatrixVectorMultiplyLMemKernel(
+            makeKernelParameters(s_kernelName),
+            WIDTH,
+            MAX_B));
+      addStreamToOnCardMemory("cpu2lmem", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== addStreamFromCPU("fromcpu");
+      addStreamToCPU("tocpu") <== addStreamFromOnCardMemory("lmem2cpu", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) ;
+      k.getInput("a") <== addStreamFromOnCardMemory("a", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+      k.getInput("prevb") <== addStreamFromOnCardMemory("prevb", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+      //        addStreamToCPU("b") <== k.getOutput("b");
+      addStreamToOnCardMemory("b", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== k.getOutput("b");
+      k.getInput("v") <== addStreamFromCPU("v");
     }
 
     private static EngineInterface interfaceDefault() {
@@ -47,8 +54,22 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
         ei.setLMemLinearWrapped(
             "a",
             zero,
-            N * bsize,
+            bsize,
             iterations * N * bsize,
+            zero);
+
+        ei.setLMemLinearWrapped(
+            "b",
+            N * bsize,
+            bsize,
+            iterations * N * bsize / stripeWidth,
+            zero);
+
+        ei.setLMemLinearWrapped(
+            "prevb",
+            N * bsize,
+            bsize,
+            iterations * N * bsize / stripeWidth,
             zero);
 
         ei.setScalar(s_kernelName, "striperows", N);
@@ -56,11 +77,13 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
         ei.setScalar(s_kernelName, "iterations", iterations);
 
         ei.setStream("v", CPUTypes.DOUBLE, bsize * iterations);
-        ei.setStream("b", CPUTypes.DOUBLE, bsize * iterations);
+        // ei.setStream("b", CPUTypes.DOUBLE, bsize * iterations);
         ei.setTicks(s_kernelName, N * N / stripeWidth * iterations);
 
         ei.ignoreLMem("cpu2lmem");
+        ei.ignoreLMem("lmem2cpu");
         ei.ignoreStream("fromcpu");
+        ei.ignoreStream("tocpu");
         return ei;
     }
 
@@ -69,10 +92,10 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
         DenseMatrixVectorMultiplyManager manager = new DenseMatrixVectorMultiplyManager(new EngineParameters(args));
         manager.createSLiCinterface(interfaceDefault());
         manager.createSLiCinterface(ManagerUtils.interfaceWrite("write", "fromcpu", "cpu2lmem"));
-//        ManagerUtils.debug(manager);
-
+        manager.createSLiCinterface(ManagerUtils.interfaceRead("read",  "tocpu", "lmem2cpu"));
         // 4 cost tables, 2 parallel threads
         ManagerUtils.setFullBuild(manager, 6, 6);
+        ManagerUtils.debug(manager);
 
         manager.build();
     }

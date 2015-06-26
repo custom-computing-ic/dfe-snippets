@@ -32,8 +32,8 @@ vec run_cpu(const Matrix& m, const vec& b) {
 
 int main(void) {
 
-  long n = 384; // 200 * 384; // 3 * (1 << 14);
-  long iterations = 10;
+  long n = 48 * 64 * 10; // * 2; // 200 * 384; // 3 * (1 << 14);
+  long iterations = 1;
   Matrix m(n);
   m.init_random();
   m.print_info();
@@ -64,9 +64,21 @@ int main(void) {
   DenseMatrixVectorMultiply(
       n,
       iterations,
-      &copyv[0],
-      &b[0]);
+      &copyv[0]
+      );
+//      &b[0]);
   print_clock_diff("FPGA run took", start);
+  DenseMatrixVectorMultiply_read(
+      bsizeBytes,
+      bsizeBytes * n,
+      (uint8_t *)&b[0]);
+  for (int i = 0; i < n; i++)
+    cout << b[i] << " ";
+  cout << endl;
+  cout << endl;
+  for (int i = 0; i < n; i++)
+    cout << exp[i] << " ";
+  cout << endl;
 
   for (int j = 0; j < iterations; j++) {
     for (int i = 0; i < n; ++i) {

@@ -42,3 +42,29 @@ class DenseMatrixVectorMultiplyKernel extends Kernel {
     io.output("b", dmvm.getRes(), dfeFloat(11, 53), dmvm.getWriteEnable());
   }
 }
+
+class DenseMatrixVectorMultiplyLMemKernel extends Kernel {
+
+  protected DenseMatrixVectorMultiplyLMemKernel(
+      KernelParameters parameters,
+      int width,
+      int maxBsize) {
+    super(parameters);
+    optimization.pushDSPFactor(1);
+    optimization.pushPipeliningFactor(0.5);
+    DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), width);
+    DFEVar n = io.scalarInput("striperows", dfeUInt(32));
+    DFEVar nstripes = io.scalarInput("nstripes", dfeUInt(32));
+    DFEVar iterations = io.scalarInput("iterations", dfeUInt(32));
+
+    DFEVector<DFEVar> a = io.input("a", vtype);
+    DFEVar b = io.input("prevb", dfeFloat(11, 53));
+
+    DenseBlasLib.LMemDMVM dmvm = DenseBlasLib.lmemDMVM(
+        this, maxBsize, n, nstripes, iterations);
+    DFEVector<DFEVar> v = io.input("v", vtype, dmvm.getReadEnable());
+    dmvm.mult(a, v, b);
+
+    io.output("b", dmvm.getRes(), dfeFloat(11, 53));
+  }
+}
