@@ -33,7 +33,7 @@ vec run_cpu(const Matrix& m, const vec& b) {
 int main(void) {
 
   long n = 48 * 8 * 5; // 64; // * 2; // 200 * 384; // 3 * (1 << 14);
-  long iterations = 1;
+  long iterations = 2;
   Matrix m(n);
   m.init_random();
   m.print_info();
@@ -80,9 +80,9 @@ int main(void) {
     //cout << b[i] << " ";
   //cout << endl;
   //cout << endl;
-  //for (int i = 0; i < n; i++)
-    //cout << exp[i] << " ";
-  //cout << endl;
+  for (int i = 0; i < n; i++)
+    cout << exp[i] << " ";
+  cout << endl;
 
   // Final round of reduction on CPU
   vector<double> res(n, 0);
@@ -92,14 +92,14 @@ int main(void) {
       res[j] += b[i * n + j];
     }
 
-  //cout << "Reduced results." << endl;
-  //for (int i = 0; i < n; i++)
-    //cout << res[i] << " ";
-  //cout << endl;
+  cout << "Reduced results." << endl;
+  for (int i = 0; i < n; i++)
+    cout << res[i] << " ";
+  cout << endl;
 
   for (int j = 0; j < iterations; j++) {
     for (int i = 0; i < n; ++i) {
-      if (res[j] != exp[i]) {
+      if (res[j] != exp[i] * iterations) {
         cout << "Wrong output, iteration " << j << endl;
         return 1;
       }
