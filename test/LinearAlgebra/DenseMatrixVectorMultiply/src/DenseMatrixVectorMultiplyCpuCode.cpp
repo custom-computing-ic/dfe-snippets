@@ -32,14 +32,13 @@ vec run_cpu(const Matrix& m, const vec& b) {
 
 int main(void) {
 
-  long n = 48 * 64 * 10; // * 2; // 200 * 384; // 3 * (1 << 14);
+  long n = 48 * 8 * 5; // 64; // * 2; // 200 * 384; // 3 * (1 << 14);
   long iterations = 1;
   Matrix m(n);
   m.init_random();
   m.print_info();
  // m.print();
 
-  vector<double> b(n * iterations, 0);
   vector<double> v(n, 1);
   auto exp = run_cpu(m, v);
 
@@ -48,6 +47,8 @@ int main(void) {
   print_clock_diff("Convert to strided", start);
 
   max_config_set_int64(MAX_CONFIG_PCIE_TIMEOUT, 120);
+
+  int partialSums = 8 * 4;
 
   long bsizeBytes = sizeof(double) * n;
   start = high_resolution_clock::now();
@@ -64,25 +65,41 @@ int main(void) {
   DenseMatrixVectorMultiply(
       n,
       iterations,
+      8 * 4,
       &copyv[0]
       );
-//      &b[0]);
   print_clock_diff("FPGA run took", start);
+
+  int size = n * partialSums;
+  vector<double> b(size, 0);
   DenseMatrixVectorMultiply_read(
-      bsizeBytes,
+      bsizeBytes * partialSums,
       bsizeBytes * n,
       (uint8_t *)&b[0]);
-  for (int i = 0; i < n; i++)
-    cout << b[i] << " ";
-  cout << endl;
-  cout << endl;
-  for (int i = 0; i < n; i++)
-    cout << exp[i] << " ";
-  cout << endl;
+  //for (int i = 0; i < size; i++)
+    //cout << b[i] << " ";
+  //cout << endl;
+  //cout << endl;
+  //for (int i = 0; i < n; i++)
+    //cout << exp[i] << " ";
+  //cout << endl;
+
+  // Final round of reduction on CPU
+  vector<double> res(n, 0);
+  for (int i = 0; i < partialSums; i++)
+    for (int j = 0; j < n; j++) {
+      // cout << b[i * n + j] << " ";
+      res[j] += b[i * n + j];
+    }
+
+  //cout << "Reduced results." << endl;
+  //for (int i = 0; i < n; i++)
+    //cout << res[i] << " ";
+  //cout << endl;
 
   for (int j = 0; j < iterations; j++) {
     for (int i = 0; i < n; ++i) {
-      if (b[j * n + i] != exp[i]) {
+      if (res[j] != exp[i]) {
         cout << "Wrong output, iteration " << j << endl;
         return 1;
       }

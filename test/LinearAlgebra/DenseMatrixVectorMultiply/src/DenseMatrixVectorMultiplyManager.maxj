@@ -45,6 +45,7 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
 
         InterfaceParam bsize = N * CPUTypes.DOUBLE.sizeInBytes();
         InterfaceParam stripeWidth = ei.addConstant(WIDTH);
+        InterfaceParam nPartialSums = ei.addParam("nPartialSums", CPUTypes.INT64);
 
         //ei.setLMemLinear(
             //"a",
@@ -54,21 +55,21 @@ public class DenseMatrixVectorMultiplyManager extends CustomManager{
         ei.setLMemLinearWrapped(
             "a",
             zero,
-            bsize,
+            N * bsize,
             iterations * N * bsize,
             zero);
 
         ei.setLMemLinearWrapped(
             "b",
             N * bsize,
-            bsize,
+            bsize * nPartialSums,
             iterations * N * bsize / stripeWidth,
             zero);
 
         ei.setLMemLinearWrapped(
             "prevb",
             N * bsize,
-            bsize,
+            bsize * nPartialSums,
             iterations * N * bsize / stripeWidth,
             zero);
 
