@@ -6,6 +6,13 @@
 namespace dfesnippets {
   namespace timing {
 
+    double clock_diff(
+        std::chrono::high_resolution_clock::time_point start) {
+      using namespace std::chrono;
+      auto end = std::chrono::high_resolution_clock::now();
+      return duration_cast<duration<double> >(end - start).count();
+    }
+
     void print_clock_diff(
         std::string item,
         std::chrono::high_resolution_clock::time_point start) {
