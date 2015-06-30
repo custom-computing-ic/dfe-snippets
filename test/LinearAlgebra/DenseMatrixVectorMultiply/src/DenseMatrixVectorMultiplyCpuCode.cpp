@@ -32,8 +32,8 @@ vec run_cpu(const Matrix& m, const vec& b) {
 
 int main(void) {
 
-  long n = 48 * 8 * 5; // 64; // * 2; // 200 * 384; // 3 * (1 << 14);
-  long iterations = 2;
+  long n = 384 * 150;
+  long iterations = 10;
   Matrix m(n);
   m.init_random();
   m.print_info();
@@ -48,7 +48,7 @@ int main(void) {
 
   max_config_set_int64(MAX_CONFIG_PCIE_TIMEOUT, 120);
 
-  int partialSums = 8 * 4;
+  int partialSums = 8 * 4 * 2;
 
   long bsizeBytes = sizeof(double) * n;
   start = high_resolution_clock::now();
@@ -56,16 +56,23 @@ int main(void) {
       bsizeBytes * n,
       0,
       (uint8_t *)m.linear_access_pointer());
+
+  // set mem contents to zero
+  vector<double> zerov(n * partialSums, 0);
+  DenseMatrixVectorMultiply_write(
+      zerov.size() * sizeof(double),
+      bsizeBytes * n,
+      (uint8_t *)&zerov[0]);
   print_clock_diff("Write to DRAM took", start);
 
-  cout << "Starting DFE run " << endl;
+  cout << "Starting DFE run (" << iterations << " iterations) " << endl;
   start = high_resolution_clock::now();
   vector<double> copyv = dfesnippets::vectorutils::ncopy(v, iterations);
 
   DenseMatrixVectorMultiply(
       n,
       iterations,
-      8 * 4,
+      partialSums,
       &copyv[0]
       );
   print_clock_diff("FPGA run took", start);
@@ -76,26 +83,13 @@ int main(void) {
       bsizeBytes * partialSums,
       bsizeBytes * n,
       (uint8_t *)&b[0]);
-  //for (int i = 0; i < size; i++)
-    //cout << b[i] << " ";
-  //cout << endl;
-  //cout << endl;
-  for (int i = 0; i < n; i++)
-    cout << exp[i] << " ";
-  cout << endl;
 
   // Final round of reduction on CPU
   vector<double> res(n, 0);
   for (int i = 0; i < partialSums; i++)
     for (int j = 0; j < n; j++) {
-      // cout << b[i * n + j] << " ";
       res[j] += b[i * n + j];
     }
-
-  cout << "Reduced results." << endl;
-  for (int i = 0; i < n; i++)
-    cout << res[i] << " ";
-  cout << endl;
 
   for (int j = 0; j < iterations; j++) {
     for (int i = 0; i < n; ++i) {
