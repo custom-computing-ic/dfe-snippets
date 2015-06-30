@@ -14,6 +14,13 @@ namespace dfesnippets {
           copyv[j * size + i] = v[i];
       return copyv;
     }
+
+    template <typename T>
+      void print_vector(std::vector<T> in) {
+        for (auto v : in)
+          std::cout << v << " ";
+        std::cout << std::endl;
+      }
   }
 }
 
