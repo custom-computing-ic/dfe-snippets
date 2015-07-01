@@ -35,8 +35,8 @@ vec run_cpu(const Matrix& m, const vec& b) {
 
 int main(void) {
 
-  long n = 48 * 8 * 5;//:w
-  long iterations = 2;
+  long n = 48 * 8 * 5 * 20;//:w
+  long iterations = 10;
   Matrix m(n);
   m.init_random();
   m.print_info();
@@ -56,7 +56,10 @@ int main(void) {
   long bsizeBytes = sizeof(double) * n;
 
   long stripeWidth = 48;
-  ResultsFormatter rf(2 * n * n, 2 * n * n / stripeWidth);
+  ResultsFormatter rf(
+      2 * n * n,
+      8 * (n * n + 2 * n * n / stripeWidth),
+      iterations);
   rf.startTiming();
   DenseMatrixVectorMultiply_write(
       bsizeBytes * n,
@@ -70,7 +73,6 @@ int main(void) {
       zerov.size() * sizeof(double),
       bsizeBytes * n,
       (uint8_t *)&zerov[0]);
-  print_clock_diff("Write to DRAM", start);
 
   cout << "Starting DFE run (" << iterations << " iterations) " << endl;
   start = high_resolution_clock::now();

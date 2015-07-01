@@ -11,6 +11,7 @@ namespace dfesnippets {
     class ResultsFormatter {
       long flops, dataSize;
 
+      long iterations = 1;
       double dramWriteTime = -1;
       double dramReadTime = -1;
       std::chrono::high_resolution_clock::time_point firstStart;
@@ -27,6 +28,12 @@ namespace dfesnippets {
       ResultsFormatter(
           long _flops,
           long _dataSize) : flops(_flops), dataSize(_dataSize) {
+      }
+
+      ResultsFormatter(
+          long _flops,
+          long _dataSize,
+          long _iterations) : flops(_flops), dataSize(_dataSize), iterations(_iterations) {
       }
 
       double toGBps(double bytes, double seconds) {
@@ -59,25 +66,28 @@ namespace dfesnippets {
         double gflops = toGFlops(flops);
         double totalRunTime = dfesnippets::timing::clock_diff(firstStart);
 
+        if (dramWriteTime != -1) {
+          std::cout << "Dram Write " << std::endl;
+          std::cout << "  Time (s)           = " << dramWriteTime << std::endl;
+          std::cout << "  Size (GB)          = " << toGB(dramWriteSize) << std::endl;
+          std::cout << "  Bwidth (GB/s)      = " << toGBps(dramWriteSize, dramWriteTime) << std::endl;
+        }
+
+        std::cout << "Compute " << std::endl;
+        std::cout <<   "  Iterations         = " << iterations << std::endl;
+        std::cout <<   "  Time               = " << computeTime << std::endl;
+        std::cout <<   "  Time / iteration   = " << computeTime / iterations << std::endl;
+        std::cout <<   "  GFLOPS             = " << gflops * iterations << std::endl;
+        std::cout <<   "  GFLOPS/s           = " << gflops * iterations / computeTime << std::endl;
+        std::cout <<   "  Data Size          = " << toGB(dataSize * iterations) << std::endl;
+        std::cout <<   "  Bwidth (GB/s)      = " << toGBps(dataSize * iterations, computeTime) << std::endl;
+
         if (dramReadTime != -1) {
           std::cout << "Dram Read" << std::endl;
           std::cout << "  Time (s)           = " << dramReadTime << std::endl;
           std::cout << "  Size (GB)          = " << toGB(dramReadSize) << std::endl;
           std::cout << "  Bwidth (GB/s)      = " << toGBps(dramReadSize, dramReadTime) << std::endl;
         }
-
-        if (dramWriteTime != -1) {
-          std::cout << "Dram Write " << std::endl;
-          std::cout << "  Time (s)           = " << dramWriteTime << std::endl;
-          std::cout << "  Size (GB)          = " << toGB(dramWriteSize) << std::endl;
-          std::cout << "  Bwidth (GB/s)      = " << toGBps(dramWriteSize, dramReadTime) << std::endl;
-        }
-
-        std::cout << "Compute " << std::endl;
-        std::cout <<   "  Time               = " << computeTime << std::endl;
-        std::cout <<   "  GFLOPS             = " << gflops << std::endl;
-        std::cout <<   "  GFLOPS/s           = " << gflops / computeTime << std::endl;
-        std::cout <<   "  Bwidth (GB/s)      = " << toGBps(dataSize, computeTime) << std::endl;
 
         std::cout <<   "Running Total (s)    = " << totalRunTime << std::endl;
         std::cout <<   "Total GFLOPS         = " << gflops / totalRunTime << std::endl;
