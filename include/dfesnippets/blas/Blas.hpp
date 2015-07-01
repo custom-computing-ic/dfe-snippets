@@ -78,11 +78,11 @@ namespace dfesnippets {
           std::cerr << "Error! n must be a multiple of stride_width" << std::endl;
           return;
         }
-        int nstrides = n / stride_width;
-        int idx = 0;
-        for (int i = 0; i < nstrides; i++)
-          for (int row = 0; row < n; row++)
-            for (int col = 0; col < stride_width; col++) {
+        long nstrides = n / stride_width;
+        long idx = 0;
+        for (long i = 0; i < nstrides; i++)
+          for (long row = 0; row < n; row++)
+            for (long col = 0; col < stride_width; col++) {
               new_data[idx++] = data[row * n + i * stride_width + col] ;
             }
         delete [] data;
