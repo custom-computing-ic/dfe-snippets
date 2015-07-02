@@ -20,23 +20,28 @@ using namespace dfesnippets::timing;
 using namespace dfesnippets::vectorutils;
 using namespace dfesnippets::formatting;
 
+long n = 48 * 8; // * 5 * 20;//:w
+long iterations = 10;
+long stripeWidth = 48;
+
+ResultsFormatter rf(
+    2 * n * n,
+    8 * (n * n + 2 * n * n / stripeWidth),
+    iterations);
+
 vec run_cpu(const Matrix& m, const vec& b) {
   int n = m.size();
   // omp_set_num_threads(numThreads);
-  auto start_time = high_resolution_clock::now();
-  auto v = m * b;
-  stringstream ss;
-  ss << "Parallel (";
-  ss << omp_get_max_threads();
-  ss << " threads) ";
-  print_clock_diff(ss.str(), start_time);
+  rf.startTiming();
+  for (int i = 0; i < iterations; i++)
+    auto v = m * b;
+  rf.setCpuTime(rf.stopTiming());
+  rf.setCpuNumThreads(omp_get_max_threads());
   return m * b;
 }
 
 int main(void) {
 
-  long n = 48 * 8 * 5 * 20;//:w
-  long iterations = 10;
   Matrix m(n);
   m.init_random();
   m.print_info();
@@ -55,11 +60,7 @@ int main(void) {
 
   long bsizeBytes = sizeof(double) * n;
 
-  long stripeWidth = 48;
-  ResultsFormatter rf(
-      2 * n * n,
-      8 * (n * n + 2 * n * n / stripeWidth),
-      iterations);
+  rf.resetTiming();
   rf.startTiming();
   DenseMatrixVectorMultiply_write(
       bsizeBytes * n,
