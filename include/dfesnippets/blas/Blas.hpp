@@ -31,7 +31,7 @@ namespace dfesnippets {
         delete [] data;
       }
 
-      value_t& operator()(long i, long j) {
+      value_t& operator()(long i, long j) const {
         return data[i * n + j];
       }
 
@@ -45,7 +45,7 @@ namespace dfesnippets {
         return r;
       }
 
-      void print() {
+      void print() const {
         for (int i = 0; i < n; i ++ ) {
           for (int j = 0 ; j < n; j++)
             std::cout << operator()(i, j) << " ";
@@ -58,6 +58,13 @@ namespace dfesnippets {
         for (long i = 0; i < n; i ++ )
           for (long j = 0 ; j < n; j++)
             data[i * n + j] =  j / 48 + 1;
+      }
+
+      void init() {
+#pragma omp parallel for
+        for (long i = 0; i < n; i ++ )
+          for (long j = 0 ; j < n; j++)
+            data[i * n + j] =  (i * j) % 48 + 1;
       }
 
       void print_info() {
