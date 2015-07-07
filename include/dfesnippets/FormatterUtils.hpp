@@ -8,13 +8,16 @@
 namespace dfesnippets {
   namespace formatting {
 
+    /** A general purpose class for timing, measuring and printing various metrics */
     class ResultsFormatter {
       long flops, dataSize;
 
-      long cpuNhreads = -1;
+      long cpuNhreads = 1;
       long iterations = 1;
       double dramWriteTime = -1;
       double dramReadTime = -1;
+      double computeTime = -1;
+
       double cpuTime;
       std::chrono::high_resolution_clock::time_point firstStart;
       std::chrono::high_resolution_clock::time_point start;
@@ -24,7 +27,6 @@ namespace dfesnippets {
 
       long dramReadSize, dramWriteSize;
 
-      double computeTime;
 
       public:
       ResultsFormatter(
@@ -74,22 +76,24 @@ namespace dfesnippets {
         double gflops = toGFlops(flops);
         double totalRunTime = dfesnippets::timing::clock_diff(firstStart);
 
-        std::cout << "  ----------------------   " << std::endl;
         if (dramWriteTime != -1) {
+          std::cout << "  ----------------------   " << std::endl;
           std::cout << "[FPGA] Dram Write " << std::endl;
           std::cout << "  Time (s)           = " << dramWriteTime << std::endl;
           std::cout << "  Size (GB)          = " << toGB(dramWriteSize) << std::endl;
           std::cout << "  Bwidth (GB/s)      = " << toGBps(dramWriteSize, dramWriteTime) << std::endl;
         }
 
-        std::cout << "[FPGA] Compute " << std::endl;
-        std::cout <<   "  Iterations         = " << iterations << std::endl;
-        std::cout <<   "  Time               = " << computeTime << std::endl;
-        std::cout <<   "  Time / iteration   = " << computeTime / iterations << std::endl;
-        std::cout <<   "  GFLOPS             = " << gflops * iterations << std::endl;
-        std::cout <<   "  GFLOPS/s           = " << gflops * iterations / computeTime << std::endl;
-        std::cout <<   "  Data Size          = " << toGB(dataSize * iterations) << std::endl;
-        std::cout <<   "  Bwidth (GB/s)      = " << toGBps(dataSize * iterations, computeTime) << std::endl;
+        if (computeTime != -1) {
+          std::cout << "[FPGA] Compute " << std::endl;
+          std::cout <<   "  Iterations         = " << iterations << std::endl;
+          std::cout <<   "  Time               = " << computeTime << std::endl;
+          std::cout <<   "  Time / iteration   = " << computeTime / iterations << std::endl;
+          std::cout <<   "  GFLOPS             = " << gflops * iterations << std::endl;
+          std::cout <<   "  GFLOPS/s           = " << gflops * iterations / computeTime << std::endl;
+          std::cout <<   "  Data Size          = " << toGB(dataSize * iterations) << std::endl;
+          std::cout <<   "  Bwidth (GB/s)      = " << toGBps(dataSize * iterations, computeTime) << std::endl;
+        }
 
         if (dramReadTime != -1) {
           std::cout << "[FPGA] Dram Read" << std::endl;
@@ -98,8 +102,10 @@ namespace dfesnippets {
           std::cout << "  Bwidth (GB/s)      = " << toGBps(dramReadSize, dramReadTime) << std::endl;
         }
 
-        std::cout <<   "[FPGA] Total (s)     = " << totalRunTime << std::endl;
-        std::cout <<   "[FPGA] Total GFLOPS  = " << gflops / totalRunTime << std::endl;
+        if (computeTime != -1) {
+          std::cout <<   "[FPGA] Total (s)     = " << totalRunTime << std::endl;
+          std::cout <<   "[FPGA] T-otal GFLOPS  = " << gflops / totalRunTime << std::endl;
+        }
 
         if (cpuTime != -1) {
           std::cout << "  ----------------------   " << std::endl;
@@ -110,12 +116,13 @@ namespace dfesnippets {
           std::cout << "  Time / iteration   = " << cpuTime / iterations << std::endl;
           std::cout << "  GFLOP/s            = " << gflops * iterations / cpuTime << std::endl;
           std::cout << "  Bwidth (GB/s)      = " << toGBps(dataSize * iterations, cpuTime) << std::endl;
+        }
+
+        if (cpuTime != -1 && computeTime != -1) {
           std::cout << "  ----------------------   " << std::endl;
           std::cout << "Compute Speedup      = " << cpuTime / computeTime << std::endl;
           std::cout << "Total  Speedup       = " << cpuTime / totalRunTime << std::endl;
         }
-
-
       }
 
       void startTiming() {

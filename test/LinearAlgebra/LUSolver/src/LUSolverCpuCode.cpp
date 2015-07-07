@@ -10,10 +10,12 @@
 #include <dfesnippets/blas/Blas.hpp>
 #include <dfesnippets/VectorUtils.hpp>
 #include <dfesnippets/sparse/utils.hpp>
+#include <dfesnippets/FormatterUtils.hpp>
 
 using namespace std;
 using namespace dfesnippets::blas;
 using namespace dfesnippets::vectorutils;
+using namespace dfesnippets::formatting;
 
 class System {
   public:
@@ -44,13 +46,11 @@ class System {
 
       // generate rhs
       b = a * x;
-
-    }
-
+}
     bool checkSolution(vector<double> got) {
       bool good = true;
       for (int i = 0; i < x.size(); i++)
-        if (!almost_equal(got[i], x[i], 1E-8)) {
+        if (!almost_equal(got[i], x[i], 1E-10)) {
           cerr << "Got " << got[i] << " exp " << x[i] << " @i= " << i << endl;
           good = false;
         }
@@ -108,7 +108,9 @@ vector<double> lusolve(const Matrix &a, vector<double> b) {
 
 int main(void) {
 
-  int n = 4000;
+  long n = 2000;
+
+  ResultsFormatter rf(n * n * n  * 2.0 / 3.0, n * n);
 
   std::cout << "Building system: " << std::endl;
   System s(n);
@@ -117,16 +119,17 @@ int main(void) {
   s.a.print_info();
 
   std::cout << "Solving: " << std::endl;
+  rf.startTiming();
   auto got = lusolve(s.a, s.b);
+  rf.setCpuTime(rf.stopTiming());
 
   cout << endl << "Final: " << endl;
   //s.a.print();
-
   if (s.checkSolution(got)) {
     std::cout << "Test passed " << std::endl;
     return 0;
   }
-
+  rf.print();
   std::cout << "Test failed " << std::endl;
   //std::cout << "Rhs: " << std::endl;
   //print_vector(s.b);
@@ -134,6 +137,5 @@ int main(void) {
   //print_vector(s.x);
   //std::cout << "Got: " << std::endl;
   //print_vector(got);
-
   return 1;
 }
