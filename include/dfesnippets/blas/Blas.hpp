@@ -67,6 +67,13 @@ namespace dfesnippets {
             data[i * n + j] =  (i * j) % 48 + 1;
       }
 
+      void init(int val) {
+#pragma omp parallel for
+        for (long i = 0; i < n; i ++ )
+          for (long j = 0 ; j < n; j++)
+            data[i * n + j] =  val;
+      }
+
       void print_info() {
         std::cout << "Matrix "  << std::endl;
         std::cout << "  Dense (" << n << " x " << n << ")" << std::endl;
