@@ -23,7 +23,7 @@ using namespace dfesnippets::timing;
 using namespace dfesnippets::vectorutils;
 using namespace dfesnippets::formatting;
 
-long n = 48 * 8;
+long n = 48 * 8 * 2;
 long iterations = 10;
 long stripeWidth = 48;
 
