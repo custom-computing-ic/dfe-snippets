@@ -123,6 +123,15 @@ all: runsim build
 
 .PHONY: stopsim run cleansim cleandfe debug debughw simlib dfelib
 
+# ---- CPU Only ----
+$(PRJ)_cpuc: $(CPUFILES)
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -DCPU_ONLY -o $@
+
+runcpu: $(PRJ)_cpuc
+	echo "Runing cpu"
+	./$(PRJ)_cpuc
+	echo "Ran CPUc"
+
 # ---- Simulation ----
 
 $(SIMMAXDIR)/$(PRJ).max: $(ENGINEFILES)
