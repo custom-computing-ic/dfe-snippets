@@ -13,15 +13,25 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   include_directories ($ENV{MAXELEROSDIR}/include)
   link_directories($ENV{MAXCOMPILERDIR}/lib)
   link_directories($ENV{MAXELEROSDIR}/lib)
+
+  # --- Maxeler targets
   add_custom_target(
     blas_dmvm_fpga_sim
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runsim)
   add_custom_target(
     blas_dmvm_fpga_dfe
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build run)
+
+  # --- Tests
   add_test(
     NAME test_blas_dmvm_fpga_sim
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runsim)
+  add_test(
+    NAME test_sorting_bitonic_fpga_sim
+    COMMAND make -C ../test/Sorting/BitonicSorting/build runsim)
+  add_test(
+    NAME test_sorting_parallel_bitonic_sort_fpga_sim
+    COMMAND make -C ../test/Sorting/ParallelBitonicSort/build runsim)
 else()
   message(STATUS "MAXCOMPILERDIR not set!")
   add_custom_target(
