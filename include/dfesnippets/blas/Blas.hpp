@@ -106,6 +106,15 @@ namespace dfesnippets {
       inline int size() const {
         return n;
       }
+
+      void row_interchange(int i, int j) {
+        for (int k = 0; k < n; k++) {
+          value_t tmp = this->operator()(i, k);
+          this->operator()(i, k) = this->operator()(j, k);
+          this->operator()(j, k) = tmp;
+        }
+      }
+
     };
 
   }
