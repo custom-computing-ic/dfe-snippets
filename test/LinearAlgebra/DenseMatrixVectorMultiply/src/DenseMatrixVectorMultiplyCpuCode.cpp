@@ -6,8 +6,11 @@
 #include <sstream>
 #include <omp.h>
 
+#ifdef PA_MAXELER
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
+#endif
+
 #include <dfesnippets/blas/Blas.hpp>
 #include <dfesnippets/timing/Timing.hpp>
 #include <dfesnippets/VectorUtils.hpp>
@@ -20,7 +23,7 @@ using namespace dfesnippets::timing;
 using namespace dfesnippets::vectorutils;
 using namespace dfesnippets::formatting;
 
-long n = 48 * 8 * 5 * 20;//:w
+long n = 48 * 8 * 2;
 long iterations = 10;
 long stripeWidth = 48;
 
@@ -30,7 +33,6 @@ ResultsFormatter rf(
     iterations);
 
 vec run_cpu(const Matrix& m, const vec& b) {
-  int n = m.size();
   // omp_set_num_threads(numThreads);
   rf.startTiming();
   for (int i = 0; i < iterations; i++)
@@ -45,7 +47,6 @@ int main(void) {
   Matrix m(n);
   m.init_random();
   m.print_info();
- // m.print();
 
   vector<double> v(n, 1);
   auto exp = run_cpu(m, v);
@@ -54,12 +55,10 @@ int main(void) {
   m.convert_to_strided_access(48);
   print_clock_diff("Convert to strided", start);
 
-  max_config_set_int64(MAX_CONFIG_PCIE_TIMEOUT, 120);
-
+#ifdef PA_MAXELER
   int partialSums = 8 * 4 * 2;
-
   long bsizeBytes = sizeof(double) * n;
-
+  max_config_set_int64(MAX_CONFIG_PCIE_TIMEOUT, 120);
   rf.resetTiming();
   rf.startTiming();
   DenseMatrixVectorMultiply_write(
@@ -106,9 +105,6 @@ int main(void) {
       res[j] += b[i * n + j];
     }
 //  print_vector(res);
-
-  rf.print();
-
   for (int j = 0; j < iterations; j++) {
     for (int i = 0; i < n; ++i) {
       if (res[j] != exp[i] * iterations) {
@@ -117,6 +113,9 @@ int main(void) {
       }
     }
   }
+
+  rf.print();
+#endif
 
   cout << "Test passed" << endl;
   return 0;
