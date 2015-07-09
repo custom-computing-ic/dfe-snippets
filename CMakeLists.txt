@@ -12,12 +12,12 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   link_directories($ENV{MAXCOMPILERDIR}/lib)
   link_directories($ENV{MAXELEROSDIR}/lib)
   add_custom_target(
-    dmvm
+    blas_dmvm_fpga
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runsim)
 else()
   message(STATUS "MAXCOMPILERDIR not set!")
   add_custom_target(
-    dmvm
+    blas_dmvm_cpu
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runcpu)
 endif()
 

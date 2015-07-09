@@ -143,7 +143,7 @@ $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_simc.o: $(CPUFILES)
-	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DPA_MAXELER -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
 	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
@@ -183,7 +183,7 @@ $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_dfec.o: $(CPUFILES)
-	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DPA_MAXELER -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
 	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
