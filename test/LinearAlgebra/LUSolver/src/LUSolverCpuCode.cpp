@@ -107,19 +107,29 @@ vector<double> backSubstitute(const Matrix& a, vector<double> b) {
 
 // solve Ax = b using Gaussian elimination with partial pivoting
 // TODO
-vector<double> lusolvepp(const Matrix &a, vector<double> b) {
+vector<double> lusolvepp(Matrix &a, vector<double> b) {
   auto n = a.size();
 
   // transform A to upper diagonal matrix
   for (int i = 0; i < n; i++) {
     for (int j = i + 1; j < n; j++) {
-      double mij = a(j, i) / a(i, i);
       if (a(i, i) == 0) {
         cout << " Warning: Not all submatrices are singular - finding pivot" << endl;
-        // TODO find row with largest element
-        // TODO interchange
+        //std::cout << "Matrix before " << std::endl;
+        //a.print();
+        double max = 0;
+        int pivot = i;
+        for (int k = i + 1; k < n; k++)
+          if (abs(a(i, k)) > max) {
+            max = abs(a(i, k));
+            pivot = k;
+          }
+        a.row_interchange(i, pivot);
+        //std::cout << "Matrix after: " << std::endl;
+        //a.print();
         // TODO store permutations
       }
+      double mij = a(j, i) / a(i, i);
       a(j, i) = 0;
       b[j] -= b[i] * mij;
       for (int k = i + 1; k < n; k++) {
@@ -214,7 +224,7 @@ bool test_pp_ge(bool verbose = false) {
   if (verbose)
     std::cout << "Solving: " << std::endl;
   rf.startTiming();
-  auto got = lusolve(s.a, s.b);
+  auto got = lusolvepp(s.a, s.b);
   rf.setCpuTime(rf.stopTiming());
 
   bool status = s.checkSolution(got);
@@ -232,7 +242,7 @@ bool test_pp_ge(bool verbose = false) {
 
 int main(void) {
   bool passed = true;
-  passed &= test_simple_ge();
+//  passed &= test_simple_ge();
   passed &= test_pp_ge();
   return passed ? 0 : 1;
 }
