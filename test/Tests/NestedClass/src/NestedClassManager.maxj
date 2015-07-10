@@ -30,7 +30,7 @@ public class NestedClassManager extends CustomManager{
         int        size = type.sizeInBytes();
 
         InterfaceParam N             = engine_interface.addParam("N", CPUTypes.INT);
-        engine_interface.setTicks(s_partialSummationKernelName, N );
+        engine_interface.setTicks(s_kernelName, N );
 
         engine_interface.setStream("input",  type, N * size);
         engine_interface.setStream("output", type, N * size);
