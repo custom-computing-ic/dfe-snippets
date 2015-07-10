@@ -28,7 +28,7 @@ else()
     blas_dmvm_cpu
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runcpu)
   add_test(
-    NAME bleah
-    COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runcpu)
+    NAME test_blas_lusolver_fpga_sim
+    COMMAND make -C ../test/LinearAlgebra/LUSolver/build runcpu)
 endif()
 

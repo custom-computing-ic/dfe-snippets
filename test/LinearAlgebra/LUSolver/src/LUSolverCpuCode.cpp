@@ -4,8 +4,10 @@
 #include <iostream>
 #include <memory>
 
+#ifdef PA_MAXELER
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
+#endif
 
 #include <dfesnippets/blas/Blas.hpp>
 #include <dfesnippets/VectorUtils.hpp>
@@ -157,7 +159,7 @@ vector<double> lusolve(const Matrix &a, vector<double> b) {
 }
 
 
-void test_simple_ge(bool verbose = false) {
+bool test_simple_ge(bool verbose = false) {
   long n = 100;
 
   ResultsFormatter rf(n * n * n  * 2.0 / 3.0, n * n);
@@ -178,20 +180,22 @@ void test_simple_ge(bool verbose = false) {
   auto got = lusolve(s.a, s.b);
   rf.setCpuTime(rf.stopTiming());
 
+  bool status = s.checkSolution(got);
   if (verbose)
     cout << endl << "Final: " << endl;
   //s.a.print();
-  if (s.checkSolution(got)) {
+  if (status) {
     std::cout << "Test passed " << std::endl;
   } else {
     std::cout << "Test failed " << std::endl;
   }
   if (verbose)
     rf.print();
+  return status;
 }
 
 // test Gaussian elimination with partial pivoting
-void test_pp_ge(bool verbose = false) {
+bool test_pp_ge(bool verbose = false) {
   long n = 10;
 
   ResultsFormatter rf(n * n * n  * 2.0 / 3.0, n * n);
@@ -213,20 +217,22 @@ void test_pp_ge(bool verbose = false) {
   auto got = lusolve(s.a, s.b);
   rf.setCpuTime(rf.stopTiming());
 
+  bool status = s.checkSolution(got);
   if (verbose)
     cout << endl << "Final: " << endl;
-  //s.a.print();
-  if (s.checkSolution(got)) {
+  if (status) {
     std::cout << "Test passed " << std::endl;
   } else {
     std::cout << "Test failed " << std::endl;
   }
   if (verbose)
     rf.print();
+  return status;
 }
 
 int main(void) {
-  test_simple_ge();
-  test_pp_ge();
-  return 0;
+  bool passed = true;
+  passed &= test_simple_ge();
+  passed &= test_pp_ge();
+  return passed ? 0 : 1;
 }
