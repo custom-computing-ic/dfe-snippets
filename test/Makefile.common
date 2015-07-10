@@ -123,6 +123,15 @@ all: runsim build
 
 .PHONY: stopsim run cleansim cleandfe debug debughw simlib dfelib
 
+# ---- CPU Only ----
+$(PRJ)_cpuc: $(CPUFILES)
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -DCPU_ONLY -o $@
+
+runcpu: $(PRJ)_cpuc
+	echo "Runing cpu"
+	./$(PRJ)_cpuc
+	echo "Ran CPUc"
+
 # ---- Simulation ----
 
 $(SIMMAXDIR)/$(PRJ).max: $(ENGINEFILES)
@@ -134,13 +143,13 @@ $(PRJ)_sim.o: $(SIMMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_simc.o: $(CPUFILES)
-	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(SIMMAXDIR) -D__SIM__ -DPA_MAXELER -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
 	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
 
 runsim: $(PRJ)_sim
-	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) -d$(NUMDEVICES) restart
+	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) -d$(NUMDEVICES) restart > /dev/null
 	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXOS_SIM) ./$(PRJ)_sim $(USER)a0:$(USER)a
 	make stopsim
 
@@ -174,7 +183,7 @@ $(PRJ)_dfe.o: $(DFEMAXDIR)/$(PRJ).max
 	$(SLICCOMPILE) $< $@
 
 $(PRJ)_dfec.o: $(CPUFILES)
-	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DDESIGN_NAME=$(PRJ) -c -o $@
+	$(CPUCOMPILER) $< $(ALL_FLAGS) -I$(DFEMAXDIR) -DPA_MAXELER -DDESIGN_NAME=$(PRJ) -c -o $@
 
 $(PRJ)_dfe: $(PRJ)_dfe.o $(PRJ)_dfec.o
 	$(CPUCOMPILER) $(ALL_FLAGS) -o $@ $^ $(LFLAGS)
