@@ -114,9 +114,8 @@ vector<double> lusolvepp(Matrix &a, vector<double> b) {
   for (int i = 0; i < n; i++) {
     for (int j = i + 1; j < n; j++) {
       if (a(i, i) == 0) {
-        cout << " Warning: Not all submatrices are singular - finding pivot" << endl;
-        //std::cout << "Matrix before " << std::endl;
-        //a.print();
+        std::cout << "Matrix before " << std::endl;
+        a.print();
         double max = 0;
         int pivot = i;
         for (int k = i + 1; k < n; k++)
@@ -125,8 +124,10 @@ vector<double> lusolvepp(Matrix &a, vector<double> b) {
             pivot = k;
           }
         a.row_interchange(i, pivot);
-        //std::cout << "Matrix after: " << std::endl;
-        //a.print();
+        cout << " Info: Not all submatrices are singular - pivot ";
+        cout << i << " <--> " << pivot << endl;
+        std::cout << "Matrix after: " << std::endl;
+        a.print();
         // TODO store permutations
       }
       double mij = a(j, i) / a(i, i);
