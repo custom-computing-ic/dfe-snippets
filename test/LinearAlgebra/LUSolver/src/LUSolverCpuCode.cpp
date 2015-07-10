@@ -124,6 +124,9 @@ vector<double> lusolvepp(Matrix &a, vector<double> b) {
             pivot = k;
           }
         a.row_interchange(i, pivot);
+        double tmp = b[i];
+        b[i] = b[pivot];
+        b[pivot] = tmp;
         cout << " Info: Not all submatrices are singular - pivot ";
         cout << i << " <--> " << pivot << endl;
         std::cout << "Matrix after: " << std::endl;

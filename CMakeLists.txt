@@ -22,11 +22,17 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   add_test(
     NAME test_blas_dmvm_fpga_sim
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runsim)
+  add_custom_target(
+    blas_lusolver_fpga_sim
+    COMMAND make -C ../test/LinearAlgebra/LUSolver/build runsim)
 else()
   message(STATUS "MAXCOMPILERDIR not set!")
   add_custom_target(
     blas_dmvm_cpu
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runcpu)
+  add_custom_target(
+    blas_lusolver_cpu
+    COMMAND make -C ../test/LinearAlgebra/LUSolver/build runcpu)
   add_test(
     NAME test_blas_lusolver_fpga_sim
     COMMAND make -C ../test/LinearAlgebra/LUSolver/build runcpu)
