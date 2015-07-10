@@ -4,6 +4,12 @@ project("dfe-snippets")
 
 enable_testing()
 
+function (add_fpga_test arg1 arg2)
+  add_test(
+    NAME test_${arg1}_${arg2}_fpga_sim
+    COMMAND make -C ../test/${arg1}/${arg2}/build runsim)
+endfunction(add_fpga_test)
+
 if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   message(STATUS "MAXCOMPILERDIR and MAXELEROSDIR are set, adding includes!")
   message(STATUS "  MAXCOMPILER --> $ENV{MAXCOMPILERDIR}")
@@ -23,33 +29,21 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build run)
 
   # --- Tests
-  add_test(
-    NAME test_blas_dmvm_fpga_sim
-    COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runsim)
-  add_test(
-    NAME test_blas_sparse_dot_fpga_sim
-    COMMAND make -C ../test/LinearAlgebra/SparseDotProduct/build runsim)
-  add_test(
-    NAME test_blas_dltsolve_fpga_sim
-    COMMAND make -C ../test/LinearAlgebra/DenseLowerTriangularSolve/build runsim)
-  add_test(
-    NAME test_blas_jacobi_fpga_sim
-    COMMAND make -C ../test/LinearAlgebra/Jacobi/build runsim)
-  add_test(
-    NAME test_blas_naive_dmmm
-    COMMAND make -C ../test/LinearAlgebra/NaiveMatrixMultiply/build runsim)
-  add_test(
-    NAME test_sorting_bitonic_fpga_sim
-    COMMAND make -C ../test/Sorting/BitonicSorting/build runsim)
-  add_test(
-    NAME test_sorting_parallel_bitonic_sort_fpga_sim
-    COMMAND make -C ../test/Sorting/ParallelBitonicSort/build runsim)
-  add_test(
-    NAME test_reductions_log_addreduce
-    COMMAND make -C ../test/Summation/LogAddReduce/build runsim)
-  add_test(
-    NAME test_reductions_balanced_tree
-    COMMAND make -C ../test/Summation/FullSummationBalancedTree/build runsim)
+  add_fpga_test(LinearAlgebra DenseMatrixVectorMultiply)
+  add_fpga_test(LinearAlgebra SparseDotProduct)
+  add_fpga_test(LinearAlgebra DenseLowerTriangularSolve)
+  add_fpga_test(LinearAlgebra Jacobi)
+  add_fpga_test(LinearAlgebra NaiveMatrixMultiply)
+  add_fpga_test(Sorting BitonicSorting)
+  add_fpga_test(Sorting ParallelBitonicSort)
+  add_fpga_test(Summation LogAddReduce)
+  add_fpga_test(Summation FullSummationBalancedTree)
+
+  # TODO
+  #add_test(
+    #NAME test_csrspmv_fpga_sim
+    #COMMAND make -C ../test/LinearAlgebra/CSRSpMV/build runsim)
+
 else()
   message(STATUS "MAXCOMPILERDIR not set!")
   add_custom_target(
