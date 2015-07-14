@@ -47,3 +47,5 @@ To create an external, __stand-alone project__ run:
 ./create.py <ProjectName>
 cd <ProjectName>/build && make runsim
 ```
+
+_NOTE_ If you select `c++` as the project language, the generated Makefile expects a compiler which supports C++ 11 (i.e the `--std=c++11` command line argument).
