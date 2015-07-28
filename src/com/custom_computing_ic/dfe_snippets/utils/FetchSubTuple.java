@@ -54,12 +54,13 @@ public class FetchSubTuple extends KernelLib
     private DFEVar m_numElementsStored;
 
     /***
-        @param   inputSize      The maximum number of entries to be processed per cycle.
+        @param   tupleSize      The maximum number of entries to be processed per cycle.
         @param   dataBitWidth   The bitwidth of dataType: necessary for correct initialisation of internal FIFOs.
         @param   dataType       The type of the content stored.
-        @param   align          Boolean indicating whether a sub-tuple needs to be aligned to 0-th index of output vector.
+        @param   align          Whether to align the content of sub-tuple to 0-th index at the output.
     */
-    public FetchSubTuple(KernelLib owner, String name, int tupleSize, int dataBitWidth, DFEType dataType, boolean align)
+    public FetchSubTuple(KernelLib owner, String name, int tupleSize, int dataBitWidth,
+                         DFEType dataType, boolean align)
     {
         super(owner);
 
@@ -81,7 +82,8 @@ public class FetchSubTuple extends KernelLib
         m_buffer = new SMIO[tupleSize];
         for (int i = 0; i < tupleSize; i++)
         {
-            m_buffer[i] = addStateMachine("Sm" + name + "" + i, new FifoWrapperSM(this, dataBitWidth, bufferDepth));
+            m_buffer[i] = addStateMachine("Sm" + name + "" + i,
+                            new FifoWrapperSM(this, dataBitWidth, bufferDepth));
         }
     }
 
