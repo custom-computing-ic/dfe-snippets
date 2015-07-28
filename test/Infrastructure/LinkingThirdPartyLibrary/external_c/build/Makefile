@@ -19,6 +19,12 @@ all: sim dfe
 
 sim: ${SOFTWAREPRJ}_sim
 dfe: ${SOFTWAREPRJ}_dfe
+
+runsim:
+	make -C ../../build simlib
+	make sim
+	./simrunner ./${SOFTWAREPRJ}_sim
+
 clean:
 	rm -f *.o *.so *_sim ${SOFTWAREPRJ}_sim ${SOFTWAREPRJ}_dfe
 

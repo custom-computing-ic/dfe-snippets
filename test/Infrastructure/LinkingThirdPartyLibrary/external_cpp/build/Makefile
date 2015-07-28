@@ -10,7 +10,7 @@ SOFTWAREPRJ=TargetCPUCode
 COMPILER_CFLAGS = -fopenmp
 OPT_FLAGS = -march=native -O3
 CFLAGS= ${COMPILER_CFLAGS} ${OPT_FLAGS} -Wall
-LFLAGS= -L${MAXELEROSDIR}/lib -lmaxeleros -fPIC #   -L${MAXCOMPILERDIR}/lib
+LFLAGS= -L${MAXELEROSDIR}/lib -lmaxeleros -fPIC
 ALL_FLAGS = ${CFLAGS} ${EXTRA_CFLAGS}
 
 all: sim dfe
@@ -19,6 +19,12 @@ all: sim dfe
 
 sim: ${SOFTWAREPRJ}_sim
 dfe: ${SOFTWAREPRJ}_dfe
+
+runsim:
+	make -C ../../build simlib
+	make sim
+	./simrunner ./${SOFTWAREPRJ}_sim
+
 clean:
 	rm -f *.o *.so *_sim ${SOFTWAREPRJ}_sim ${SOFTWAREPRJ}_dfe
 
@@ -27,7 +33,7 @@ clean:
 ${SOFTWAREPRJ}_simc.o: ../${SOFTWAREPRJ}.cpp
 	${CXX}  $< ${ALL_FLAGS} -I${HARDWARE_INCLUDE_DIR}/ -c -o $@
 
-${SOFTWAREPRJ}_sim: ${SOFTWAREPRJ}_simc.o
+${SOFTWAREPRJ}_sim: ${SOFTWAREPRJ}_simc.o 
 	${CXX} ${ALL_FLAGS} -L${HARDWARE_SO_DIR} -l${HARDWAREPRJ}_sim  -o $@ $^ ${LFLAGS}
 
 
