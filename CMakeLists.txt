@@ -4,6 +4,7 @@ project("dfe-snippets")
 
 enable_testing()
 
+# TODO: clean up builds after tests!
 function (add_fpga_test arg1 arg2)
   add_test(
     NAME test_${arg1}_${arg2}_fpga_sim
@@ -59,6 +60,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   add_fpga_test(LanguageFeatures NestedCounterVariableBoundary)
   add_fpga_test(Infrastructure BRAMReadWrite)
   add_fpga_test(Infrastructure InputDependentCounterIterateUntil)
+  #  FIXME:
   #  add_fpga_test(Infrastructure InputDependentCounterTimesToRepeat)
   add_fpga_test(Infrastructure LatencyAnnotation)
   add_fpga_test(Infrastructure LinearMemoryControl)
