@@ -60,7 +60,7 @@ int main() {
 
 ## Creating new projects
 
-Use `create.py -h` for a list of available options.
+Use `create.py -h` for a list of available options.
 
 To create and run a __new dfe-snippet__ from the snippets directory run:
 ```
@@ -83,4 +83,4 @@ Test this project with:
 cd <ProjectName>/build && make runsim
 ```
 
-__Note__ If you select `c++` as the project language, the generated Makefile expects a compiler which supports C++ 11 (i.e the `--std=c++11` command line argument).
+__Note__ If you select `c++` as the project language, the generated Makefile expects a compiler which supports C++ 11 (i.e the `--std=c++11` command line argument).
