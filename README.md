@@ -83,6 +83,4 @@ Test this project with:
 cd <ProjectName>/build && make runsim
 ```
 
-__Note__ that python scripts require __python 2.7__ (check your version with `python -v`).
-
 __Note__ If you select `c++` as the project language, the generated Makefile expects a compiler which supports C++ 11 (i.e the `--std=c++11` command line argument).
