@@ -1,6 +1,7 @@
 # dfe-snippets
 
 `dfe-snippets` is a collection of building blocks for projects using Maxeler Dataflow Engines (DFEs).
+It contains useful code both for the CPU side (C++) and the DFE side (MaxJ).
 
 ## Requires
 
@@ -57,7 +58,7 @@ int main() {
 }
 ```
 
-## Use Scripts
+### Use Scripts
 
 To use the scripts, first add the directory to your PATH:
 
