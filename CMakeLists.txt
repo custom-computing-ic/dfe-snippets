@@ -41,6 +41,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   add_fpga_test(LinearAlgebra DenseLowerTriangularSolve)
   add_fpga_test(LinearAlgebra Jacobi)
   add_fpga_test(LinearAlgebra NaiveMatrixMultiply)
+  add_fpga_test(LinearAlgebra LUSolver)
   add_fpga_test(Sorting BitonicSorting)
   add_fpga_test(Sorting ParallelBitonicSort)
   add_fpga_test(Summation FullSummationBalancedTree)
@@ -79,13 +80,25 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
     #NAME test_csrspmv_fpga_sim
     #COMMAND make -C ../test/LinearAlgebra/CSRSpMV/build runsim)
 
+  add_test(
+    NAME test_blas_dmvm_fpga_sim
+    COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runsim)
+  add_custom_target(
+    blas_lusolver_fpga_sim
+    COMMAND make -C ../test/LinearAlgebra/LUSolver/build runsim)
 else()
   message(STATUS "MAXCOMPILERDIR not set!")
   add_custom_target(
     blas_dmvm_cpu
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runcpu)
+  add_custom_target(
+    blas_lusolver_cpu
+    COMMAND make -C ../test/LinearAlgebra/LUSolver/build runcpu)
   add_test(
     NAME test_blas_dmvm_cpu
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build runcpu)
+  add_test(
+    NAME test_blas_lusolver_fpga_sim
+    COMMAND make -C ../test/LinearAlgebra/LUSolver/build runcpu)
 endif()
 

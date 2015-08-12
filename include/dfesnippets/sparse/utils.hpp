@@ -28,12 +28,6 @@ std::vector<T> zip_flatten(std::vector<std::vector<T> > in) {
   return zf;
 }
 
-template <typename T>
-void print_vector(std::vector<T> in) {
-  for (auto v : in)
-    std::cout << v << " ";
-  std::cout << std::endl;
-}
 
 // void print_char_vector(std::vector<char> in) {
 //   for (auto v : in)
@@ -75,6 +69,10 @@ std::vector<std::vector<T> > zip_vectors(std::vector<std::vector<T> > in) {
 
 bool almost_equal(double a, double b) {
   return std::abs(a - b) <= 1E-10 * std::abs(a);
+}
+
+bool almost_equal(double a, double b, double tol) {
+  return std::abs(a - b) <= tol * std::abs(a);
 }
 
 /** Returns the smallest number greater than bytes that is multiple of k. */
