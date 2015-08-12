@@ -64,7 +64,7 @@ Use `create.py -h` for a list of available options.
 
 To create and run a __new dfe-snippet__ from the snippets directory run:
 ```
-./create.py <ProjectName> -c <ProjectConcept>
+python scripts/create.py <ProjectName> -c <ProjectConcept>
 ```
 
 Test this project with:
@@ -75,7 +75,7 @@ cd <ProjectConcept>/<ProjectName>/build && make runsim
 To create an external, __stand-alone project__ run:
 
 ```
-./create.py <ProjectName>
+python scripts/create.py <ProjectName>
 ```
 
 Test this project with:
