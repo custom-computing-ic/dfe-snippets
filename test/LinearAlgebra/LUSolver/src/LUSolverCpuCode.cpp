@@ -18,79 +18,7 @@ using namespace std;
 using namespace dfesnippets::blas;
 using namespace dfesnippets::vectorutils;
 using namespace dfesnippets::formatting;
-
-class System {
-  public:
-    int n;
-    Matrix a;
-    vector<double> x;
-    vector<double> b;
-
-    System(int _n) : n(_n), a(_n), x(_n, 0), b(_n, 0) {
-      a.init(0);
-    }
-
-    void init() {
-      // start with identity matrix
-      // fill the first row with multiples of main diagonal elements
-      for (int i = 0; i < n; i++) {
-        a(0, i) = i % 4;
-        a(i, i) = 1;
-      }
-
-      fillMatrix();
-
-      // generate solution
-      for (int i = 0; i < n; i++)
-        x[i] = i % 20;
-
-      // generate rhs
-      b = a * x;
-    }
-
-    bool checkSolution(vector<double> got) {
-      bool good = true;
-      for (size_t i = 0; i < x.size(); i++)
-        if (!almost_equal(got[i], x[i], 1E-10)) {
-          cerr << "Got " << got[i] << " exp " << x[i] << " @i= " << i << endl;
-          good = false;
-        }
-      return good;
-    }
-
-    virtual void fillMatrix() {
-      // apply some of the basic operations, adding a multiple of the first row to
-      // all other rows
-      for (int i = 1; i < n; i++) {
-        for (int k = 0; k < n; k++) {
-          a(i, k) += i * ((k % 4) + 1) * a(0, k);
-        }
-      }
-    }
-};
-
-// A system which must be solved with (at least) partial pivoting
-class GEPPSystem : public System {
-
-  public:
-  GEPPSystem(long _n) : System(_n) {}
-
-  virtual void fillMatrix() override {
-    // for the system to require pivoting, at least one row must have zero
-    // entries on the main diagonal: we don't fill the last row and just interchange
-    // it with another row at the end
-    for (int i = 1; i < n - 1; i++) {
-      for (int k = 0; k < n; k++) {
-        a(i, k) += i * ((k % 4) + 1) * a(0, k);
-      }
-    }
-
-    if (n - 1 == n / 2) {
-      cerr << "Error: can't build a nice GEPP System with n of size " << n << endl;
-    }
-    a.row_interchange(n - 1, n / 2);
-  }
-};
+using namespace dfesnippets::utils;
 
 // Solve the upper triangular system Ax = b using back substitution
 vector<double> backSubstitute(const Matrix& a, vector<double> b) {
@@ -156,7 +84,7 @@ vector<double> lusolve(const Matrix &a, vector<double> b) {
   // transform A to upper diagonal matrix
   for (int i = 0; i < n; i++) {
     for (int j = i + 1; j < n; j++) {
-      if (almost_equal(a(i, i), 0)) {
+      if (dfesnippets::utils::almost_equal(a(i, i), 0)) {
         cerr << " Error: Not all submatrices are singular" << endl;
       }
       double mij = a(j, i) / a(i, i);
