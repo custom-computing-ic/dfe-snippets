@@ -58,24 +58,17 @@ int main() {
 }
 ```
 
-### Use Scripts
+## Creating new projects
 
-To use the scripts, first add the directory to your PATH:
-
-```
-PATH_TO_DFE_SNIPPETS="~/path/to/dfe-snippets"
-export PATH=${PATH}:"${PATH_TO_DFE_SNIPPETS}/scripts"
-```
-
-Note that python scripts require __python 2.7__ (check your version with `python -v`).
-
-### create.py
-
-Use `create.py -h` for a list of available options.
+Use `create.py -h` for a list of available options.
 
 To create and run a __new dfe-snippet__ from the snippets directory run:
 ```
 ./create.py <ProjectName> -c <ProjectConcept>
+```
+
+Test this project with:
+```
 cd <ProjectConcept>/<ProjectName>/build && make runsim
 ```
 
@@ -83,7 +76,13 @@ To create an external, __stand-alone project__ run:
 
 ```
 ./create.py <ProjectName>
+```
+
+Test this project with:
+```
 cd <ProjectName>/build && make runsim
 ```
 
-_NOTE_ If you select `c++` as the project language, the generated Makefile expects a compiler which supports C++ 11 (i.e the `--std=c++11` command line argument).
+__Note__ that python scripts require __python 2.7__ (check your version with `python -v`).
+
+__Note__ If you select `c++` as the project language, the generated Makefile expects a compiler which supports C++ 11 (i.e the `--std=c++11` command line argument).
