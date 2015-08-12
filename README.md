@@ -20,6 +20,43 @@ concept1/
      build         ---> build directory
 ```
 
+## Using
+
+### DFE Libraries
+
+To use the DFE libraries you only need to add the src directory to your classpath when running `maxjc`. For example:
+`maxjc -cp <path/to/snippets>/src/:<other/class/paths> ....`
+
+If you use the Makefile.common provided with `dfe-snippets` you can just add this to the `JFLAGS` variable. For example:
+`JFLAGS=-cp $(MAXCOMPILERDIR)/lib/MaxCompiler.jar:$(DFESNIPPETS)/src -1.6 -d .`
+
+You should then be able to import any class using the fully qualified name. For example
+
+```
+// A Maxeler DFE kernel
+
+import com.custom_computing_ic.dfe_snippets.blas.DenseBlasLib; 
+
+class MyKernel extends Kernel {...}
+```
+
+### CPU Libraries
+
+We also provide a number of utilities for CPU code. These are header only libraries, so no compilation is required.
+To use them simply add the `include/` directory to your include path.
+
+If you use the Makefile.common provided with `dfe-snippets` you can just add this path to the `CFLAGS` variable. For example: `CFLAGS=(....) -I<path/to/dfesnippets>/include`. You should then be able to use functions, for example:
+
+```
+#include <dfesnippets/blas/Blas.hpp>
+
+int main() {
+  dfesnippets::blas::Matrix m(10);
+  // ....
+  return 0;
+}
+```
+
 ## Use Scripts
 
 To use the scripts, first add the directory to your PATH:
