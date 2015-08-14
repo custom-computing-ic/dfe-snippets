@@ -13,7 +13,6 @@
 
 #include <dfesnippets/sparse/common.hpp>
 #include <dfesnippets/sparse/sparse_matrix.hpp>
-#include <dfesnippets/sparse/sparse_matrix.hpp>
 #include <dfesnippets/sparse/partition.hpp>
 
 #include "fpga.hpp"
