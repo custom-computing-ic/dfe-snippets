@@ -70,6 +70,13 @@ namespace dfesnippets {
       return std::abs(a - b) <= tol * std::abs(a);
     }
 
+    bool almost_equal(double a, double b, double rtol, double atol) {
+      double diff = abs(a - b);
+      if (diff < atol)
+        return true;
+      return diff  / abs(a) <= rtol && diff / abs(b) <= rtol;
+    }
+
     /** Returns the smallest number greater than bytes that is multiple of k. */
     int align(int bytes, int k) {
       return  k * (bytes / k + (bytes % k == 0 ? 0 : 1));
