@@ -4,7 +4,8 @@
 #include <iostream>
 #include <omp.h>
 #include <string.h>
-#include <dfesnippets/sparse/utils.hpp>
+
+#include <dfesnippets/NumericUtils.hpp>
 
 namespace dfesnippets {
 
@@ -150,7 +151,7 @@ namespace dfesnippets {
         bool checkSolution(std::vector<double> got) {
           bool good = true;
           for (size_t i = 0; i < x.size(); i++)
-            if (!dfesnippets::utils::almost_equal(got[i], x[i], 1E-10)) {
+            if (!dfesnippets::numeric_utils::almost_equal(got[i], x[i], 1E-10)) {
               std::cerr << "Got " << got[i] << " exp " << x[i] << " @i= " << i << std::endl;
               good = false;
             }
