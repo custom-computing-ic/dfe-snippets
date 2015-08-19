@@ -5,10 +5,10 @@ txtgreen='\e[0;32m'
 txtrst='\e[0m'
 
 run_sim=./run-sim.sh
-sim_bin=../build/SpmvBase_sim
 max_time=120
 
 f=$1
+sim_bin=$2
 
 if [[ $f != *"$1"* ]]; then
   continue

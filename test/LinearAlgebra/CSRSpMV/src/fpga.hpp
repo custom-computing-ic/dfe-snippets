@@ -6,7 +6,7 @@
 #include <chrono>
 #include "Maxfiles.h"
 #include <dfesnippets/sparse/sparse_matrix.hpp>
-#include <dfesnippets/timing/Timing.hpp>
+#include <dfesnippets/Timing.hpp>
 
 #include "scheduling.hpp"
 

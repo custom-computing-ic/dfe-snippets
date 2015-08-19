@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include "mkl_spblas.h"
-#include <dfesnippets/timing/Timing.hpp>
+#include <dfesnippets/Timing.hpp>
 #include <dfesnippets/sparse/common.hpp>
 #include <dfesnippets/VectorUtils.hpp>
 #include <dfesnippets/NumericUtils.hpp>

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 2.6)
 
 project("dfe-snippets")
 
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
+
 enable_testing()
 
 # TODO: clean up builds after tests!
@@ -102,3 +104,6 @@ else()
     COMMAND make -C ../test/LinearAlgebra/LUSolver/build runcpu)
 endif()
 
+
+add_subdirectory(
+  test/LinearAlgebra/CSRSpMV)
