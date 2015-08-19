@@ -13,10 +13,10 @@ namespace dfesnippets {
     }
 
     bool almost_equal(double a, double b, double rtol, double atol) {
-      double diff = abs(a - b);
+      double diff = std::abs(a - b);
       if (diff < atol)
         return true;
-      return diff  / abs(a) <= rtol && diff / abs(b) <= rtol;
+      return (diff  / std::abs(a) <= rtol) && (diff / std::abs(b) <= rtol);
     }
 
     /** Returns the smallest number greater than bytes that is multiple of k. */
