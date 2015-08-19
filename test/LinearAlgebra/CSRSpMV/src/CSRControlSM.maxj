@@ -2,6 +2,9 @@ import com.maxeler.maxcompiler.v2.managers.DFEManager;
 import com.maxeler.maxcompiler.v2.statemachine.*;
 import com.maxeler.maxcompiler.v2.statemachine.manager.*;
 
+
+// SM to decode the Adjusted CSR format:
+// (length) rowIndptr, values
 class CSRControlSM extends ManagerStateMachine {
 
     private enum Mode {
@@ -35,7 +38,7 @@ class CSRControlSM extends ManagerStateMachine {
         mode = state.enumerated(Mode.class, Mode.ReadRowLength);
 
         counter = state.value(dfeUInt(32), 0);
-        
+
         rowLength = state.value(dfeUInt(32));
         rowEnd = state.value(dfeUInt(32));
         itemCount = state.value(dfeUInt(32), 0);

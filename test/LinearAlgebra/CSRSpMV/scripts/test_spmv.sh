@@ -5,7 +5,7 @@ txtgreen='\e[0;32m'
 txtrst='\e[0m'
 
 run_sim=./run-sim.sh
-sim_bin=../build/fpgaNaive_sim
+sim_bin=../build/SpmvBase_sim
 max_time=120
 
 files=`find /mnt/data/cccad3/pg1709/uof-test-matrices -maxdepth 1 -name "*.mtx"`

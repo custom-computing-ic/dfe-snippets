@@ -1,5 +1,13 @@
 cmake_minimum_required (VERSION 2.6)
 
+
+function(add_matrix_test name )
+  add_test(
+    NAME test_${name}
+    COMMAND ./run_single.sh ../test-matrices/test_${name}.mtx
+    WORKING_DIRECTORY ../scripts)
+endfunction()
+
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
 # -- Boost
@@ -38,7 +46,7 @@ endif (DFE_MODEL)
 set (PRJ "SpmvBase")
 set (MANAGER "fpgaNaiveManager")
 
-set (DFE_SOURCES ../../../../src/com/custom_computing_ic/dfe_snippets/reductions/ ../src/dfe/*.java)
+set (DFE_SOURCES ../../../../src/com/custom_computing_ic/dfe_snippets/reductions/ ../src/*.maxj)
 
 set (SIMMAXDIR "${PRJ}_${DFE_MODEL}_DFE_SIM/results")
 set (HWMAXDIR "${PRJ}_${DFE_MODEL}_DFE/results")
@@ -83,9 +91,9 @@ add_custom_target(
 
 add_custom_command(
   OUTPUT ${PRJ}_sim.o
-  DEPENDS src/dfe/*.java
+  DEPENDS src/*.maxj
   COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
-  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src/dfe' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
+  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
   COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
   COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
   COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
@@ -93,9 +101,9 @@ add_custom_command(
 
 add_custom_command(
   OUTPUT ${PRJ}_dfe.o
-  DEPENDS src/dfe/*.java
+  DEPENDS src/*.maxj
   COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
-  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src/dfe' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
+  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='../src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
   COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
   COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
   COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
@@ -123,21 +131,35 @@ INCLUDE_DIRECTORIES( ${MKL_INCLUDE_DIR} )
 include_directories (include/eval)
 include_directories (src)
 include_directories (build/include)
-include_directories (../../../include/dfesnippets/sparse)
+include_directories (../../../include/)
 
 file(GLOB CppSources src/*.cpp)
-file(GLOB LibrarySources ../../../include/dfesnippets/sparse/*.cpp)
+#file(GLOB LibrarySources ../../../include/dfesnippets/sparse/*.cpp)
 
-add_library(spmv_commons_cpu SHARED ${LibrarySources})
+#add_library(spmv_commons_cpu SHARED ${LibrarySources})
 
-add_executable(${PRJ}_sim src/cpu/main.cpp ${PRJ}_sim.o)
-target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL} spmv_commons_cpu)
+add_executable(${PRJ}_sim src/main.cpp ${PRJ}_sim.o)
+target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL})
 
-add_executable(${PRJ}_dfe src/cpu/main.cpp ${PRJ}_dfe.o)
-target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL} spmv_commons_cpu)
+add_executable(${PRJ}_dfe src/main.cpp ${PRJ}_dfe.o)
+target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL})
 
 include_directories(src/cpu/)
 
 # -- Tests
 
 enable_testing()
+
+add_matrix_test("break")
+add_matrix_test("cage6")
+add_matrix_test("long_row")
+add_matrix_test("no_empty_rows")
+add_matrix_test("non_multiple")
+add_matrix_test("one_row")
+add_matrix_test("one_value_one_index_per_row")
+add_matrix_test("small")
+add_matrix_test("some_empty_rows")
+add_matrix_test("tiny")
+add_matrix_test("tols90")
+add_matrix_test("two_rows")
+add_matrix_test("tiny_odd")
