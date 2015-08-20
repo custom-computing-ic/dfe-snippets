@@ -2,15 +2,12 @@ cmake_minimum_required (VERSION 2.6)
 
 set (PRJ "SpmvBase")
 set (MANAGER "fpgaNaiveManager")
-set (DFE_SOURCES ${CMAKE_CURRENT_LIST_DIR}/../../../src/com/custom_computing_ic/dfe_snippets/reductions/ ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj)
+set (DFE_SNIPPETS_LIB "${CMAKE_CURRENT_LIST_DIR}/../../../src/")
+set (DFE_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj)
 
 function(add_matrix_test name )
 
-  if (${EXECUTABLE_OUTPUT_PATH})
-    set(exepath ${EXECUTABLE_OUTPUT_PATH}/SpmvBase_sim)
-  else()
-    set(exepath ../build/SpmvBase_sim)
-  endif()
+  set(exepath ${EXECUTABLE_OUTPUT_PATH}/SpmvBase_sim)
 
   add_test(
     NAME test_spmv_${name}
@@ -103,7 +100,7 @@ add_custom_target(
 add_custom_command(
   OUTPUT ${PRJ}_sim.o
   DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj
-  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
+  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
   COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
   COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
   COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "${CMAKE_CURRENT_BINARY_DIR}/include/Maxfiles.h"
@@ -113,7 +110,7 @@ add_custom_command(
 add_custom_command(
   OUTPUT ${PRJ}_dfe.o
   DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj
-  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar -1.6 -d . ${DFE_SOURCES}
+  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
   COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
   COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
   COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
