@@ -58,6 +58,9 @@ function (add_fpga_build concept name maxfile manager)
   set(PRJ "${concept}${name}")
   set(DFE_SNIPPETS_LIB "${PROJECT_SOURCE_DIR}/src/")
   set(DFE_SOURCES ${PROJECT_SOURCE_DIR}/test/${concept}/${name}/src/*.maxj)
+  set(NUMDEVICES 1)
+  set(USER $ENV{USER})
+  set (SLIC_CONF "use_simulation=${USER}a")
   add_custom_target(
     runsim_${PRJ}
     COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
@@ -111,6 +114,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build run)
 
   add_fpga_build(LinearAlgebra CSRSpMV SpmvBase fpgaNaiveManager)
+  add_fpga_build(LinearAlgebra CsrDecoder CsrDecoder CsrDecoderManager)
 
   # --- Tests
   add_fpga_test(LinearAlgebra DenseMatrixVectorMultiply)
