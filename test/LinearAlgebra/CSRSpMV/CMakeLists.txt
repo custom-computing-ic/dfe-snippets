@@ -18,22 +18,6 @@ endfunction()
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
-# -- Boost
-SET (BOOST_ROOT "/opt/boost/boost_1_57_0")
-SET (BOOST_INCLUDEDIR "/opt/boost/boost-1.57.0/include")
-SET (BOOST_LIBRARYDIR "/opt/boost/boost-1.57.0/lib")
-SET (BOOST_MIN_VERSION "1.57.0")
-set (Boost_NO_BOOST_CMAKE ON)
-FIND_PACKAGE(Boost ${BOOST_MIN_VERSION} REQUIRED)
-if (NOT Boost_FOUND)
-  message(FATAL_ERROR "Fatal error: Boost (version >= 1.41) required.")
-else()
-  message(STATUS "Setting up BOOST")
-  message(STATUS " Includes - ${Boost_INCLUDE_DIRS}")
-  message(STATUS " Library  - ${Boost_LIBRARY_DIRS}")
-  include_directories(${Boost_INCLUDE_DIRS})
-  link_directories(${Boost_LIBRARY_DIRS})
-endif (NOT Boost_FOUND)
 
 # -- MKL
 set(INSTALL_TO_DIR ${CMAKE_SOURCE_DIR}/build)
@@ -64,17 +48,17 @@ set (USER "$ENV{USER}")
 set (SIMNAME "${USER}a0:${USER}a")
 set (SLIC_CONF "use_simulation=${USER}a")
 
-execute_process(
-  COMMAND maxGuessBuildDir -n ${PRJ}_${DFE_MODEL}_DFE_SIM
-  OUTPUT_VARIABLE MAXBUILD_DIR_SIM
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
+#execute_process(
+  #COMMAND maxGuessBuildDir -n ${PRJ}_${DFE_MODEL}_DFE_SIM
+  #OUTPUT_VARIABLE MAXBUILD_DIR_SIM
+  #OUTPUT_STRIP_TRAILING_WHITESPACE
+  #)
 
-execute_process(
-  COMMAND maxGuessBuildDir -n ${PRJ}_DFE_SIM
-  OUTPUT_VARIABLE MAXBUILD_DIR_HW
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
+#execute_process(
+  #COMMAND maxGuessBuildDir -n ${PRJ}_DFE_SIM
+  #OUTPUT_VARIABLE MAXBUILD_DIR_HW
+  #OUTPUT_STRIP_TRAILING_WHITESPACE
+  #)
 
 message(STATUS "Simulation Build DIR --> ${MAXBUILD_DIR_SIM}")
 message(STATUS "Hardware   Build DIR --> ${MAXBUILD_DIR_HW}")
@@ -86,15 +70,15 @@ add_custom_target(
   DEPENDS ${PRJ}_sim
   )
 
-add_custom_command(
-  OUTPUT ${PRJ}_dfe.o
-  DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj
-  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
-  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
-  COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
-  COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
-  COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
-  )
+#add_custom_command(
+  #OUTPUT ${PRJ}_dfe.o
+  #DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj
+  #COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
+  #COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
+  #COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
+  #COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "include/Maxfiles.h"
+  #COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
+  #)
 
 # --- Include MKL ---
 
@@ -113,8 +97,6 @@ file(GLOB CppSources ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
 #add_library(spmv_commons_cpu SHARED ${LibrarySources})
 
 
-add_executable(${PRJ}_dfe ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp ${PRJ}_dfe.o)
-target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL})
 
 include_directories(${CMAKE_CURRENT_LIST_DIR}/src/cpu/)
 

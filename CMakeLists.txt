@@ -6,6 +6,23 @@ project("dfe-snippets")
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
+# -- Boost
+SET (BOOST_ROOT "/opt/boost/boost_1_57_0")
+SET (BOOST_INCLUDEDIR "/opt/boost/boost-1.57.0/include")
+SET (BOOST_LIBRARYDIR "/opt/boost/boost-1.57.0/lib")
+SET (BOOST_MIN_VERSION "1.57.0")
+set (Boost_NO_BOOST_CMAKE ON)
+FIND_PACKAGE(Boost ${BOOST_MIN_VERSION} REQUIRED)
+if (NOT Boost_FOUND)
+  message(FATAL_ERROR "Fatal error: Boost (version >= 1.41) required.")
+else()
+  message(STATUS "Setting up BOOST")
+  message(STATUS " Includes - ${Boost_INCLUDE_DIRS}")
+  message(STATUS " Library  - ${Boost_LIBRARY_DIRS}")
+  include_directories(${Boost_INCLUDE_DIRS})
+  link_directories(${Boost_LIBRARY_DIRS})
+endif (NOT Boost_FOUND)
+
 # --- Include MKL
 include(${PROJECT_SOURCE_DIR}/scripts/FindMKL.cmake)
 include_directories(${MKL_INCLUDE_DIR})
@@ -60,6 +77,19 @@ function (add_fpga_build concept name maxfile manager)
 
   add_executable(${PRJ}_sim test/${concept}/${name}/src/main.cpp ${PRJ}_sim.o)
   target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL})
+
+  add_custom_command(
+    OUTPUT ${PRJ}_dfe.o
+    DEPENDS test/${concept}/${name}/src/*.maxj
+    COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
+    COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${manager} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
+    COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
+    COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${maxfile}.h" "include/"
+    COMMAND sliccompile `cat buildlocation`"/results/${maxfile}.max" ${PRJ}_sim.o
+    )
+
+  add_executable(${PRJ}_dfe test/${concept}/${name}/src/main.cpp ${PRJ}_dfe.o)
+  target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL})
 endfunction()
 
 if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
