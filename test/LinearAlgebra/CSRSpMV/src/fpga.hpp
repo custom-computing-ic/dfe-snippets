@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <chrono>
-#include "Maxfiles.h"
+#include "SpmvBase.h"
 #include <dfesnippets/sparse/sparse_matrix.hpp>
 #include <dfesnippets/Timing.hpp>
 

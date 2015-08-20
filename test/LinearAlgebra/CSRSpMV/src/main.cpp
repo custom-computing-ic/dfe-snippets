@@ -8,7 +8,7 @@
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "Maxfiles.h"
+#include "SpmvBase.h"
 #include "MaxSLiCInterface.h"
 
 #include <dfesnippets/sparse/common.hpp>

@@ -1,8 +1,26 @@
 cmake_minimum_required(VERSION 2.6)
 
+
 project("dfe-snippets")
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR})
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
+
+# --- Include MKL
+include(${PROJECT_SOURCE_DIR}/scripts/FindMKL.cmake)
+include_directories(${MKL_INCLUDE_DIR})
+
+# DFE Models: MAX3424A or MAIA
+set(DFE_MODEL "$ENV{DFE_MODEL}")
+if (DFE_MODEL)
+  message(STATUS "Using specified DFE Model --> $ENV{DFE_MODEL}")
+else (DFE_MODEL)
+  set(DFE_MODEL MAIA)
+  message(STATUS "Using default DFE Model --> MAIA")
+endif (DFE_MODEL)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
+include_directories(include/)
 
 enable_testing()
 
@@ -18,6 +36,31 @@ function (add_fpga_test3 arg1 arg2 arg3)
     NAME test_${arg1}_${arg2}_${arg3}_fpga_sim
     COMMAND make -C ../test/${arg1}/${arg2}/${arg3}/build runsim)
 endfunction(add_fpga_test3)
+
+function (add_fpga_build concept name maxfile manager)
+  set(PRJ "${concept}${name}")
+  set(DFE_SNIPPETS_LIB "${PROJECT_SOURCE_DIR}/src/")
+  set(DFE_SOURCES ${PROJECT_SOURCE_DIR}/test/${concept}/${name}/src/*.maxj)
+  add_custom_target(
+    runsim_${PRJ}
+    COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
+    COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} ./${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
+    DEPENDS ${PRJ}_sim
+    )
+
+  add_custom_command(
+    OUTPUT ${PRJ}_sim.o
+    DEPENDS test/${concept}/${name}/src/*.maxj
+    COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
+    COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${manager} DFEModel=${DFE_MODEL} maxFileName=${maxfile} target='DFE_SIM' enableMPCX=true | tee output.log
+    COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
+    COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${maxfile}.h" "${CMAKE_CURRENT_BINARY_DIR}/include/"
+    COMMAND sliccompile `cat buildlocation`"/results/${maxfile}.max" ${PRJ}_sim.o
+    )
+
+  add_executable(${PRJ}_sim test/${concept}/${name}/src/main.cpp ${PRJ}_sim.o)
+  target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL})
+endfunction()
 
 if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   message(STATUS "MAXCOMPILERDIR and MAXELEROSDIR are set, adding includes!")
@@ -36,6 +79,8 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   add_custom_target(
     blas_dmvm_fpga_dfe
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build run)
+
+  add_fpga_build(LinearAlgebra CSRSpMV SpmvBase fpgaNaiveManager)
 
   # --- Tests
   add_fpga_test(LinearAlgebra DenseMatrixVectorMultiply)

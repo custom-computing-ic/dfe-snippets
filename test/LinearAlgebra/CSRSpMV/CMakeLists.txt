@@ -5,20 +5,16 @@ set (MANAGER "fpgaNaiveManager")
 set (DFE_SNIPPETS_LIB "${CMAKE_CURRENT_LIST_DIR}/../../../src/")
 set (DFE_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj)
 
+# include(${PROJECT_SOURCE_DIR}/scripts/MaxelerUtils.cmake)
+
 function(add_matrix_test name )
-
-  set(exepath ${EXECUTABLE_OUTPUT_PATH}/SpmvBase_sim)
-
+  set(exepath ${EXECUTABLE_OUTPUT_PATH}/LinearAlgebraCSRSpMV_sim)
   add_test(
-    NAME test_spmv_${name}
+    NAME test_LinearAlgebraCSRSpMV_${name}
     COMMAND ./run_single.sh ${CMAKE_CURRENT_LIST_DIR}/test-matrices/test_${name}.mtx ${exepath}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/scripts)
-
-  #add_dependencies(
-    #test_spmv_${name}
-    #${PRJ}_sim)
-
 endfunction()
+
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
@@ -84,27 +80,10 @@ message(STATUS "Simulation Build DIR --> ${MAXBUILD_DIR_SIM}")
 message(STATUS "Hardware   Build DIR --> ${MAXBUILD_DIR_HW}")
 
 add_custom_target(
-  runsim
-  COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
-  COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} ./${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
-  DEPENDS ${PRJ}_sim
-  )
-
-add_custom_target(
   gdbsim
   COMMAND maxcompilersim -n ${USER}a -c${DFE_MODEL} -d${NUMDEVICES} restart
   COMMAND SLIC_CONF=${SLIC_CONF} LD_PRELOAD=${MAXOS_SIM} gdb --args ./${PRJ}_sim ${USER}a0:${USER}a \${FILE} \${NUM_REPEATS}
   DEPENDS ${PRJ}_sim
-  )
-
-add_custom_command(
-  OUTPUT ${PRJ}_sim.o
-  DEPENDS ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj
-  COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
-  COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${MANAGER} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE_SIM' enableMPCX=true | tee output.log
-  COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
-  COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${PRJ}.h" "${CMAKE_CURRENT_BINARY_DIR}/include/Maxfiles.h"
-  COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
   )
 
 add_custom_command(
@@ -117,23 +96,10 @@ add_custom_command(
   COMMAND sliccompile `cat buildlocation`"/results/${PRJ}.max" ${PRJ}_sim.o
   )
 
-if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
-  message(STATUS "MAXCOMPILERDIR and MAXELEROSDIR are set, adding includes!")
-  message(STATUS "  MAXCOMPILER --> $ENV{MAXCOMPILERDIR}")
-  message(STATUS "  MAXELEROS   --> $ENV{MAXELEROSDIR}")
-  include_directories ($ENV{MAXCOMPILERDIR}/include)
-  include_directories ($ENV{MAXCOMPILERDIR}/include/slic)
-  include_directories ($ENV{MAXELEROSDIR}/include)
-  link_directories($ENV{MAXCOMPILERDIR}/lib)
-  link_directories($ENV{MAXELEROSDIR}/lib)
-else()
-  message(STATUS "MAXCOMPILERDIR not set!")
-endif()
-
 # --- Include MKL ---
 
-include(FindMKL.cmake)
-INCLUDE_DIRECTORIES( ${MKL_INCLUDE_DIR} )
+include(${PROJECT_SOURCE_DIR}/scripts/FindMKL.cmake)
+include_directories(${MKL_INCLUDE_DIR})
 
 # -- Library includes --
 include_directories (include/eval)
@@ -146,8 +112,6 @@ file(GLOB CppSources ${CMAKE_CURRENT_LIST_DIR}/src/*.cpp)
 
 #add_library(spmv_commons_cpu SHARED ${LibrarySources})
 
-add_executable(${PRJ}_sim ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp ${PRJ}_sim.o)
-target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL})
 
 add_executable(${PRJ}_dfe ${CMAKE_CURRENT_LIST_DIR}/src/main.cpp ${PRJ}_dfe.o)
 target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL})
