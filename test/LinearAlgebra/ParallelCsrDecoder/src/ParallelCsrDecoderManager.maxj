@@ -8,15 +8,16 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 public class ParallelCsrDecoderManager extends CustomManager{
 
     private static final String s_kernelName  = "ParallelCsrDecoderKernel";
+    private static final int inputWidth = 8;
 
     ParallelCsrDecoderManager(EngineParameters ep)
     {
         super(ep);
 
-        KernelBlock k = addKernel(new ParallelCsrDecoderKernel(makeKernelParameters(s_kernelName)));
+        KernelBlock k = addKernel(new ParallelCsrDecoderKernel(
+              makeKernelParameters(s_kernelName), inputWidth));
 
         k.getInput("a") <== addStreamFromCPU("a");
-        k.getInput("b") <== addStreamFromCPU("b");
         addStreamToCPU("output") <== k.getOutput("output");
     }
 
@@ -28,10 +29,9 @@ public class ParallelCsrDecoderManager extends CustomManager{
         InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
         InterfaceParam sizeBytes = N * size;
 
-        engine_interface.setTicks(s_kernelName, N);
+        engine_interface.setTicks(s_kernelName, N / inputWidth);
 
         engine_interface.setStream("a", type, sizeBytes);
-        engine_interface.setStream("b", type, sizeBytes);
         engine_interface.setStream("output", type, sizeBytes);
         return engine_interface;
     }
