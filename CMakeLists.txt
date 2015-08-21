@@ -78,7 +78,7 @@ function (add_fpga_build concept name maxfile manager)
     COMMAND sliccompile `cat buildlocation`"/results/${maxfile}.max" ${PRJ}_sim.o
     )
 
-  add_executable(${PRJ}_sim test/${concept}/${name}/src/main.cpp ${PRJ}_sim.o)
+  add_executable(${PRJ}_sim test/${concept}/${name}/src/${name}CpuCode.cpp ${PRJ}_sim.o)
   target_link_libraries(${PRJ}_sim maxeleros slic m pthread ${MKL})
 
   add_custom_command(
@@ -91,7 +91,7 @@ function (add_fpga_build concept name maxfile manager)
     COMMAND sliccompile `cat buildlocation`"/results/${maxfile}.max" ${PRJ}_sim.o
     )
 
-  add_executable(${PRJ}_dfe test/${concept}/${name}/src/main.cpp ${PRJ}_dfe.o)
+  add_executable(${PRJ}_dfe test/${concept}/${name}/src/${name}CpuCode.cpp ${PRJ}_dfe.o)
   target_link_libraries(${PRJ}_dfe maxeleros slic m pthread ${MKL})
 endfunction()
 
@@ -115,6 +115,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
 
   add_fpga_build(LinearAlgebra CSRSpMV SpmvBase fpgaNaiveManager)
   add_fpga_build(LinearAlgebra CsrDecoder CsrDecoder CsrDecoderManager)
+  add_fpga_build(LinearAlgebra ParallelCsrDecoder ParallelCsrDecoder ParallelCsrDecoderManager)
 
   # --- Tests
   add_fpga_test(LinearAlgebra DenseMatrixVectorMultiply)
