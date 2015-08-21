@@ -41,7 +41,6 @@ public class CsrDecoderManager extends CustomManager{
 
         engine_interface.setStream("colptr", type, sizeBytes);
         engine_interface.setStream("indptr", type, size * nIndptr);
-
         engine_interface.setStream("indptr_out", type, size * nIndptr);
         engine_interface.setStream("rowlength", type, sizeBytes);
         return engine_interface;

@@ -4,6 +4,8 @@ import com.maxeler.maxcompiler.v2.managers.DFEManager;
 import com.maxeler.maxcompiler.v2.statemachine.*;
 import com.maxeler.maxcompiler.v2.statemachine.manager.*;
 
+// XXX must reset the CSRDecoder (at least set prevData, counter etc. to zero)
+// after a matrix has been fully processed
 public class CsrDecoder extends ManagerStateMachine {
 
     private enum Mode {
@@ -23,7 +25,7 @@ public class CsrDecoder extends ManagerStateMachine {
     private final DFEsmStateValue prevData, rowLength, indptrData;
     private final DFEsmStateValue colptrReady, indptrReady;
     private final DFEsmStateValue rowLengthValid, indptrOutValid;
-    private final DFEsmStateValue counter;
+    private final DFEsmStateValue counter, rowsProcessed;
 
     private final DFEsmStateValue iIndptrRead, iColptrRead;
 
@@ -42,6 +44,7 @@ public class CsrDecoder extends ManagerStateMachine {
         // rowEnd = state.value(dfeUInt(32));
         rowLength = state.value(dfeUInt(32));
         prevData = state.value(dfeUInt(32), 0);
+        rowsProcessed = state.value(dfeUInt(32), 0);
 
         indptrReady = state.value(dfeBool(), false);
         colptrReady = state.value(dfeBool(), false);
@@ -93,6 +96,7 @@ public class CsrDecoder extends ManagerStateMachine {
             mode.next <== Mode.ReadRow;
             iIndptrRead.next <== true;
             iColptrRead.next <== false;
+            rowsProcessed.next <== rowsProcessed + 1;
           }
         }
         CASE (Mode.ReadRow) {
@@ -103,6 +107,12 @@ public class CsrDecoder extends ManagerStateMachine {
               mode.next <== Mode.ReadRowLength;
               iIndptrRead.next <== false;
               iColptrRead.next <== true;
+              IF (rowsProcessed === iRowCount) {
+                // finished processing this matrix,
+                // reset eveything
+                prevData.next <== 0;
+                rowsProcessed.next <== 0;
+              }
             }
             indptrData.next <== iIndptr;
             indptrOutValid.next <== true;
