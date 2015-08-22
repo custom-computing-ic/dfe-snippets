@@ -4,13 +4,24 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
 
+import com.custom_computing_ic.dfe_snippets.utils.FetchSubTuple;
+
 class ParallelCsrDecoderKernel extends Kernel {
 
     protected ParallelCsrDecoderKernel(KernelParameters parameters, int inputWidth) {
         super(parameters);
-        DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeUInt(32), inputWidth);
+
+        DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), inputWidth);
+
+        FetchSubTuple fst = new FetchSubTuple(this, "fst", inputWidth, 64, dfeFloat(11, 53), true);
+
         DFEVector<DFEVar> a = io.input("a", vtype);
-        io.output("output", a, vtype);
+
+        DFEVar colptr = io.input("length", dfeUInt(32));
+
+        fst.push(constant.var(true), a); //
+
+        io.output("output", fst.pop(colptr), vtype);
     }
 }
 

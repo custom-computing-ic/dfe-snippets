@@ -5,10 +5,12 @@ import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
 import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
 
+import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
+
 public class ParallelCsrDecoderManager extends CustomManager{
 
     private static final String s_kernelName  = "ParallelCsrDecoderKernel";
-    private static final int inputWidth = 8;
+    private static final int inputWidth = 48;
 
     ParallelCsrDecoderManager(EngineParameters ep)
     {
@@ -18,7 +20,10 @@ public class ParallelCsrDecoderManager extends CustomManager{
               makeKernelParameters(s_kernelName), inputWidth));
 
         k.getInput("a") <== addStreamFromCPU("a");
+        k.getInput("length") <== addStreamFromCPU("length");
         addStreamToCPU("output") <== k.getOutput("output");
+
+        addMaxFileConstant("inputWidth", inputWidth);
     }
 
     private static EngineInterface interfaceDefault() {
@@ -26,13 +31,13 @@ public class ParallelCsrDecoderManager extends CustomManager{
         CPUTypes type = CPUTypes.INT32;
         int size = type.sizeInBytes();
 
-        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
-        InterfaceParam sizeBytes = N * size;
+        InterfaceParam ticks = engine_interface.addParam("ticks", CPUTypes.INT);
 
-        engine_interface.setTicks(s_kernelName, N / inputWidth);
+        engine_interface.setTicks(s_kernelName, ticks);
+        engine_interface.setStream("a", CPUTypes.DOUBLE, ticks * inputWidth * CPUTypes.DOUBLE.sizeInBytes());
+        engine_interface.setStream("length", type, ticks * size);
+        engine_interface.setStream("output", CPUTypes.DOUBLE, ticks * inputWidth * CPUTypes.DOUBLE.sizeInBytes());
 
-        engine_interface.setStream("a", type, sizeBytes);
-        engine_interface.setStream("output", type, sizeBytes);
         return engine_interface;
     }
 
@@ -40,6 +45,7 @@ public class ParallelCsrDecoderManager extends CustomManager{
     public static void main(String[] args) {
         ParallelCsrDecoderManager manager = new ParallelCsrDecoderManager(new EngineParameters(args));
         manager.createSLiCinterface(interfaceDefault());
+        ManagerUtils.setFullBuild(manager, 4, 4);
         manager.build();
     }
 }
