@@ -25,3 +25,23 @@ class ParallelCsrDecoderKernel extends Kernel {
     }
 }
 
+class ParallelKernelTwo extends Kernel {
+
+  protected ParallelKernelTwo(KernelParameters parameters, int inputWidth) {
+    super(parameters);
+    DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), inputWidth);
+    DFEVar readEnable = io.input("readenable", dfeUInt(32));
+    DFEVector<DFEVar> a = io.input("a", vtype, readEnable === 1);
+
+    DFEVar readMask = io.input("readmask", dfeUInt(32));
+
+    DFEVector<DFEVar> out = vtype.newInstance(this);
+    for (int i = 0; i < inputWidth; i++) {
+      out[i] <== readMask.slice(i) === 0 ?
+        0 : a[i];
+    }
+
+    io.output("output", out, vtype);
+  }
+}
+
