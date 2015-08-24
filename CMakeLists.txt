@@ -57,7 +57,8 @@ endfunction(add_fpga_test3)
 function (add_fpga_build concept name maxfile manager)
   set(PRJ "${concept}${name}")
   set(DFE_SNIPPETS_LIB "${PROJECT_SOURCE_DIR}/src/")
-  set(DFE_SOURCES ${PROJECT_SOURCE_DIR}/test/${concept}/${name}/src/*.maxj)
+  set(DFE_SRC_DIR "${PROJECT_SOURCE_DIR}/test/${concept}/${name}/src")
+  set(DFE_SOURCES ${DFE_SRC_DIR}/*.maxj)
   set(NUMDEVICES 1)
   set(USER $ENV{USER})
   set (SLIC_CONF "use_simulation=${USER}a")
@@ -70,9 +71,9 @@ function (add_fpga_build concept name maxfile manager)
 
   add_custom_command(
     OUTPUT ${PRJ}_sim.o
-    DEPENDS test/${concept}/${name}/src/*.maxj
+    DEPENDS ${DFE_SRC_DIR}/*.maxj
     COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
-    COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${manager} DFEModel=${DFE_MODEL} maxFileName=${maxfile} target='DFE_SIM' enableMPCX=true | tee output.log
+    COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${DFE_SRC_DIR}' maxJavaRun -v -m 8192 ${manager} DFEModel=${DFE_MODEL} maxFileName=${maxfile} target='DFE_SIM' enableMPCX=true | tee output.log
     COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
     COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${maxfile}.h" "${CMAKE_CURRENT_BINARY_DIR}/include/"
     COMMAND sliccompile `cat buildlocation`"/results/${maxfile}.max" ${PRJ}_sim.o
@@ -83,9 +84,9 @@ function (add_fpga_build concept name maxfile manager)
 
   add_custom_command(
     OUTPUT ${PRJ}_dfe.o
-    DEPENDS test/${concept}/${name}/src/*.maxj
+    DEPENDS ${DFE_SRC_DIR}/*.maxj
     COMMAND maxjc -cp $ENV{MAXCOMPILERDIR}/lib/MaxCompiler.jar:${DFE_SNIPPETS_LIB} -1.6 -d . ${DFE_SOURCES}
-    COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${CMAKE_CURRENT_LIST_DIR}/src' maxJavaRun -v -m 8192 ${manager} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
+    COMMAND MAXAPPJCP=. MAXSOURCEDIRS='${DFE_SRC_DIR}' maxJavaRun -v -m 8192 ${manager} DFEModel=${DFE_MODEL} maxFileName=${PRJ} target='DFE' enableMPCX=true
     COMMAND grep 'Build location:' output.log | sed 's/.*Build location:[[:space:]]*//' > buildlocation
     COMMAND mkdir -p "include" && cp `cat buildlocation`"/results/${maxfile}.h" "include/"
     COMMAND sliccompile `cat buildlocation`"/results/${maxfile}.max" ${PRJ}_sim.o
