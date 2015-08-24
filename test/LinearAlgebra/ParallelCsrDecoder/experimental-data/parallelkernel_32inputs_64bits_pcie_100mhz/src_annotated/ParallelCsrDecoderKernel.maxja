@@ -1,0 +1,167 @@
+    LUTs     FFs   BRAMs    DSPs : ParallelCsrDecoderKernel.maxj
+      43    2084       0       0 : resources used by this file
+   0.01%   0.20%   0.00%   0.00% : % of available
+   0.53%  13.59%   0.00%   0.00% : % of total used
+  10.62%  42.88%   0.00%   0.00% : % of user resources
+
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+                                 : import com.maxeler.maxcompiler.v2.statemachine.*;
+                                 : import com.maxeler.maxcompiler.v2.statemachine.manager.*;
+                                 : import com.maxeler.maxcompiler.v2.managers.DFEManager;
+                                 : 
+                                 : import com.custom_computing_ic.dfe_snippets.utils.FetchSubTuple;
+                                 : 
+                                 : class ParallelCsrDecoderKernel extends Kernel {
+                                 : 
+                                 :     protected ParallelCsrDecoderKernel(KernelParameters parameters, int inputWidth) {
+                                 :         super(parameters);
+                                 : 
+                                 :         DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), inputWidth);
+                                 : 
+                                 :         FetchSubTuple fst = new FetchSubTuple(this, "fst", inputWidth, 64, dfeFloat(11, 53), true);
+                                 : 
+                                 :         DFEVector<DFEVar> a = io.input("a", vtype);
+                                 : 
+                                 :         DFEVar colptr = io.input("length", dfeUInt(32));
+                                 : 
+                                 :         fst.push(constant.var(true), a); //
+                                 : 
+                                 :         io.output("output", fst.pop(colptr), vtype);
+                                 :     }
+                                 : }
+                                 : 
+                                 : class ParallelKernelTwo extends Kernel {
+                                 : 
+                                 :   protected ParallelKernelTwo(KernelParameters parameters, int inputWidth) {
+                                 :     super(parameters);
+                                 :     DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), inputWidth);
+       1       1       0       0 :     DFEVar readEnable = io.input("readenable", dfeUInt(32));
+       9       2       0       0 :     DFEVector<DFEVar> a = io.input("a", vtype, readEnable === 1);
+                                 : 
+       1       1       0       0 :     DFEVar readMask = io.input("readmask", dfeUInt(32));
+                                 : 
+                                 :     DFEVector<DFEVar> out = vtype.newInstance(this);
+                                 :     for (int i = 0; i < inputWidth; i++) {
+      32    2080       0       0 :       out[i] <== readMask.slice(i) === 0 ?
+                                 :         0 : a[i];
+                                 :     }
+                                 : 
+                                 :     io.output("output", out, vtype);
+                                 :     debug.simPrintf( "Kernel: readEnable: %d, readmask: %d\n", readEnable, readMask);
+                                 :   }
+                                 : }
+                                 : 
+                                 : 
+                                 : 
+                                 : class ReadMaskControlSm extends ManagerStateMachine {
+                                 : 
+                                 :     private enum Mode {
+                                 :       ReadLength, // may want to merge
+                                 :       OutputCommands,
+                                 :     };
+                                 : 
+                                 :     private final DFEsmStateEnum<Mode> mode;
+                                 :     private final DFEsmPullInput iLength;
+                                 :     private final DFEsmStateValue iLengthReady;
+                                 :     private final DFEsmPushOutput oReadMask, oReadEnable;
+                                 :     private final DFEsmStateValue readEnableOutValid, readMaskOutValid;
+                                 :     private final DFEsmStateValue readEnableData, readMaskData;
+                                 : 
+                                 :     private final DFEsmStateValue crtPos, toread, iLengthRead;
+                                 :     private final int bufferWidth = 32;
+                                 : 
+                                 :     public ReadMaskControlSm(DFEManager owner) {
+                                 :       super(owner);
+                                 :       mode = state.enumerated(Mode.class, Mode.ReadLength);
+                                 : 
+                                 :       iLength = io.pullInput("length", dfeUInt(32));
+                                 : 
+                                 :       oReadMask = io.pushOutput("readmask", dfeUInt(32), 1);
+                                 :       oReadEnable = io.pushOutput("readenable", dfeUInt(32), 1);
+                                 : 
+                                 :       crtPos = state.value(dfeUInt(32), 0);
+                                 :       toread = state.value(dfeUInt(32), 0);
+                                 :       iLengthRead = state.value(dfeBool(), true);
+                                 :       readEnableOutValid = state.value(dfeBool(), true);
+                                 :       readEnableData = state.value(dfeUInt(32), 1);
+                                 :       readMaskOutValid = state.value(dfeBool(), false);
+                                 :       readMaskData = state.value(dfeUInt(32));
+                                 :       iLengthReady = state.value(dfeBool(), false);
+                                 :     }
+                                 : 
+                                 :     DFEsmValue iLengthReady() {
+                                 :       return iLengthRead & ~iLength.empty & ~oReadEnable.stall & ~oReadMask.stall;
+                                 :     }
+                                 : 
+                                 :     @Override
+                                 :     protected void nextState() {
+                                 :       iLengthReady.next <== iLengthReady();
+                                 : 
+                                 :       readEnableOutValid.next <== false;
+                                 :       readMaskOutValid.next <== false;
+                                 : 
+                                 :       SWITCH (mode) {
+                                 :         CASE (Mode.ReadLength) {
+                                 :           IF (iLengthReady === true) {
+                                 :             toread.next <== iLength;
+                                 :             mode.next <== Mode.OutputCommands;
+                                 :           }
+                                 :         }
+                                 :         CASE (Mode.OutputCommands) {
+                                 :           readEnableOutValid.next <== true;
+                                 :           readMaskOutValid.next <== true;
+                                 : 
+                                 :           DFEsmAssignableValue canread = assignable.value(dfeUInt(32));
+                                 :           IF ( bufferWidth - crtPos < toread) {
+                                 :             canread <== bufferWidth - crtPos;
+                                 :           } ELSE {
+                                 :             canread <== toread;
+                                 :           }
+                                 :           IF (crtPos + canread >= bufferWidth) {
+                                 :             readEnableData.next <== 1;
+                                 :           } ELSE {
+                                 :             readEnableData.next <== 0;
+                                 :           }
+                                 : 
+                                 :           DFEsmAssignableValue pattern = assignable.value(dfeUInt(64));
+                                 :           pattern <== 0;
+                                 :           for (long i = 0; i <= bufferWidth; i++)
+                                 :             IF (canread === i)
+                                 :               pattern <== (1l << i) - 1l;
+                                 : 
+                                 :           for (int i = 0; i <= bufferWidth; i++)
+                                 :             IF (crtPos === i)
+                                 :               readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(32));
+                                 : 
+                                 :           // XXX assumes bufferWidth % 2 == 0
+                                 :           // crtPos = (crtPos + canread ) % bufferWidth;
+                                 :           crtPos.next <== (crtPos + canread) & (bufferWidth - 1);
+                                 :           toread.next <== toread - canread;
+                                 :           IF (toread - canread === 0) {
+                                 :             mode.next <== Mode.ReadLength;
+                                 :             iLengthRead.next <== true;
+                                 :           }
+                                 : 
+                                 :         }
+                                 :       }
+                                 :     }
+                                 : 
+                                 :     @Override
+                                 :     protected void outputFunction() {
+                                 :       iLength.read <== iLengthReady();
+                                 : 
+                                 :       oReadEnable.valid <== readEnableOutValid;
+                                 :       oReadMask.valid <== readMaskOutValid;
+                                 : 
+                                 :       oReadEnable <==readEnableData;
+                                 :       oReadMask <== readMaskData;
+                                 : 
+                                 :       //IF (readEnableOutValid)
+                                 :         //debug.simPrintf("Outputting command, readmask: %d, readeenable: %d toread: %d, crtPos: %d\n",
+                                 :             //readMaskData, readEnableData, toread, crtPos);
+                                 :     }
+                                 : }
