@@ -53,12 +53,6 @@ class ParallelKernelTwo extends Kernel {
 
 class ReadMaskControlSm extends ManagerStateMachine {
 
-    private enum Mode {
-      ReadLength, // may want to merge
-      OutputCommands,
-    };
-
-    private final DFEsmStateEnum<Mode> mode;
     private final DFEsmPullInput iLength;
     private final DFEsmStateValue iLengthReady;
     private final DFEsmPushOutput oReadMask, oReadEnable;
@@ -70,8 +64,6 @@ class ReadMaskControlSm extends ManagerStateMachine {
 
     public ReadMaskControlSm(DFEManager owner) {
       super(owner);
-      mode = state.enumerated(Mode.class, Mode.ReadLength);
-
       iLength = io.pullInput("length", dfeUInt(32));
 
       oReadMask = io.pushOutput("readmask", dfeUInt(32), 1);
@@ -98,52 +90,51 @@ class ReadMaskControlSm extends ManagerStateMachine {
       readEnableOutValid.next <== false;
       readMaskOutValid.next <== false;
 
-      SWITCH (mode) {
-        CASE (Mode.ReadLength) {
-          IF (iLengthReady === true) {
-            toread.next <== iLength;
-            mode.next <== Mode.OutputCommands;
-            iLengthRead.next <== false;
-          }
+      DFEsmAssignableValue realtoread = assignable.value(dfeUInt(32));
+      IF (iLengthReady === true) {
+        realtoread <== iLength;
+        iLengthRead.next <== false;
+      } ELSE {
+        realtoread <== toread;
+      }
+
+      IF (realtoread !== 0) {
+        readEnableOutValid.next <== true;
+        readMaskOutValid.next <== true;
+
+        DFEsmAssignableValue canread = assignable.value(dfeUInt(32));
+        IF ( bufferWidth - crtPos < realtoread) {
+          canread <== bufferWidth - crtPos;
+        } ELSE {
+          canread <== realtoread;
         }
-        CASE (Mode.OutputCommands) {
-          readEnableOutValid.next <== true;
-          readMaskOutValid.next <== true;
 
-          DFEsmAssignableValue canread = assignable.value(dfeUInt(32));
-          IF ( bufferWidth - crtPos < toread) {
-            canread <== bufferWidth - crtPos;
-          } ELSE {
-            canread <== toread;
-          }
-          IF (crtPos + canread >= bufferWidth) {
-            readEnableData.next <== 1;
-          } ELSE {
-            readEnableData.next <== 0;
-          }
-
-          DFEsmAssignableValue pattern = assignable.value(dfeUInt(64));
-          pattern <== 0;
-          for (long i = 0; i <= bufferWidth; i++)
-            IF (canread === i)
-              pattern <== (1l << i) - 1l;
-
-          for (int i = 0; i <= bufferWidth; i++)
-            IF (crtPos === i)
-              readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(32));
-
-          // XXX assumes bufferWidth % 2 == 0
-          // crtPos = (crtPos + canread ) % bufferWidth;
-          crtPos.next <== (crtPos + canread) & (bufferWidth - 1);
-          toread.next <== toread - canread;
-          IF (toread - canread === 0) {
-            mode.next <== Mode.ReadLength;
-            iLengthRead.next <== true;
-          }
-
-          //debug.simPrintf( "Sm: readEnable: %d, readmask: %d toread %d crtPos %d\n",
-              //readEnableData, readMaskData, toread, crtPos);
+        IF (crtPos + canread >= bufferWidth) {
+          readEnableData.next <== 1;
+        } ELSE {
+          readEnableData.next <== 0;
         }
+
+        DFEsmAssignableValue pattern = assignable.value(dfeUInt(64));
+        pattern <== 0;
+        for (long i = 0; i <= bufferWidth; i++)
+          IF (canread === i)
+            pattern <== (1l << i) - 1l;
+
+        for (int i = 0; i <= bufferWidth; i++)
+          IF (crtPos === i)
+            readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(32));
+
+        // XXX assumes bufferWidth % 2 == 0
+        // crtPos = (crtPos + canread ) % bufferWidth;
+        crtPos.next <== (crtPos + canread) & (bufferWidth - 1);
+        toread.next <== realtoread - canread;
+        IF (realtoread - canread === 0) {
+          iLengthRead.next <== true;
+        }
+
+        //debug.simPrintf( "Sm: readEnable: %d, readmask: %d toread %d crtPos %d\n",
+        //readEnableData, readMaskData, toread, crtPos);
       }
     }
 
