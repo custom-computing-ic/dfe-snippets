@@ -3,12 +3,13 @@
 #include <vector>
 #include <iostream>
 #include <bitset>
+#include <tuple>
 
 #include "ParallelCsrDecoder.h"
 #include "MaxSLiCInterface.h"
 
 template<typename value_type>
-std::vector<value_type> test_binary2(
+std::tuple<std::vector<value_type>, int> test_binary2(
     const std::vector<value_type>& data,
     const std::vector<uint32_t>& reads,
     int bufferWidth) {
@@ -18,6 +19,7 @@ std::vector<value_type> test_binary2(
   std::vector<uint32_t> res;
   std::vector<value_type> result;
   int pos = 0;
+  int cycles = 0;
   for (auto toread : reads) {
     while (toread > 0) {
       int canread = std::min((uint32_t)(bufferWidth - crtPos), toread);
@@ -33,12 +35,13 @@ std::vector<value_type> test_binary2(
 
       crtPos = (crtPos + canread) % bufferWidth;
       toread -= canread;
+      cycles++;
     }
   }
 
   //for (auto a : res)
     //std::cout << std::bitset<32>(a) << std::endl;
-  return result;
+  return std::make_tuple(result, cycles);
 }
 
 int main() {
@@ -56,13 +59,15 @@ int main() {
   for(int i = 0; i < inSize; ++i) {
     a[i] = i + 1;
   }
-  auto exp = test_binary2<double>(a, length, inputWidth);
+  auto texp = test_binary2<double>(a, length, inputWidth);
+  auto exp = std::get<0>(texp);
+  int expCycles = std::get<1>(texp);
 
   if (inputWidth != 32)
     std::cout << "Warning! This may not work for input width != 32" << std::endl;
 
-  std::cout << "Running on DFE." << std::endl;
-  int ticks = 13; //length.size();
+  std::cout << "Running on DFE (" << expCycles << " cycles )" << std::endl;
+  int ticks = expCycles;
   std::vector<double> out(ticks * inputWidth, 10);
   ParallelCsrDecoder_ParallelCsrWrite(
       a.size() * sizeof(double),
