@@ -1,0 +1,275 @@
+    LUTs     FFs   BRAMs    DSPs : FetchSubTuple3.maxj
+    7696    4746       1       0 : resources used by this file
+   1.47%   0.45%   0.04%   0.00% : % of available
+  48.05%  11.38%   0.69%   0.00% : % of total used
+  87.43%  14.89%  50.00%   0.00% : % of user resources
+
+                                 : //package com.custom_computing_ic.dfe_snippets.utils;
+                                 : 
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+                                 : import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+                                 : import com.maxeler.maxcompiler.v2.utils.*;
+                                 : 
+                                 : 
+                                 : /***
+                                 :     This implements a FIFO buffer which enables fetching arbitrary
+                                 :     amounts of data per cycle. The maximum number of entries fetchable
+                                 :     per cycle is a compile time parameter (tupleSize). The number of
+                                 :     entries to fetch can differ each cycle and vary from 0 to tupleSize.
+                                 :     The output is a DFEVector with requested number of entries and rest
+                                 :     of the vector filled with zeroes. Compile time parameter allows
+                                 :     aligning nonzero entries in the output vector to its 0th index.
+                                 : 
+                                 :     The buffer occasionally issues stall signal (nextPushEnable() == 0)
+                                 :     to avoid overflow of internal FIFOs and help orchestrating outer
+                                 :     code.
+                                 : 
+                                 :     Assumed use case: multi-pipe processing of input stream of length
+                                 :     not divisible to number of pipes p. At the end of the stream the number
+                                 :     of values to be read is less then p; this buffer helps not to go
+                                 :     across the boundary and not to loose/discard values happen to be
+                                 :     beyond the boundary.
+                                 : 
+                                 : */
+                                 : 
+                                 : public class FetchSubTuple3 extends KernelLib
+                                 : {
+                                 :     private static final int bufferDepth = 16;
+                                 : 
+                                 :     private DFEVectorType<DFEVar> m_tupleType;
+                                 :     private DFEVectorType<DFEVar> m_boolTupleType;
+                                 :     private DFEType m_contentType;
+                                 :     private DFEType m_indexType;
+                                 : 
+                                 :     private int     m_tupleSize;
+                                 :     private int     m_tupleBitWidth;
+                                 :     private boolean m_align;
+                                 : 
+                                 :     private DFEVector<DFEVector<DFEVar>> m_buffer;
+                                 :     // current depth (fill level) at each FIFO component
+                                 :     private DFEVector<DFEVar>  m_depth;
+                                 : 
+                                 :     private DFEVar m_nextPushEnable;
+                                 :     private DFEVar m_numElementsStored;
+                                 :     private DFEVar  m_currentDepth;
+                                 : 
+                                 :     /***
+                                 :         @param   tupleSize      The maximum number of entries to be processed per cycle.
+                                 :         @param   dataBitWidth   The bitwidth of dataType: necessary for correct initialisation of internal FIFOs.
+                                 :         @param   dataType       The type of the content stored.
+                                 :         @param   align          Whether to align the content of sub-tuple to 0-th index at the output.
+                                 :     */
+                                 :     public FetchSubTuple3(KernelLib owner, String name, int tupleSize, int dataBitWidth,
+                                 :                           DFEType dataType, boolean align)
+                                 :     {
+                                 :         super(owner);
+                                 : 
+                                 :         m_align            = align;
+                                 :         m_tupleBitWidth    = MathUtils.bitsToAddress(tupleSize);
+                                 :         int depthBitWidth = MathUtils.bitsToAddress(bufferDepth);
+                                 :         m_contentType      = dataType;
+                                 :         m_indexType        = dfeInt(dataBitWidth);
+                                 :         m_tupleSize        = tupleSize;
+                                 :         m_tupleType =
+                                 :                 new DFEVectorType<DFEVar> (m_contentType, m_tupleSize);
+                                 :         m_boolTupleType = 
+                                 :                 new DFEVectorType<DFEVar> (dfeBool(), m_tupleSize);
+                                 : 
+                                 :         m_nextPushEnable    = dfeBool().newInstance(this);
+                                 :         m_numElementsStored = m_indexType.newInstance(this);
+                                 : 
+                                 :         m_currentDepth = dfeUInt(depthBitWidth).newInstance(this);
+                                 : 
+                                 :         m_depth = new DFEVectorType<DFEVar> (dfeUInt(depthBitWidth), m_tupleSize).newInstance(this);
+                                 : 
+                                 :         // 2 dim array: first dim = 1..tupleSise, 2nd dim = 1..bufferDepth
+                                 :         DFEVectorType<DFEVar> fifo_type = new DFEVectorType<DFEVar>(m_contentType, bufferDepth);
+                                 :         m_buffer = new DFEVectorType<DFEVector<DFEVar>>(fifo_type, tupleSize).newInstance(this);
+                                 :     }
+                                 : 
+                                 :     public DFEVar nextPushEnable() { return m_nextPushEnable; }
+                                 : 
+                                 : 
+                                 :     /***
+                                 :         @param  subTupleSize  Number of elements to retrieve. Must be between 0 and tupleSize.
+                                 :         @param  enable        Boolean: indicates whether inputTuple is requested to be pushed into the buffer.
+                                 :         @param  inputTuple    Vector of input data. All its tupleSize entries are pushed to the buffer, if return is 1.
+                                 :         @return               Vector of tupleSize, with only subTupleSize entries retrieved from the buffer.
+                                 :     */
+                                 :     public DFEVector<DFEVar> popPush(DFEVar subTupleSize, DFEVar pushEnable, DFEVector<DFEVar> inputTuple)
+                                 :     {
+                                 :         DFEType tupleIndexType = null;
+                                 :         if (m_tupleBitWidth == 0)
+                                 :         {
+                                 :             tupleIndexType = dfeUInt(1);
+                                 :         }
+                                 :         else
+                                 :         {
+                                 :             tupleIndexType = dfeUInt(m_tupleBitWidth);
+                                 :         }
+                                 : 
+                                 :         // ----------------------------------------------------------------------
+                                 :         //  Manage state
+                                 :         // ----------------------------------------------------------------------
+                                 : 
+                                 :         // in case subTupleSize has incompatible bit width
+                                 :         DFEVar numElements = subTupleSize.cast(tupleIndexType);
+                                 : 
+                                 :         DFEVector<DFEVar> readEnable = m_boolTupleType.newInstance(this);
+                                 :         DFEVector<DFEVar> mask       = m_boolTupleType.newInstance(this);
+                                 :         DFEVar shiftLoop             = tupleIndexType.newInstance(this);
+                                 : 
+                                 : 
+                                 :         optimization.pushPipeliningFactor(0.0);
+       7       2       0       0 :             DFEVar shift = control.count.pulse(1)? 0 : stream.offset(shiftLoop,-1);
+                                 :             //DFEVar tempShift = shift + numElements;
+                                 :             //DFEVar depthDecrement = tempShift >= m_tupleSize;
+                                 :             shiftLoop <== //depthDecrement? (tempShift - m_tupleSize) : tempShift;
+      10       9       0       0 :                           KernelMath.modulo(shift + numElements, m_tupleSize);
+                                 :         optimization.popPipeliningFactor();
+                                 : 
+                                 : /*
+                                 :             DFEVar pastDepth = control.count.pulse(1)? 0 : stream.offset(m_currentDepth,-1);
+                                 : 
+                                 :             DFEVar m_pushAccepted = pushEnable & (pastDepth < bufferDepth);
+                                 : 
+                                 :             DFEVar depthDecremented = pastDepth-depthDecrement;
+                                 :             m_currentDepth <== m_pushAccepted ? (depthDecremented+1)
+                                 :                                               : (depthDecremented);
+                                 : */
+                                 :             //DFEVar m_pushAccepted = pushEnable & (pastNumElements < (bufferDepth-1)*m_tupleSize);
+                                 :             //DFEVar incomingData = m_pushAccepted? constant.var(m_indexType,m_tupleSize)
+                                 : //                                                : constant.var(m_indexType,0);
+                                 :             // do we have enough data to pop?
+                                 :             //DFEVar enoughData = (incomingData + pastNumElements >= numElements);
+                                 :             //DFEVar fetchSize  = (enoughData)? numElements : 0;
+                                 : 
+                                 :             // assuming fetchSize has dataBitWidth bits
+                                 : 
+                                 :             // m_numElementsStored <== pastNumElements + incomingData - fetchSize;
+                                 :             // m_nextPushEnable <== (m_numElementsStored < (bufferDepth-1)*m_tupleSize);
+                                 : //        optimization.popPipeliningFactor();
+                                 : 
+                                 : 
+                                 :         for (int i = 0; i < m_tupleSize; i++)
+                                 :         {
+      23      28       0       0 :             mask[i] <== (i < numElements);
+                                 :         }
+                                 :         readEnable = null;
+                                 :         if (m_tupleBitWidth == 0)
+                                 :         {
+                                 :             readEnable = mask;
+                                 :         }
+                                 :         else
+                                 :         {
+      99      67       1       0 :             readEnable = mask.rotateElementsLeft(shift);
+                                 :         }
+                                 :         optimization.pushPipeliningFactor(0.0);
+                                 :             // all FIFOs have same depth +{0,1} - just watching an arbitrary FIFO
+       1       1       0       0 :             DFEVar pastDepth0 = control.count.pulse(1)? 0 : stream.offset(m_depth[0],-1);
+                                 :             m_nextPushEnable = pastDepth0 < bufferDepth-3;
+                                 : 
+                                 :             for (int i = 0; i < m_tupleSize; i++)
+                                 :             {
+       5       1       0       0 :                 DFEVar pastDepth = control.count.pulse(1)? 0 : stream.offset(m_depth[i],-1);
+      98       0       0       0 :                 m_depth[i] <== pushEnable?
+      22       0       0       0 :                                     (readEnable[i]? pastDepth : (pastDepth+1))
+      21       0       0       0 :                                    :(readEnable[i]? (pastDepth-1) : pastDepth);
+                                 :             }
+                                 : 
+                                 :         optimization.popPipeliningFactor();
+                                 : 
+                                 : 
+                                 :         debug.simPrintf("pushEnable=%d, subTupleSize=%d, pastDepth0=%d, nextPushEnable=%d, ",
+                                 :                          pushEnable, subTupleSize, pastDepth0, m_nextPushEnable);
+                                 :         debug.simPrintf("input = [");
+                                 :         for (int i = 0; i < m_tupleSize; i++)
+                                 :         {
+                                 :             debug.simPrintf("%f ", inputTuple[i]);
+                                 :         }
+                                 :         debug.simPrintf("], readEnable = [ ");
+                                 :         for (int i = 0; i < m_tupleSize; i++)
+                                 :         {
+                                 :             debug.simPrintf("%d ", readEnable[i]);
+                                 :         }
+                                 :         debug.simPrintf("] ");
+                                 :         debug.simPrintf("depth = [");
+                                 :         for (int i = 0; i < m_tupleSize; i++)
+                                 :         {
+                                 :             debug.simPrintf("%d ", m_depth[i]);
+                                 :         }
+                                 :         debug.simPrintf("] ");
+                                 : 
+                                 :         // ----------------------------------------------------------------------
+                                 :         //  Data storage update
+                                 :         // ----------------------------------------------------------------------
+                                 : 
+                                 :         DFEVector<DFEVar> tuple     = m_tupleType.newInstance(this);
+                                 : 
+                                 :         optimization.pushPipeliningFactor(0.0);
+                                 :         for (int i = 0; i < m_tupleSize; i++)
+                                 :         {
+                                 : 
+      69       4       0       0 :             DFEVar pastDepth = control.count.pulse(1)? 0 : stream.offset(m_depth[i],-1);
+                                 : 
+     163       0       0       0 :             DFEVar asIfReadEnable = (pushEnable & pastDepth.eq(0))?
+                                 :                                                inputTuple[i]
+                                 :                                              : stream.offset(m_buffer[i][0],-1);
+    1532       0       0       0 :             tuple[i] <== readEnable[i]? asIfReadEnable
+                                 :                                       : constant.var(m_contentType, 0);
+                                 :             // shifting those FIFOs that are being read
+                                 :             for (int j = 0; j < bufferDepth; j++)
+                                 :             {
+                                 :                 if (j == bufferDepth-1)
+                                 :                 {
+                                 :                     m_buffer[i][j] <== (pushEnable & pastDepth.eq(j))? inputTuple[i] : 0;
+                                 :                 }
+                                 :                 else
+                                 :                 {
+      64       0       0       0 :                     DFEVar asIfReadDisabled = (pushEnable & pastDepth.eq(j))?
+                                 :                                                inputTuple[i]
+                                 :                                              : stream.offset(m_buffer[i][j],-1);
+     896       0       0       0 :                     DFEVar asIfReadEnabled  = (pushEnable & pastDepth.eq(j+1))?
+                                 :                                                inputTuple[i]
+                                 :                                              : stream.offset(m_buffer[i][j+1],-1);
+      65       0       0       0 :                     m_buffer[i][j] <== readEnable[i]? asIfReadEnabled
+                                 :                                                     : asIfReadDisabled;
+                                 :                 }
+                                 :             }
+                                 :         }
+                                 :         optimization.popPipeliningFactor();
+                                 :     
+                                 :         debug.simPrintf("output = [");
+                                 :         for (int i = 0; i < m_tupleSize; i++)
+                                 :         {
+                                 :             debug.simPrintf("%f ", tuple[i]);
+                                 :         }
+                                 :         debug.simPrintf("] ");
+                                 : 
+                                 :         debug.simPrintf("buffer = [");
+                                 :         for (int i = 0; i < m_tupleSize; i++)
+                                 :         {
+                                 :             debug.simPrintf("\n[");
+                                 :             for (int j = 0; j < bufferDepth-1; j++)
+                                 :                 debug.simPrintf("%f ", m_buffer[i][j]);
+                                 :             debug.simPrintf("]");
+                                 :         }
+                                 :         debug.simPrintf("]\n ");
+                                 :     
+                                 : 
+                                 : 
+                                 :         // align tuple values so that they start from index 0
+                                 :         if (m_align)
+                                 :         {
+    4621    4634       0       0 :             return tuple.rotateElementsRight(shift);
+                                 :         }
+                                 :         else
+                                 :         {
+                                 :             return tuple;
+                                 :         }
+                                 :     }
+                                 : }

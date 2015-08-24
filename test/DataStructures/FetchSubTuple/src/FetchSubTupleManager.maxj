@@ -8,13 +8,13 @@ import com.maxeler.maxcompiler.v2.build.EngineParameters;
 public class FetchSubTupleManager extends CustomManager{
 
     private static final String s_kernelName  = "FetchSubTupleKernel";
-    private static final int tupleSize = 8;
+    private static final int tupleSize = 24;
 
     FetchSubTupleManager(EngineParameters ep)
     {
         super(ep);
 
-        config.setDefaultStreamClockFrequency(135);
+        config.setDefaultStreamClockFrequency(200);
 
 
         KernelBlock k = addKernel(new FetchSubTupleKernel(makeKernelParameters(s_kernelName), tupleSize));

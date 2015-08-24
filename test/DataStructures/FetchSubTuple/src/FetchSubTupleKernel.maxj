@@ -36,33 +36,35 @@ class FetchSubTupleKernel extends Kernel
         DFEVar pushEnable = ~prefetchEnable & ( (cycleCounter < 27) | (cycleCounter > 30) );
         DFEVar popEnable  = ~prefetchEnable & ( (cycleCounter < 10) | (cycleCounter > 11) );
 
-        debug.simPrintf("\ncycle=%d ", cycleCounter);
 
 
 
         DFEVar dataRequestEnableLoop = dfeBool().newInstance(this);
         DFEVar dataRequestEnable = control.count.pulse(1)? 0 : stream.offset(dataRequestEnableLoop,-1);
 
+        DFEVar pushEnable2 = dataRequestEnable & pushEnable;
+
+        //debug.simPrintf("\ncycle=%d, pushEnable2=%d | ", cycleCounter, pushEnable2);
+
         DFEVector<DFEVar> input = io.input("input", tupleType, dataRequestEnable);
         DFEVar size             = io.input("sizes", scalarType, popEnable);
 
-        boolean alignOutput = true;
+        boolean alignOutput = false;
         FetchSubTuple buffer = new FetchSubTuple(this, "test", tupleSize, 64, floatType, alignOutput);
-        DFEVar success = buffer.push(pushEnable, input);
         DFEVar subTupleSize = (popEnable)? size: 0;
-        DFEVector<DFEVar> outTuple = buffer.pop(subTupleSize);
+        DFEVector<DFEVar> outTuple = buffer.popPush(subTupleSize, pushEnable2, input);
 
-        dataRequestEnableLoop <== buffer.nextPushEnable() & stream.offset(pushEnable,1);
+        dataRequestEnableLoop <== buffer.nextPushEnable();
 
-
-        debug.simPrintf("|prefetchEnable=%d, pushEnable=%d, popEnable=%d, size=%d, subTupleSize=%d, dataRequestEnable=%d, nextPushEnable=%d, pushSuccessful=%d, ",
-                          prefetchEnable, pushEnable, popEnable, size, subTupleSize, dataRequestEnable, dataRequestEnableLoop, success);
+/*
+        debug.simPrintf("|prefetchEnable=%d, pushEnable=%d, popEnable=%d, size=%d, subTupleSize=%d, dataRequestEnable=%d, nextPushEnable=%d, ",
+                          prefetchEnable, pushEnable, popEnable, size, subTupleSize, dataRequestEnable, dataRequestEnableLoop);
         debug.simPrintf("outTuple: ");
         for (int i = 0; i < tupleSize; i++)
         {
             debug.simPrintf("%f ", outTuple[i]);
         }
-
+*/
         io.output("output", outTuple, tupleType);
     }
 }
