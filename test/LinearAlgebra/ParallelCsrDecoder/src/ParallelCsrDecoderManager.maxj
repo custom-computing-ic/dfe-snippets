@@ -37,18 +37,16 @@ public class ParallelCsrDecoderManager extends CustomManager{
     }
 
     private static EngineInterface interfaceDefault() {
-        EngineInterface engine_interface = new EngineInterface();
+        EngineInterface ei = new EngineInterface();
         CPUTypes type = CPUTypes.UINT32;
         int size = type.sizeInBytes();
 
-        InterfaceParam ticks = engine_interface.addParam("ticks", CPUTypes.INT);
+        InterfaceParam ticks = ei.addParam("ticks", CPUTypes.INT);
+        ei.setTicks(s_kernelName, ticks);
 
-        engine_interface.setTicks(s_kernelName, ticks);
-
-        engine_interface.setStream("output", CPUTypes.DOUBLE, ticks * inputWidth * CPUTypes.DOUBLE.sizeInBytes());
-        engine_interface.ignoreLMem("cpu2lmem");
-        engine_interface.ignoreStream("fromcpu");
-        return engine_interface;
+        ei.ignoreLMem("cpu2lmem");
+        ei.ignoreStream("fromcpu");
+        return ei;
     }
 
 

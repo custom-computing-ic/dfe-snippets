@@ -45,7 +45,7 @@ class ParallelKernelTwo extends Kernel {
     }
 
     io.output("output", out, vtype);
-    debug.simPrintf( "Kernel: readEnable: %d, readmask: %d\n", readEnable, readMask);
+  //  debug.simPrintf( "Kernel: readEnable: %d, readmask: %d\n", readEnable, readMask);
   }
 }
 
@@ -103,6 +103,7 @@ class ReadMaskControlSm extends ManagerStateMachine {
           IF (iLengthReady === true) {
             toread.next <== iLength;
             mode.next <== Mode.OutputCommands;
+            iLengthRead.next <== false;
           }
         }
         CASE (Mode.OutputCommands) {
@@ -140,6 +141,8 @@ class ReadMaskControlSm extends ManagerStateMachine {
             iLengthRead.next <== true;
           }
 
+          //debug.simPrintf( "Sm: readEnable: %d, readmask: %d toread %d crtPos %d\n",
+              //readEnableData, readMaskData, toread, crtPos);
         }
       }
     }

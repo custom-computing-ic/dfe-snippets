@@ -47,8 +47,11 @@ int main() {
   int nbursts = 6; // how many bursts we are expecting to read
   const int inSize = nbursts * inputWidth;
   std::vector<uint32_t> length{
-    4, 4, 4, 4, 16, 32, 32, 4, 4, 4, 4, 16,
+    4, 4, 4, 4, 16, 64, 4, 2, 4, 2, 4, 16,
   };
+  //std::vector<uint32_t> length{
+    //4, 4, 4, 4, 16, 32, 32, 4, 4, 4, 4, 16,
+  //};
   std::vector<double> a(inSize);
   for(int i = 0; i < inSize; ++i) {
     a[i] = i + 1;
@@ -59,7 +62,7 @@ int main() {
     std::cout << "Warning! This may not work for input width != 32" << std::endl;
 
   std::cout << "Running on DFE." << std::endl;
-  int ticks = length.size();
+  int ticks = 13; //length.size();
   std::vector<double> out(ticks * inputWidth, 10);
   ParallelCsrDecoder_ParallelCsrWrite(
       a.size() * sizeof(double),
@@ -71,13 +74,14 @@ int main() {
       &length[0],
       length.size() * sizeof(uint32_t),
       &out[0],
+      out.size() * sizeof(double),
       0,
       a.size() * sizeof(double));
 
   int status = 0;
-  for (size_t i = 0; i < a.size(); i++)
+  for (size_t i = 0; i < exp.size(); i++)
     if (exp[i] != out[i]) {
-      std::cout << "Got " << out[i] << " exp " << exp[i] << std::endl;
+      std::cout << i << ": got " << out[i] << " exp " << exp[i] << std::endl;
       status |= 1;
     }
 
