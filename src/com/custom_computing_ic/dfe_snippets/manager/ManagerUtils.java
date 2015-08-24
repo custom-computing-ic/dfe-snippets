@@ -1,3 +1,4 @@
+
 package com.custom_computing_ic.dfe_snippets.manager;
 
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControllerConfig;

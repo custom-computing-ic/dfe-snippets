@@ -11,6 +11,8 @@ import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
 import com.maxeler.maxcompiler.v2.managers.BuildConfig;
 
+import com.custom_computing_ic.dfe_snippets.sparse.AdjustedCSRDecoder;
+
 
 public class fpgaNaiveManager extends CustomManager {
 
@@ -58,8 +60,8 @@ public class fpgaNaiveManager extends CustomManager {
             compute.getInput("matrix_value" + i) <== readValueControl.getOutput("matrix_value" + i);
 
             // -- CSR Control SM
-            ManagerStateMachine stateMachine = new CSRControlSM(this, ep.getDebugSm(), i);
-            StateMachineBlock control = addStateMachine("CSRControlSM" + i, stateMachine);
+            ManagerStateMachine stateMachine = new AdjustedCSRDecoder(this, ep.getDebugSm(), i);
+            StateMachineBlock control = addStateMachine("AdjustedCSRDecoder" + i, stateMachine);
             control.getInput("indptr") <== readControl.getOutput("indptr" + i);
 
             // -- Resolve access to vector memory
@@ -99,7 +101,7 @@ public class fpgaNaiveManager extends CustomManager {
         for (int i = 0; i < numPipes; i++) {
             ei.ignoreScalar(s_kernelName + i,"outputs");
             ei.ignoreScalar(s_kernelName + i,"n");
-            ei.ignoreScalar("CSRControlSM" + i,"output_count");
+            ei.ignoreScalar("AdjustedCSRDecoder" + i,"output_count");
             ei.ignoreScalar("ReadControl", "input_count_" + i);
         }
         ei.setTicks("ReadControl", 0);
@@ -133,7 +135,7 @@ public class fpgaNaiveManager extends CustomManager {
         for (int i = 0; i < numPipes; i++) {
             ei.setTicks(s_kernelName + i, ticksPerPipe);
             ei.setScalar(s_kernelName + i, "n", n);
-            ei.setScalar("CSRControlSM" + i, "output_count", inputsPerPipe.get(i));
+            ei.setScalar("AdjustedCSRDecoder" + i, "output_count", inputsPerPipe.get(i));
             ei.setScalar("ReadControl", "input_count_" + i, csrInputsPerPipe.get(i));
         }
 

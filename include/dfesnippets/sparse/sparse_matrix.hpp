@@ -5,8 +5,10 @@
 #include <iostream>
 #include <iomanip>
 #include "mkl_spblas.h"
-#include <dfesnippets/sparse/utils.hpp>
+#include <dfesnippets/Timing.hpp>
 #include <dfesnippets/sparse/common.hpp>
+#include <dfesnippets/VectorUtils.hpp>
+#include <dfesnippets/NumericUtils.hpp>
 
 #include <boost/numeric/ublas/matrix_sparse.hpp>
 #include <boost/numeric/ublas/io.hpp>
@@ -32,8 +34,8 @@ std::vector<double> SpMV_MKL_ge(char *path,
         auto start_time = std::chrono::high_resolution_clock::now();
         mkl_dcsrgemv(&tr, &n, values, row_ptr, col_ind, &v[0], &r[0]);
         auto end_time = std::chrono::high_resolution_clock::now();
-        print_clock_diff("SpMV (CPU)", end_time, start_time);
-        print_spmv_gflops("SpMV (CPU)", nnzs, end_time, start_time);
+        dfesnippets::timing::print_clock_diff("SpMV (CPU)", end_time, start_time);
+        dfesnippets::timing::print_spmv_gflops("SpMV (CPU)", nnzs, end_time, start_time);
         return r;
 }
 
@@ -80,7 +82,7 @@ std::vector<double> SpMV_CPU(char *path, std::vector<double> v, bool symmetric) 
     std::vector<double> r = SpMV_MKL_sym(path, v);
     std::cout << "Checking sym/unsymmetric match...";
     for (size_t i = 0; i < v.size(); i++) {
-      if (!almost_equal(r[i], r2[i])) {
+      if (!dfesnippets::numeric_utils::almost_equal(r[i], r2[i])) {
         printf(" r[%ld] == %f != r[%ld] == %f\n", i, r[i], i, r2[i]);
         exit(1);
       }
@@ -126,9 +128,9 @@ public:
   void print() {
     std::cout << "ACSR Matrix n = " << n << " nnzs = " << nnzs << std::endl;
     std::cout << "  Values (size = " << values.size() << "): ";
-    print_vector(values);
+    dfesnippets::vectorutils::print_vector(values);
     std::cout << "  Adjusted_indptr (size = " << adjusted_ind.size() << "): ";
-    print_vector(adjusted_ind);
+    dfesnippets::vectorutils::print_vector(adjusted_ind);
   }
 
   void print_dense() {

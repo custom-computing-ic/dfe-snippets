@@ -8,11 +8,10 @@
 #include <boost/numeric/ublas/io.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include "Maxfiles.h"
+#include "SpmvBase.h"
 #include "MaxSLiCInterface.h"
 
 #include <dfesnippets/sparse/common.hpp>
-#include <dfesnippets/sparse/sparse_matrix.hpp>
 #include <dfesnippets/sparse/sparse_matrix.hpp>
 #include <dfesnippets/sparse/partition.hpp>
 
@@ -42,7 +41,7 @@ int main(int argc, char** argv) {
   int num_repeat = boost::lexical_cast<int>(argv[3]);
 
   // -- Design Parameters
-  int numPipes = fpgaNaive_numPipes;
+  int numPipes = SpmvBase_numPipes;
 
   // -- Matrix Parameters
   int n, nnzs;
@@ -81,7 +80,7 @@ int main(int argc, char** argv) {
   auto res = ublas::prod(inMatrix, vu);
   vector<double> bExp = SpMV_MKL_ge((char *)path.c_str(), v);
 
-  int partitionSize = min(fpgaNaive_vectorCacheSize, n);
+  int partitionSize = min(SpmvBase_vectorCacheSize, n);
   vector<CsrMatrix<double>> partitions = partition(inMatrix, partitionSize);
   vector<double> dfe_res(n, 0);
 
@@ -99,7 +98,7 @@ int main(int argc, char** argv) {
 #endif
 
   int offset = 0;
-  for (int i = 0; i < partitions.size(); ++i) {
+  for (size_t i = 0; i < partitions.size(); ++i) {
     auto p = partitions[i];
     AdjustedCsrMatrix<double> original_matrix(n);
     original_matrix.load_from_csr(
@@ -124,18 +123,17 @@ int main(int argc, char** argv) {
   }
 
   cout << "Checking ublas " << endl;
-  for (int i = 0; i < n; ++i)
-  {
-          if (!almost_equal(res(i), bExp[i])) {
-                  cerr << "Expected " << bExp[i] << " got: " << res(i) << endl;
-                  exit(1);
-          }
+  for (int i = 0; i < n; ++i) {
+    if (!dfesnippets::numeric_utils::almost_equal(res(i), bExp[i])) {
+      cerr << "Expected " << bExp[i] << " got: " << res(i) << endl;
+      exit(1);
+    }
   }
   cout << "Ran SPMV " << endl;
 
   int errors = 0;
   for (size_t i = 0; i < dfe_res.size(); i++)
-    if (!almost_equal(bExp[i], dfe_res[i])) {
+    if (!dfesnippets::numeric_utils::almost_equal(bExp[i], dfe_res[i])) {
       cerr << "Expected [ " << i << " ] " << bExp[i] << " got: " << dfe_res[i] << endl;
       errors++;
     }

@@ -5,6 +5,8 @@
 #include <omp.h>
 #include <string.h>
 
+#include <dfesnippets/NumericUtils.hpp>
+
 namespace dfesnippets {
 
   namespace blas {
@@ -31,13 +33,13 @@ namespace dfesnippets {
         delete [] data;
       }
 
-      value_t& operator()(long i, long j) {
+      value_t& operator()(long i, long j) const {
         return data[i * n + j];
       }
 
       vec operator* (const vec& v) const {
         vec r(n, 0);
- #pragma omp parallel for
+#pragma omp parallel for
         for (long i = 0; i < n; i++)
           for (long j = 0; j < n; j++) {
             r[i] += v[j] * data[i * n + j];
@@ -45,7 +47,7 @@ namespace dfesnippets {
         return r;
       }
 
-      void print() {
+      void print() const {
         for (int i = 0; i < n; i ++ ) {
           for (int j = 0 ; j < n; j++)
             std::cout << operator()(i, j) << " ";
@@ -58,6 +60,20 @@ namespace dfesnippets {
         for (long i = 0; i < n; i ++ )
           for (long j = 0 ; j < n; j++)
             data[i * n + j] =  j / 48 + 1;
+      }
+
+      void init() {
+#pragma omp parallel for
+        for (long i = 0; i < n; i ++ )
+          for (long j = 0 ; j < n; j++)
+            data[i * n + j] =  (i * j) % 48 + 1;
+      }
+
+      void init(int val) {
+#pragma omp parallel for
+        for (long i = 0; i < n; i ++ )
+          for (long j = 0 ; j < n; j++)
+            data[i * n + j] =  val;
       }
 
       void print_info() {
@@ -92,7 +108,90 @@ namespace dfesnippets {
       inline int size() const {
         return n;
       }
+
+      void row_interchange(int i, int j) {
+        for (int k = 0; k < n; k++) {
+          value_t tmp = this->operator()(i, k);
+          this->operator()(i, k) = this->operator()(j, k);
+          this->operator()(j, k) = tmp;
+        }
+      }
+
     };
+
+    class System {
+      public:
+        int n;
+        Matrix a;
+        std::vector<double> x;
+        std::vector<double> b;
+
+        System(int _n) : n(_n), a(_n), x(_n, 0), b(_n, 0) {
+          a.init(0);
+        }
+
+        void init() {
+          // start with identity matrix
+          // fill the first row with multiples of main diagonal elements
+          for (int i = 0; i < n; i++) {
+            a(0, i) = i % 4;
+            a(i, i) = 1;
+          }
+
+          fillMatrix();
+
+          // generate solution
+          for (int i = 0; i < n; i++)
+            x[i] = i % 20;
+
+          // generate rhs
+          b = a * x;
+        }
+
+        bool checkSolution(std::vector<double> got) {
+          bool good = true;
+          for (size_t i = 0; i < x.size(); i++)
+            if (!dfesnippets::numeric_utils::almost_equal(got[i], x[i], 1E-10)) {
+              std::cerr << "Got " << got[i] << " exp " << x[i] << " @i= " << i << std::endl;
+              good = false;
+            }
+          return good;
+        }
+
+        virtual void fillMatrix() {
+          // apply some of the basic operations, adding a multiple of the first row to
+          // all other rows
+          for (int i = 1; i < n; i++) {
+            for (int k = 0; k < n; k++) {
+              a(i, k) += i * ((k % 4) + 1) * a(0, k);
+            }
+          }
+        }
+    };
+
+    // A system which must be solved with (at least) partial pivoting
+    class GEPPSystem : public System {
+
+      public:
+        GEPPSystem(long _n) : System(_n) {}
+
+        virtual void fillMatrix() override {
+          // for the system to require pivoting, at least one row must have zero
+          // entries on the main diagonal: we don't fill the last row and just interchange
+          // it with another row at the end
+          for (int i = 1; i < n - 1; i++) {
+            for (int k = 0; k < n; k++) {
+              a(i, k) += i * ((k % 4) + 1) * a(0, k);
+            }
+          }
+
+          if (n - 1 == n / 2) {
+            std::cerr << "Error: can't build a nice GEPP System with n of size " << n << std::endl;
+          }
+          a.row_interchange(n - 1, n / 2);
+        }
+    };
+
 
   }
 }

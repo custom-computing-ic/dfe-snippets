@@ -4,8 +4,9 @@
 #include <vector>
 #include <iostream>
 #include <chrono>
-#include "Maxfiles.h"
+#include "SpmvBase.h"
 #include <dfesnippets/sparse/sparse_matrix.hpp>
+#include <dfesnippets/Timing.hpp>
 
 #include "scheduling.hpp"
 
@@ -27,11 +28,11 @@ std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
   auto adjusted_indptr = get<0>(res);
   auto values = get<1>(res);
   auto pipe_input_count = get<2>(res);
-  print_clock_diff("Done: ", start_time);
+  dfesnippets::timing::print_clock_diff("Done: ", start_time);
 
   // -- dimensions in bytes for the encoding streams
-  int value_size = align(values.size() * sizeof(value_type), 384);
-  int adjusted_indptr_size = align(adjusted_indptr.size() * sizeof(int), 384);
+  int value_size = dfesnippets::numeric_utils::align(values.size() * sizeof(value_type), 384);
+  int adjusted_indptr_size = dfesnippets::numeric_utils::align(adjusted_indptr.size() * sizeof(int), 384);
 
   // --- Running whole SpMV design
   cout << "      Running on DFE." << endl;
@@ -46,21 +47,21 @@ std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
 
   start_time = high_resolution_clock::now();
 
-  fpgaNaive_writeDRAM(adjusted_indptr_size,
+  SpmvBase_writeDRAM(adjusted_indptr_size,
                       0,
                       (uint8_t *)&adjusted_indptr[0]);
-  fpgaNaive_writeDRAM(value_size,
+  SpmvBase_writeDRAM(value_size,
                       adjusted_indptr_size,
                       (uint8_t*)&values[0]);
-  print_clock_diff("Writing to DRAM ", start_time);
+  dfesnippets::timing::print_clock_diff("Writing to DRAM ", start_time);
 
   start_time = high_resolution_clock::now();
 
-  fpgaNaive_setBRAMs(
+  SpmvBase_setBRAMs(
                     &v[0],
                     &v[0]);
 
-  print_clock_diff("Writing to BRAMs ", start_time);
+  dfesnippets::timing::print_clock_diff("Writing to BRAMs ", start_time);
 
   std::vector<double> b(m.n * 2, 0);
   start_time = high_resolution_clock::now();
@@ -79,25 +80,25 @@ std::vector<double> SpMV_DFE(AdjustedCsrMatrix<value_type> m,
     csr_size_per_pipe.push_back(val);
 
   cout << "Indptr_size_per_pipe" << endl;
-  print_vector(indptr_size_per_pipe);
+  dfesnippets::vectorutils::print_vector(indptr_size_per_pipe);
   for (int i = 0; i < num_repeat; i++)
-      fpgaNaive(
-                adjusted_indptr_size,
-                m.n,
-                values.size() / num_pipes,
-                value_size,
-                &csr_size_per_pipe[0],
-                &indptr_size_per_pipe[0],
-                values.size() / num_pipes,
-                &b[0]
-            );
+    SpmvBase(
+        adjusted_indptr_size,
+        m.n,
+        values.size() / num_pipes,
+        value_size,
+        &csr_size_per_pipe[0],
+        &indptr_size_per_pipe[0],
+        values.size() / num_pipes,
+        &b[0]
+        );
 
   auto end_time = high_resolution_clock::now();
 
   cout << "Done " << num_repeat << "runs of SpMV. _Adjust run times accordingly_\n";
 
-  print_clock_diff("SpMV ", end_time, start_time);
-  print_spmv_gflops("SpMV ", m.nnzs, end_time, start_time);
+  dfesnippets::timing::print_clock_diff("SpMV ", end_time, start_time);
+  dfesnippets::timing::print_spmv_gflops("SpMV ", m.nnzs, end_time, start_time);
 
   std::vector<pair<double, double> > r;
   for (size_t i = 0; i < b.size(); i+=2) {

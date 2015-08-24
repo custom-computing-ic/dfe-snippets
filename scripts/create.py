@@ -45,7 +45,8 @@ def ProcessSourceFiles(files, dest, macro_dict):
     srcRoot = os.path.join(dest, 'src')
     for f in files:
         ReplaceMacros(srcRoot + "/" + f, macro_dict)
-    ReplaceMacros(dest + "/build/Makefile", macro_dict)
+    if os.path.isfile(os.path.join(dest, 'build', 'Makefile')):
+      ReplaceMacros(dest + "/build/Makefile", macro_dict)
 
 
 def CopyTemplateFiles(dest, options):
@@ -70,6 +71,11 @@ def CopyTemplateFiles(dest, options):
     for f in os.listdir(srcRoot):
         if f not in files:
             os.remove(os.path.join(srcRoot, f))
+
+    if options.makefile == 'cmake':
+      # remove the build directory
+      shutil.rmtree(os.path.join(dest, 'build'));
+      return files
 
     if not options.concept:
         # For standalone projects, copy makefiles
@@ -100,6 +106,11 @@ def main():
     parser.add_argument('name', help='Name of the project')
     parser.add_argument(
         '-c', '--concept', help='Required to create a new snippet')
+    parser.add_argument(
+        '-m', '--makefile',
+        choices=['gnumake', 'cmake'],
+        default='gnumake',
+        help='Makefile to use for the new snippet')
     args = parser.parse_args()
 
     if args.concept:
@@ -137,6 +148,10 @@ def main():
 
     # printSummary
     PrintSummary(files, dest, args)
+    if args.makefile == 'cmake':
+      print 'NOTE, please add the following line to the top level CMakeLists.txt'
+      print '   add_fpga_build({} {} {} {}Manager)'.format(
+          projectConcept, projectName, projectName, projectName)
 
 if __name__ == '__main__':
     main()

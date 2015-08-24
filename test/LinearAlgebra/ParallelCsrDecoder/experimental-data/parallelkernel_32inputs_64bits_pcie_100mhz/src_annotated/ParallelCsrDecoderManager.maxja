@@ -1,0 +1,61 @@
+    LUTs     FFs   BRAMs    DSPs : ParallelCsrDecoderManager.maxj
+     272    2441       0       0 : resources used by this file
+   0.05%   0.23%   0.00%   0.00% : % of available
+   3.33%  15.92%   0.00%   0.00% : % of total used
+  67.16%  50.23%   0.00%   0.00% : % of user resources
+
+                                 : import com.maxeler.maxcompiler.v2.managers.engine_interfaces.*;
+                                 : import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+                                 : import com.maxeler.maxcompiler.v2.managers.custom.blocks.*;
+                                 : import com.maxeler.maxcompiler.v2.build.EngineParameters;
+                                 : import com.maxeler.maxcompiler.v2.statemachine.manager.ManagerStateMachine;
+                                 : 
+                                 : import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
+                                 : 
+                                 : public class ParallelCsrDecoderManager extends CustomManager{
+                                 : 
+                                 :     private static final String s_kernelName  = "ParallelCsrDecoderKernel";
+                                 :     private static final int inputWidth = 32;
+                                 : 
+                                 :     ParallelCsrDecoderManager(EngineParameters ep)
+                                 :     {
+                                 :         super(ep);
+                                 : 
+                                 :         //KernelBlock k = addKernel(new ParallelCsrDecoderKernel(
+                                 :               //makeKernelParameters(s_kernelName), inputWidth));
+                                 : 
+                                 :         StateMachineBlock readSm = addStateMachine("readSm", new ReadMaskControlSm(this));
+     229     357       0       0 :         KernelBlock k = addKernel(new ParallelKernelTwo(
+      43    2084       0       0 :               makeKernelParameters(s_kernelName), inputWidth));
+                                 :         k.getInput("a") <== addStreamFromCPU("a");
+                                 :         readSm.getInput("length") <== addStreamFromCPU("length");
+                                 :         k.getInput("readenable") <== readSm.getOutput("readenable");
+                                 :         k.getInput("readmask") <== readSm.getOutput("readmask");
+                                 : 
+                                 :         addStreamToCPU("output") <== k.getOutput("output");
+                                 : 
+                                 :         addMaxFileConstant("inputWidth", inputWidth);
+                                 :     }
+                                 : 
+                                 :     private static EngineInterface interfaceDefault() {
+                                 :         EngineInterface engine_interface = new EngineInterface();
+                                 :         CPUTypes type = CPUTypes.UINT32;
+                                 :         int size = type.sizeInBytes();
+                                 : 
+                                 :         InterfaceParam ticks = engine_interface.addParam("ticks", CPUTypes.INT);
+                                 : 
+                                 :         engine_interface.setTicks(s_kernelName, ticks);
+                                 : 
+                                 :         engine_interface.setStream("output", CPUTypes.DOUBLE, ticks * inputWidth * CPUTypes.DOUBLE.sizeInBytes());
+                                 : 
+                                 :         return engine_interface;
+                                 :     }
+                                 : 
+                                 : 
+                                 :     public static void main(String[] args) {
+     272    2441       0       0 :         ParallelCsrDecoderManager manager = new ParallelCsrDecoderManager(new EngineParameters(args));
+                                 :         manager.createSLiCinterface(interfaceDefault());
+                                 :         ManagerUtils.setFullBuild(manager, 4, 4);
+                                 :         manager.build();
+                                 :     }
+                                 : }

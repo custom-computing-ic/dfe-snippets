@@ -1,8 +1,13 @@
+package com.custom_computing_ic.dfe_snippets.sparse;
+
 import com.maxeler.maxcompiler.v2.managers.DFEManager;
 import com.maxeler.maxcompiler.v2.statemachine.*;
 import com.maxeler.maxcompiler.v2.statemachine.manager.*;
 
-class CSRControlSM extends ManagerStateMachine {
+
+// SM to decode the Adjusted CSR format:
+// (length) rowIndptr, values
+public class AdjustedCSRDecoder extends ManagerStateMachine {
 
     private enum Mode {
         ReadRowLength, // first entry ever processed
@@ -28,14 +33,14 @@ class CSRControlSM extends ManagerStateMachine {
     //    private final DFEsmStateValue sCycleCounter = state.value(dfeUInt(64), 0);
     private boolean dbg = false;
 
-    CSRControlSM(DFEManager owner, boolean dbg, int id) {
+    public AdjustedCSRDecoder(DFEManager owner, boolean dbg, int id) {
         super(owner);
         this.dbg = dbg;
         this.id = id;
         mode = state.enumerated(Mode.class, Mode.ReadRowLength);
 
         counter = state.value(dfeUInt(32), 0);
-        
+
         rowLength = state.value(dfeUInt(32));
         rowEnd = state.value(dfeUInt(32));
         itemCount = state.value(dfeUInt(32), 0);

@@ -3,13 +3,14 @@
 
 #include <vector>
 #include <tuple>
+#include <dfesnippets/VectorUtils.hpp>
 
 // distributes the adjusted indptr array to multiple processing elements
 template <typename value_type>
 std::tuple<std::vector<int>, std::vector<value_type>, std::vector<int>, std::vector<int> >
 distribute_indptr(std::vector<int> adjusted_indptr,
                   std::vector<value_type> values,
-                  int n, 
+                  int n,
                   int npes) {
   using namespace std;
   if (n % npes != 0)
@@ -91,10 +92,11 @@ distribute_indptr(std::vector<int> adjusted_indptr,
 
   // distribute the rows accross pes
   // add padding to make rows of equal length
-  return make_tuple(zip_flatten<int>(rows),
-                    zip_flatten<value_type>(row_values),
-                    indptr_inputs_per_pipe,
-                    csr_inputs_per_pipe);
+  return make_tuple(
+      dfesnippets::vectorutils::zip_flatten<int>(rows),
+      dfesnippets::vectorutils::zip_flatten<value_type>(row_values),
+      indptr_inputs_per_pipe,
+      csr_inputs_per_pipe);
 }
 
 
