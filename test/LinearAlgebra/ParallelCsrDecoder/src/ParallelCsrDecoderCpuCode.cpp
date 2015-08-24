@@ -2,78 +2,81 @@
 
 #include <vector>
 #include <iostream>
+#include <bitset>
 
 #include "ParallelCsrDecoder.h"
 #include "MaxSLiCInterface.h"
 
-int main(void)
-{
+template<typename value_type>
+std::vector<value_type> test_binary2(
+    const std::vector<value_type>& data,
+    const std::vector<uint32_t>& reads,
+    int bufferWidth) {
 
-  int nbursts = 4; // how many bursts we are expecting to read
+  std::cout << "All binary" << std::endl;
+  int crtPos = 0;
+  std::vector<uint32_t> res;
+  std::vector<value_type> result;
+  int pos = 0;
+  for (auto toread : reads) {
+    while (toread > 0) {
+      int canread = std::min((uint32_t)(bufferWidth - crtPos), toread);
+      uint32_t readmask = ((1l << canread) - 1) << crtPos;
+      res.push_back(readmask);
+
+      for (int i = 0; i < crtPos; i++)
+        result.push_back(0);
+      for (int i = crtPos; i < crtPos + canread; i++)
+        result.push_back(data[pos++]);
+      for (int i = crtPos + canread; i < bufferWidth; i++)
+        result.push_back(0);
+
+      crtPos = (crtPos + canread) % bufferWidth;
+      toread -= canread;
+    }
+  }
+
+  //for (auto a : res)
+    //std::cout << std::bitset<32>(a) << std::endl;
+  return result;
+}
+
+int main() {
+
   const int inputWidth = ParallelCsrDecoder_inputWidth;
+  int nbursts = 4; // how many bursts we are expecting to read
   const int inSize = nbursts * inputWidth;
-
+  std::vector<uint32_t> length{
+    4, 4, 4, 4, 16, 32, 32, 4, 4, 4, 4, 16,
+  };
   std::vector<double> a(inSize);
-
-
   for(int i = 0; i < inSize; ++i) {
     a[i] = i + 1;
   }
+  auto exp = test_binary2<double>(a, length, inputWidth);
 
   if (inputWidth != 32)
     std::cout << "Warning! This may not work for input width != 32" << std::endl;
 
-  uint32_t allones = 0xffffffff;
-  uint32_t allExceptFirst4 = 0xfffffff0;
-  uint32_t first4 = !allExceptFirst4;
-  std::vector<uint32_t> readmask{
-    0x0000000f,
-    0x000000f0,
-    0x00000f00,
-    0x0000f000,
-    0xfffff000,
-    allones,
-    allones,
-    allones
-  };
-  std::vector<uint32_t> readenable{
-    1, 0, 0, 0, 0, 1, 1, 1
-  };
-
   std::cout << "Running on DFE." << std::endl;
-
-
-    //void ParallelCsrDecoder(
-        //int64_t param_ticks,
-        //const void *instream_a,
-        //size_t instream_size_a,
-        //const uint32_t *instream_readenable,
-        //const uint32_t *instream_readmask,
-        //double *outstream_output);
-
-  int ticks = readmask.size();
-  std::vector<double> out(ticks * inputWidth);
+  int ticks = length.size();
+  std::vector<double> out(ticks * inputWidth, 10);
   ParallelCsrDecoder(
       ticks,
       &a[0],
       a.size() * sizeof(double),
-      &readenable[0],
-      &readmask[0],
+      &length[0],
+      length.size() * sizeof(uint32_t),
       &out[0]);
 
-  //for (int i = 0; i < ticks * inputWidth; ++i) {
-    //if (i % inputWidth == 0)
-      //std::cout << std::endl;
-    //std::cout << out[i] << " ";
-  //}
+  int status = 0;
+  for (size_t i = 0; i < a.size(); i++)
+    if (exp[i] != out[i]) {
+      std::cout << "Got " << out[i] << " exp " << exp[i] << std::endl;
+      status |= 1;
+    }
 
-  for (int i = 0; i < out.size(); i++)
-    std::cout << out[i] << std::endl;
-
-  for (int i = 0; i < a.size(); i++)
-    if (a[i] != out[i])
-      std::cout << "Got " << out[i] << " exp " << a[i] << std::endl;
-
-  std::cout << "Test passed!" << std::endl;
-  return 0;
+  if (status == 0)
+    std::cout << "Test passed!" << std::endl;
+  return status;
 }

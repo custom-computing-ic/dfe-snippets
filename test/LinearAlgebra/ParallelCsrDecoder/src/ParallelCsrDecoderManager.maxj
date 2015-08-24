@@ -1,9 +1,8 @@
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
-import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.*;
 import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
-import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.*;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.statemachine.manager.ManagerStateMachine;
 
 import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
 
@@ -19,12 +18,13 @@ public class ParallelCsrDecoderManager extends CustomManager{
         //KernelBlock k = addKernel(new ParallelCsrDecoderKernel(
               //makeKernelParameters(s_kernelName), inputWidth));
 
+        StateMachineBlock readSm = addStateMachine("readSm", new ReadMaskControlSm(this));
         KernelBlock k = addKernel(new ParallelKernelTwo(
               makeKernelParameters(s_kernelName), inputWidth));
         k.getInput("a") <== addStreamFromCPU("a");
-
-        k.getInput("readenable") <== addStreamFromCPU("readenable");
-        k.getInput("readmask") <== addStreamFromCPU("readmask");
+        readSm.getInput("length") <== addStreamFromCPU("length");
+        k.getInput("readenable") <== readSm.getOutput("readenable");
+        k.getInput("readmask") <== readSm.getOutput("readmask");
 
         addStreamToCPU("output") <== k.getOutput("output");
 
@@ -39,9 +39,6 @@ public class ParallelCsrDecoderManager extends CustomManager{
         InterfaceParam ticks = engine_interface.addParam("ticks", CPUTypes.INT);
 
         engine_interface.setTicks(s_kernelName, ticks);
-
-        engine_interface.setStream("readenable", type, ticks * size);
-        engine_interface.setStream("readmask", type, ticks * size);
 
         engine_interface.setStream("output", CPUTypes.DOUBLE, ticks * inputWidth * CPUTypes.DOUBLE.sizeInBytes());
 
