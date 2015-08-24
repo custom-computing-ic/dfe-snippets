@@ -44,7 +44,7 @@ std::vector<value_type> test_binary2(
 int main() {
 
   const int inputWidth = ParallelCsrDecoder_inputWidth;
-  int nbursts = 4; // how many bursts we are expecting to read
+  int nbursts = 6; // how many bursts we are expecting to read
   const int inSize = nbursts * inputWidth;
   std::vector<uint32_t> length{
     4, 4, 4, 4, 16, 32, 32, 4, 4, 4, 4, 16,
@@ -61,13 +61,18 @@ int main() {
   std::cout << "Running on DFE." << std::endl;
   int ticks = length.size();
   std::vector<double> out(ticks * inputWidth, 10);
+  ParallelCsrDecoder_ParallelCsrWrite(
+      a.size() * sizeof(double),
+      0,
+      (uint8_t *)&a[0]);
+
   ParallelCsrDecoder(
       ticks,
-      &a[0],
-      a.size() * sizeof(double),
       &length[0],
       length.size() * sizeof(uint32_t),
-      &out[0]);
+      &out[0],
+      0,
+      a.size() * sizeof(double));
 
   int status = 0;
   for (size_t i = 0; i < a.size(); i++)
