@@ -6,6 +6,7 @@ import com.maxeler.maxcompiler.v2.statemachine.manager.ManagerStateMachine;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
 
 import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
+import com.custom_computing_ic.dfe_snippets.sparse.ParallelCsrReadControl;
 
 public class ParallelCsrDecoderManager extends CustomManager{
 
@@ -19,7 +20,7 @@ public class ParallelCsrDecoderManager extends CustomManager{
         //KernelBlock k = addKernel(new ParallelCsrDecoderKernel(
               //makeKernelParameters(s_kernelName), inputWidth));
 
-        StateMachineBlock readSm = addStateMachine("readSm", new ReadMaskControlSm(this, inputWidth));
+        StateMachineBlock readSm = addStateMachine("readSm", new ParallelCsrReadControl(this, inputWidth));
         KernelBlock k = addKernel(new ParallelKernelTwo(
               makeKernelParameters(s_kernelName), inputWidth));
 
