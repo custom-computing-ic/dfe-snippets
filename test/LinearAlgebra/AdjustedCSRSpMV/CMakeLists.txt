@@ -8,9 +8,9 @@ set (DFE_SOURCES ${CMAKE_CURRENT_LIST_DIR}/src/*.maxj)
 # include(${PROJECT_SOURCE_DIR}/scripts/MaxelerUtils.cmake)
 
 function(add_matrix_test name )
-  set(exepath ${EXECUTABLE_OUTPUT_PATH}/LinearAlgebraCSRSpMV_sim)
+  set(exepath ${EXECUTABLE_OUTPUT_PATH}/LinearAlgebraAdjustedCSRSpMV_sim)
   add_test(
-    NAME test_LinearAlgebraCSRSpMV_${name}
+    NAME test_LinearAlgebraAdjustedCSRSpMV_${name}
     COMMAND ./run_single.sh ${CMAKE_CURRENT_LIST_DIR}/test-matrices/test_${name}.mtx ${exepath}
     WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/scripts)
 endfunction()

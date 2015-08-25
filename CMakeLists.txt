@@ -114,7 +114,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
     blas_dmvm_fpga_dfe
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build run)
 
-  add_fpga_build(LinearAlgebra CSRSpMV SpmvBase fpgaNaiveManager)
+  add_fpga_build(LinearAlgebra AdjustedCSRSpMV SpmvBase fpgaNaiveManager)
   add_fpga_build(LinearAlgebra CsrDecoder CsrDecoder CsrDecoderManager)
   add_fpga_build(LinearAlgebra ParallelCsrDecoder ParallelCsrDecoder ParallelCsrDecoderManager)
 
@@ -187,4 +187,4 @@ endif()
 
 
 add_subdirectory(
-  test/LinearAlgebra/CSRSpMV)
+  test/LinearAlgebra/AdjustedCSRSpMV)
