@@ -114,7 +114,9 @@ public class FetchSubTuple extends KernelLib
 
         optimization.pushPipeliningFactor(0.0);
             DFEVar shift = control.count.pulse(1)? 0 : stream.offset(shiftLoop,-1);
-            shiftLoop <== KernelMath.modulo(shift + numElements, m_tupleSize);
+            shiftLoop <== KernelMath.modulo(shift.cast(dfeUInt(m_tupleBitWidth+1)) + 
+                                            numElements.cast(dfeUInt(m_tupleBitWidth+1)), m_tupleSize)
+                          .cast(tupleIndexType);
         optimization.popPipeliningFactor();
 
         for (int i = 0; i < m_tupleSize; i++)
