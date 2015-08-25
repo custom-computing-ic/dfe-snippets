@@ -36,7 +36,7 @@ import com.maxeler.maxcompiler.v2.utils.*;
 
 public class FetchSubTuple extends KernelLib
 {
-    private static final int bufferDepth = 8;
+    private static final int bufferDepth = 4;
 
     private DFEVectorType<DFEVar> m_tupleType;
     private DFEVectorType<DFEVar> m_boolTupleType;
