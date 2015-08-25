@@ -10,7 +10,7 @@ import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
 public class ParallelCsrDecoderManager extends CustomManager{
 
     private static final String s_kernelName  = "ParallelCsrDecoderKernel";
-    private static final int inputWidth = 32;
+    private static final int inputWidth = 48;
 
     ParallelCsrDecoderManager(EngineParameters ep)
     {
@@ -19,7 +19,7 @@ public class ParallelCsrDecoderManager extends CustomManager{
         //KernelBlock k = addKernel(new ParallelCsrDecoderKernel(
               //makeKernelParameters(s_kernelName), inputWidth));
 
-        StateMachineBlock readSm = addStateMachine("readSm", new ReadMaskControlSm(this));
+        StateMachineBlock readSm = addStateMachine("readSm", new ReadMaskControlSm(this, inputWidth));
         KernelBlock k = addKernel(new ParallelKernelTwo(
               makeKernelParameters(s_kernelName), inputWidth));
 
@@ -58,7 +58,6 @@ public class ParallelCsrDecoderManager extends CustomManager{
               "ParallelCsrWrite",
               "fromcpu",
               "cpu2lmem"));
-        manager.config.setAllowNonMultipleTransitions(true);
         ManagerUtils.setFullBuild(manager, 4, 4);
         manager.build();
     }

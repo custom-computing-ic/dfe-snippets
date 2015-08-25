@@ -6,37 +6,38 @@ import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
 import com.maxeler.maxcompiler.v2.statemachine.*;
 import com.maxeler.maxcompiler.v2.statemachine.manager.*;
 import com.maxeler.maxcompiler.v2.managers.DFEManager;
+import com.maxeler.maxcompiler.v2.utils.MathUtils;
 
 import com.custom_computing_ic.dfe_snippets.utils.FetchSubTuple;
 
-class ParallelCsrDecoderKernel extends Kernel {
+//class ParallelCsrDecoderKernel extends Kernel {
 
-    protected ParallelCsrDecoderKernel(KernelParameters parameters, int inputWidth) {
-        super(parameters);
+    //protected ParallelCsrDecoderKernel(KernelParameters parameters, int inputWidth) {
+        //super(parameters);
 
-        DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), inputWidth);
+        //DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), inputWidth);
 
-        FetchSubTuple fst = new FetchSubTuple(this, "fst", inputWidth, 64, dfeFloat(11, 53), true);
+        //FetchSubTuple fst = new FetchSubTuple(this, "fst", inputWidth, 64, dfeFloat(11, 53), true);
 
-        DFEVector<DFEVar> a = io.input("a", vtype);
+        //DFEVector<DFEVar> a = io.input("a", vtype);
 
-        DFEVar colptr = io.input("length", dfeUInt(32));
+        //DFEVar colptr = io.input("length", dfeUInt(32));
 
-        fst.push(constant.var(true), a); //
+        //fst.push(constant.var(true), a); //
 
-        io.output("output", fst.pop(colptr), vtype);
-    }
-}
+        //io.output("output", fst.pop(colptr), vtype);
+    //}
+//}
 
 class ParallelKernelTwo extends Kernel {
 
   protected ParallelKernelTwo(KernelParameters parameters, int inputWidth) {
     super(parameters);
     DFEVectorType<DFEVar> vtype = new DFEVectorType<DFEVar> (dfeFloat(11, 53), inputWidth);
-    DFEVar readEnable = io.input("readenable", dfeUInt(32));
-    DFEVector<DFEVar> a = io.input("a", vtype, readEnable === 1);
+    DFEVar readEnable = io.input("readenable", dfeBool());
+    DFEVector<DFEVar> a = io.input("a", vtype, readEnable);
 
-    DFEVar readMask = io.input("readmask", dfeUInt(32));
+    DFEVar readMask = io.input("readmask", dfeUInt(inputWidth));
 
     DFEVector<DFEVar> out = vtype.newInstance(this);
     for (int i = 0; i < inputWidth; i++) {
@@ -45,7 +46,7 @@ class ParallelKernelTwo extends Kernel {
     }
 
     io.output("output", out, vtype);
-  //  debug.simPrintf( "Kernel: readEnable: %d, readmask: %d\n", readEnable, readMask);
+    //debug.simPrintf( "Kernel: readEnable: %d, readmask: %d\n", readEnable, readMask);
   }
 }
 
@@ -60,22 +61,24 @@ class ReadMaskControlSm extends ManagerStateMachine {
     private final DFEsmStateValue readEnableData, readMaskData;
 
     private final DFEsmStateValue crtPos, toread, iLengthRead;
-    private final int bufferWidth = 32;
+    private final int inputWidth;
 
-    public ReadMaskControlSm(DFEManager owner) {
+    public ReadMaskControlSm(DFEManager owner, int inputWidth) {
       super(owner);
+      this.inputWidth = inputWidth;
+
       iLength = io.pullInput("length", dfeUInt(32));
 
-      oReadMask = io.pushOutput("readmask", dfeUInt(32), 1);
-      oReadEnable = io.pushOutput("readenable", dfeUInt(32), 1);
+      oReadMask = io.pushOutput("readmask", dfeUInt(inputWidth), 1);
+      oReadEnable = io.pushOutput("readenable", dfeBool(), 1);
 
       crtPos = state.value(dfeUInt(32), 0);
       toread = state.value(dfeUInt(32), 0);
       iLengthRead = state.value(dfeBool(), true);
       readEnableOutValid = state.value(dfeBool(), true);
-      readEnableData = state.value(dfeUInt(32), 1);
+      readEnableData = state.value(dfeBool(), true);
       readMaskOutValid = state.value(dfeBool(), false);
-      readMaskData = state.value(dfeUInt(32));
+      readMaskData = state.value(dfeUInt(inputWidth));
       iLengthReady = state.value(dfeBool(), false);
     }
 
@@ -90,46 +93,45 @@ class ReadMaskControlSm extends ManagerStateMachine {
       readEnableOutValid.next <== false;
       readMaskOutValid.next <== false;
 
-      DFEsmAssignableValue realtoread = assignable.value(dfeUInt(32));
+      DFEsmAssignableValue toreadCrt = assignable.value(dfeUInt(32));
       IF (iLengthReady === true) {
-        realtoread <== iLength;
+        toreadCrt <== iLength;
         iLengthRead.next <== false;
       } ELSE {
-        realtoread <== toread;
+        toreadCrt <== toread;
       }
 
-      IF (realtoread !== 0) {
+      IF (toreadCrt !== 0) {
         readEnableOutValid.next <== true;
         readMaskOutValid.next <== true;
 
         DFEsmAssignableValue canread = assignable.value(dfeUInt(32));
-        IF ( bufferWidth - crtPos < realtoread) {
-          canread <== bufferWidth - crtPos;
+        IF ( inputWidth - crtPos < toreadCrt) {
+          canread <== inputWidth - crtPos;
         } ELSE {
-          canread <== realtoread;
+          canread <== toreadCrt;
         }
 
-        IF (crtPos + canread >= bufferWidth) {
-          readEnableData.next <== 1;
-        } ELSE {
-          readEnableData.next <== 0;
-        }
+        readEnableData.next <== crtPos + canread >= inputWidth;
 
         DFEsmAssignableValue pattern = assignable.value(dfeUInt(64));
         pattern <== 0;
-        for (long i = 0; i <= bufferWidth; i++)
+        for (long i = 0; i <= inputWidth; i++)
           IF (canread === i)
             pattern <== (1l << i) - 1l;
 
-        for (int i = 0; i <= bufferWidth; i++)
+        for (int i = 0; i <= inputWidth; i++)
           IF (crtPos === i)
-            readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(32));
+            readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(inputWidth));
 
-        // XXX assumes bufferWidth % 2 == 0
-        // crtPos = (crtPos + canread ) % bufferWidth;
-        crtPos.next <== (crtPos + canread) & (bufferWidth - 1);
-        toread.next <== realtoread - canread;
-        IF (realtoread - canread === 0) {
+        // crtPos = (crtPos + canread ) % inputWidth;
+        IF (crtPos + canread >= inputWidth) {
+          crtPos.next <== 0;
+        } ELSE {
+          crtPos.next <== crtPos + canread;
+        }
+        toread.next <== toreadCrt - canread;
+        IF (toreadCrt - canread === 0) {
           iLengthRead.next <== true;
         }
 

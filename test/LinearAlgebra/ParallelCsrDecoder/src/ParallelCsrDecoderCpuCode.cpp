@@ -4,6 +4,7 @@
 #include <iostream>
 #include <bitset>
 #include <tuple>
+#include <algorithm>
 
 #include "ParallelCsrDecoder.h"
 #include "MaxSLiCInterface.h"
@@ -47,14 +48,10 @@ std::tuple<std::vector<value_type>, int> test_binary2(
 int main() {
 
   const int inputWidth = ParallelCsrDecoder_inputWidth;
-  int nbursts = 6; // how many bursts we are expecting to read
-  const int inSize = nbursts * inputWidth;
-  std::vector<uint32_t> length{
-    4, 4, 4, 4, 16, 64, 4, 2, 4, 2, 4, 16,
+  std::vector<uint32_t> length {
+    4, 4, 4, 4, 16, 32, 32, 4, 4, 4, 4, 80
   };
-  //std::vector<uint32_t> length{
-    //4, 4, 4, 4, 16, 32, 32, 4, 4, 4, 4, 16,
-  //};
+  int inSize = std::accumulate(length.begin(), length.end(), 0);
   std::vector<double> a(inSize);
   for(int i = 0; i < inSize; ++i) {
     a[i] = i + 1;
@@ -62,9 +59,6 @@ int main() {
   auto texp = test_binary2<double>(a, length, inputWidth);
   auto exp = std::get<0>(texp);
   int expCycles = std::get<1>(texp);
-
-  if (inputWidth != 32)
-    std::cout << "Warning! This may not work for input width != 32" << std::endl;
 
   std::cout << "Running on DFE (" << expCycles << " cycles )" << std::endl;
   int ticks = expCycles;
