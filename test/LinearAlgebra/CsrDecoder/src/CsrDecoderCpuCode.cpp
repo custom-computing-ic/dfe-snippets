@@ -39,22 +39,14 @@ int main(void)
   std::vector<uint32_t> indptrOut(indptr.size(), 0);
   std::vector<uint32_t> out(a.size(), 0);
   CsrDecoder(
-      a.size(), indptr.size(), nrows,
-      &a[0], &indptr[0], &indptrOut[0], &out[0]);
+      a.size(), nrows,
+      &a[0], &out[0]);
 
   int status = 0;
   std::cout << "Checking row lengths" << std::endl;
   for (int i = 0; i < a.size(); i++) {
     if (out[i] != exp[i]) {
       std::cout << "i: " << i << " got: " << out[i] << " exp: " << exp[i] << std::endl;
-      status |= 1;
-    }
-  }
-
-  std::cout << "Checking indptr"  << std::endl;
-  for (int i = 0; i < indptr.size(); i++) {
-    if (indptr[i] != indptrOut[i]) {
-      std::cout << "i: " << i << " got: " << indptr[i] << " exp: " << indptrOut[i] << std::endl;
       status |= 1;
     }
   }

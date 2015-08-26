@@ -14,10 +14,12 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
 
     private final DFEsmStateValue crtPos, toread, iLengthRead;
     private final int inputWidth;
+    private final boolean dbg;
 
-    public ParallelCsrReadControl(DFEManager owner, int inputWidth) {
+    public ParallelCsrReadControl(DFEManager owner, int inputWidth, boolean dbg) {
       super(owner);
       this.inputWidth = inputWidth;
+      this.dbg = dbg;
 
       iLength = io.pullInput("length", dfeUInt(32));
 
@@ -48,7 +50,9 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       DFEsmAssignableValue toreadCrt = assignable.value(dfeUInt(32));
       IF (iLengthReady === true) {
         toreadCrt <== iLength;
-        iLengthRead.next <== false;
+        IF (iLength !== 0) {
+          iLengthRead.next <== false;
+        }
       } ELSE {
         toreadCrt <== toread;
       }
@@ -102,8 +106,10 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       oReadEnable <==readEnableData;
       oReadMask <== readMaskData;
 
-      //IF (readEnableOutValid)
-        //debug.simPrintf("Outputting command, readmask: %d, readeenable: %d toread: %d, crtPos: %d\n",
-            //readMaskData, readEnableData, toread, crtPos);
+      if (dbg)
+        IF (readEnableOutValid)
+          debug.simPrintf(
+              "ReadControl SM -- readmask: %d, readeenable: %d toread: %d, crtPos: %d\n",
+              readMaskData, readEnableData, toread, crtPos);
     }
 }

@@ -16,6 +16,7 @@ class VectorCache extends Kernel {
     int bits = MathUtils.bitsToAddress(cacheSize);
 
     for (int i = 0; i < numPipes; i++) {
+
       DFEVar indptr = io.input("indptr_in" + i, dfeInt(32)).cast(dfeUInt(bits));
       Memory<DFEVar> vRom = mem.alloc(Types.dbl(), cacheSize);
       vRom.mapToCPU("vRom" + i);

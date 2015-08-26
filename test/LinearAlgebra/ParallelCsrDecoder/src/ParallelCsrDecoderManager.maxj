@@ -20,7 +20,7 @@ public class ParallelCsrDecoderManager extends CustomManager{
         //KernelBlock k = addKernel(new ParallelCsrDecoderKernel(
               //makeKernelParameters(s_kernelName), inputWidth));
 
-        StateMachineBlock readSm = addStateMachine("readSm", new ParallelCsrReadControl(this, inputWidth));
+        StateMachineBlock readSm = addStateMachine("readSm", new ParallelCsrReadControl(this, inputWidth, false));
         KernelBlock k = addKernel(new ParallelKernelTwo(
               makeKernelParameters(s_kernelName), inputWidth));
 

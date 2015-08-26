@@ -20,13 +20,10 @@ public class CsrDecoderManager extends CustomManager{
     {
         super(ep);
 
-        ManagerStateMachine ms = new CsrDecoder(this);
+        ManagerStateMachine ms = new CsrDecoder(this, false);
         StateMachineBlock smb = addStateMachine("CsrDecoder", ms);
 
-        smb.getInput("indptr") <== addStreamFromCPU("indptr");
         smb.getInput("colptr") <== addStreamFromCPU("colptr");
-        addStreamToCPU("indptr_out") <== smb.getOutput("indptr_out");
-//        addStreamToCPU("colptr") <== smb.getOutput("rowEnd_out");
         addStreamToCPU("rowlength") <== smb.getOutput("rowLength_out");
     }
 
@@ -36,12 +33,9 @@ public class CsrDecoderManager extends CustomManager{
         int size = type.sizeInBytes();
 
         InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
-        InterfaceParam nIndptr = engine_interface.addParam("Nindptr", CPUTypes.INT);
         InterfaceParam sizeBytes = N * size;
 
         engine_interface.setStream("colptr", type, sizeBytes);
-        engine_interface.setStream("indptr", type, size * nIndptr);
-        engine_interface.setStream("indptr_out", type, size * nIndptr);
         engine_interface.setStream("rowlength", type, sizeBytes);
         return engine_interface;
     }

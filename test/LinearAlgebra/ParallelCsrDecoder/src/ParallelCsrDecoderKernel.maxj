@@ -24,6 +24,5 @@ class ParallelKernelTwo extends Kernel {
     }
 
     io.output("output", out, vtype);
-    //debug.simPrintf( "Kernel: readEnable: %d, readmask: %d\n", readEnable, readMask);
   }
 }
