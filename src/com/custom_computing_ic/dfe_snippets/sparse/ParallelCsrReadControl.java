@@ -8,9 +8,9 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
 
     private final DFEsmPullInput iLength;
     private final DFEsmStateValue iLengthReady;
-    private final DFEsmPushOutput oReadMask, oReadEnable;
+    private final DFEsmPushOutput oReadMask, oReadEnable, oRowFinished, oRowLength;
     private final DFEsmStateValue readEnableOutValid, readMaskOutValid;
-    private final DFEsmStateValue readEnableData, readMaskData;
+    private final DFEsmStateValue readEnableData, readMaskData, rowFinishedData, rowLengthData;
 
     private final DFEsmStateValue crtPos, toread, iLengthRead;
     private final int inputWidth;
@@ -23,14 +23,18 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
 
       iLength = io.pullInput("length", dfeUInt(32));
 
-      oReadMask = io.pushOutput("readmask", dfeUInt(inputWidth), 1);
-      oReadEnable = io.pushOutput("readenable", dfeBool(), 1);
+      oReadMask    = io.pushOutput("readmask", dfeUInt(inputWidth), 1);
+      oReadEnable  = io.pushOutput("readenable", dfeBool(), 1);
+      oRowFinished = io.pushOutput("rowFinished", dfeBool(), 1);
+      oRowLength   = io.pushOutput("rowLength", dfeUInt(32), 1);
 
       crtPos = state.value(dfeUInt(32), 0);
       toread = state.value(dfeUInt(32), 0);
       iLengthRead = state.value(dfeBool(), true);
       readEnableOutValid = state.value(dfeBool(), true);
       readEnableData = state.value(dfeBool(), true);
+      rowFinishedData = state.value(dfeBool(), true);
+      rowLengthData = state.value(dfeUInt(32), 0);
       readMaskOutValid = state.value(dfeBool(), false);
       readMaskData = state.value(dfeUInt(inputWidth));
       iLengthReady = state.value(dfeBool(), false);
@@ -52,6 +56,15 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
         toreadCrt <== iLength;
         IF (iLength !== 0) {
           iLengthRead.next <== false;
+          rowLengthData.next <== iLength;
+        } ELSE {
+          // handle empty row
+          rowFinishedData.next <== 1;
+          readMaskData.next <== 0;
+          rowLengthData.next <== 0;
+          readEnableData.next <== 0;
+          readMaskOutValid.next <== true;
+          readEnableOutValid.next <== true;
         }
       } ELSE {
         toreadCrt <== toread;
@@ -89,8 +102,10 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
         toread.next <== toreadCrt - canread;
         IF (toreadCrt - canread === 0) {
           iLengthRead.next <== true;
+          rowFinishedData.next <== 1;
+        } ELSE {
+          rowFinishedData.next <== 0;
         }
-
         //debug.simPrintf( "Sm: readEnable: %d, readmask: %d toread %d crtPos %d\n",
         //readEnableData, readMaskData, toread, crtPos);
       }
@@ -102,9 +117,13 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
 
       oReadEnable.valid <== readEnableOutValid;
       oReadMask.valid <== readMaskOutValid;
+      oRowLength.valid <== readMaskOutValid;
+      oRowFinished.valid <== readMaskOutValid;
 
       oReadEnable <==readEnableData;
       oReadMask <== readMaskData;
+      oRowLength <== rowLengthData;
+      oRowFinished <== rowFinishedData;
 
       if (dbg)
         IF (readEnableOutValid)
