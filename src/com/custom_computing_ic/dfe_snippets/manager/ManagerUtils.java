@@ -11,6 +11,8 @@ import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 import com.maxeler.maxcompiler.v2.managers.DFEModel;
 import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 
 import java.util.HashMap;
 
@@ -89,6 +91,12 @@ public class ManagerUtils {
   public static void setFullBuild(CustomManager m, int numCostTables, int numThreads)
   {
     setFullBuild(m, BuildConfig.Effort.HIGH, numCostTables, numThreads);
+  }
+
+  public static void addLinearStreamFromLmemToKernel(CustomManager m, KernelBlock kernel, String name) {
+    kernel.getInput(name) <== m.addStreamFromOnCardMemory(
+        name,
+        MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
   }
 }
 
