@@ -24,6 +24,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
     private final DFEsmStateValue readEnableData, readMaskData, rowFinishedData, rowLengthData;
     private final DFEsmStateValue cycleCounter;
     private final DFEsmStateValue firstReadPosition;
+    private final DFEsmStateValue rowsProcessed;
 
     private final DFEsmStateValue crtPos, toread, iLengthRead;
     private final int inputWidth;
@@ -45,6 +46,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       oFirstReadPosition  = io.pushOutput("firstReadPosition", dfeUInt(32), 1);
 
       cycleCounter = state.value(dfeInt(32), 0);
+      rowsProcessed = state.value(dfeInt(32), 0);
       crtPos = state.value(dfeUInt(32), 0);
       firstReadPosition = state.value(dfeUInt(32), 0);
       toread = state.value(dfeUInt(32), 0);
@@ -85,6 +87,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
               cycleCounter.next <== 0;
               firstReadPosition.next <== crtPos;
               readMaskOutValid.next <== true;
+              rowsProcessed.next <== rowsProcessed + 1;
               //debug.simPrintf("Empty row \n");
             } ELSE {
               mode.next <== Mode.OutputtingCommands;
@@ -96,6 +99,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
         }
         CASE (Mode.OutputtingCommands) {
           IF (outputNotStall()) {
+            rowsProcessed.next <== rowsProcessed + 1;
             readMaskOutValid.next <== true;
 
             DFEsmAssignableValue canread = assignable.value(dfeUInt(32));
@@ -173,7 +177,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       if (dbg)
         IF (readMaskOutValid)
           debug.simPrintf(
-              "ReadControl SM -- iLength %d, readmask: %d, readeenable: %d toread: %d, crtPos: %d, rowLength %d, rowFinished %d cycleCounter %d\n",
-              iLength, readMaskData, readEnableData, toread, crtPos, rowLengthData, rowFinishedData, cycleCounter);
+              "ReadControl SM -- rowsProcessed %d, iLength %d, readmask: %d, readeenable: %d toread: %d, crtPos: %d, rowLength %d, rowFinished %d cycleCounter %d\n",
+              rowsProcessed, iLength, readMaskData, readEnableData, toread, crtPos, rowLengthData, rowFinishedData, cycleCounter);
     }
 }
