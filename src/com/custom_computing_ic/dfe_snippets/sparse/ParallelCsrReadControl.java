@@ -79,13 +79,13 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
           IF (iLengthReady === true) {
             toread.next <== iLength;
             rowLengthData.next <== iLength;
+              firstReadPosition.next <== crtPos;
             IF (iLength === 0) {
               rowFinishedData.next <== 1;
               readEnableData.next <== 0;
               readMaskData.next <== 0;
               rowLengthData.next <== 0;
               cycleCounter.next <== 0;
-              firstReadPosition.next <== crtPos;
               readMaskOutValid.next <== true;
               rowsProcessed.next <== rowsProcessed + 1;
               //debug.simPrintf("Empty row \n");
