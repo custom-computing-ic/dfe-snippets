@@ -38,7 +38,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       mode = state.enumerated(Mode.class, Mode.ReadingLength);
       iLength = io.pullInput("length", dfeUInt(32));
 
-      oReadMask    = io.pushOutput("readmask", dfeUInt(32), 1);
+      oReadMask    = io.pushOutput("readmask", dfeUInt(inputWidth), 1);
       oReadEnable  = io.pushOutput("readenable", dfeUInt(32), 1);
       oRowFinished = io.pushOutput("rowFinished", dfeUInt(32), 1);
       oRowLength   = io.pushOutput("rowLength", dfeUInt(32), 1);
@@ -55,7 +55,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       rowFinishedData = state.value(dfeUInt(32), true);
       rowLengthData = state.value(dfeUInt(32), 0);
       readMaskOutValid = state.value(dfeBool(), false);
-      readMaskData = state.value(dfeUInt(32));
+      readMaskData = state.value(dfeUInt(inputWidth));
       iLengthReady = state.value(dfeBool(), false);
     }
 
@@ -125,7 +125,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
 
             for (int i = 0; i <= inputWidth; i++)
               IF (crtPos === i)
-                readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(32));
+                readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(inputWidth));
 
             // crtPos = (crtPos + canread ) % inputWidth;
             IF (crtPos + canread >= inputWidth) {
