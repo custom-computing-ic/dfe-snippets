@@ -93,28 +93,25 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
         CASE (Mode.OutputtingCommands) {
           IF (outputNotStall()) {
             rowsProcessed.next <== rowsProcessed + 1;
-            outValid.next <== true;
             DFEsmValue canread = min(inputWidth - crtPos, toread);
-            readEnableData.next <== crtPos === 0;
-            cycleCounter.next <== cycleCounter + 1;
-            readMaskData.next <== buildReadMask(canread);
-
             IF (crtPos + canread >= inputWidth) {
               crtPos.next <== 0;
             } ELSE {
               crtPos.next <== crtPos + canread;
             }
-
             toread.next <== toread - canread;
             IF (toread - canread === 0) {
               iLengthRead.next <== true;
-              rowFinishedData.next <== true;
               mode.next <== Mode.ReadingLength;
-            } ELSE {
-              iLengthRead.next <== false;
-              rowFinishedData.next <== false;
             }
-            }
+            makeOutput(
+                crtPos === 0,
+                toread - canread === 0,
+                buildReadMask(canread),
+                rowLengthData,
+                cycleCounter + 1,
+                firstReadPosition);
+          }
           }
         }
       }
