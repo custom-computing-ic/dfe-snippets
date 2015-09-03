@@ -20,7 +20,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
     private final DFEsmPullInput iLength;
     private final DFEsmStateValue iLengthReady;
     private final DFEsmPushOutput oReadMask, oReadEnable, oRowFinished, oRowLength, oNnzCounter, oFirstReadPosition;
-    private final DFEsmStateValue readMaskOutValid;
+    private final DFEsmStateValue outValid;
     private final DFEsmStateValue readEnableData, readMaskData, rowFinishedData, rowLengthData;
     private final DFEsmStateValue cycleCounter;
     private final DFEsmStateValue firstReadPosition;
@@ -39,8 +39,8 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       iLength = io.pullInput("length", dfeUInt(32));
 
       oReadMask    = io.pushOutput("readmask", dfeUInt(inputWidth), 1);
-      oReadEnable  = io.pushOutput("readenable", dfeUInt(32), 1);
-      oRowFinished = io.pushOutput("rowFinished", dfeUInt(32), 1);
+      oReadEnable  = io.pushOutput("readenable", dfeBool(), 1);
+      oRowFinished = io.pushOutput("rowFinished", dfeBool(), 1);
       oRowLength   = io.pushOutput("rowLength", dfeUInt(32), 1);
       oNnzCounter  = io.pushOutput("cycleCounter", dfeUInt(32), 1);
       oFirstReadPosition  = io.pushOutput("firstReadPosition", dfeUInt(32), 1);
@@ -51,10 +51,10 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       firstReadPosition = state.value(dfeUInt(32), 0);
       toread = state.value(dfeUInt(32), 0);
       iLengthRead = state.value(dfeBool(), true);
-      readEnableData = state.value(dfeUInt(32), false);
-      rowFinishedData = state.value(dfeUInt(32), true);
+      readEnableData = state.value(dfeBool(), false);
+      rowFinishedData = state.value(dfeBool(), true);
       rowLengthData = state.value(dfeUInt(32), 0);
-      readMaskOutValid = state.value(dfeBool(), false);
+      outValid = state.value(dfeBool(), false);
       readMaskData = state.value(dfeUInt(inputWidth));
       iLengthReady = state.value(dfeBool(), false);
     }
@@ -68,10 +68,10 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
     DFEsmValue iLengthReady() {
       return ~iLength.empty & outputNotStall() & mode === Mode.ReadingLength;
     }
-
     @Override
     protected void nextState() {
-      readMaskOutValid.next <== false;
+      outValid.next <== false;
+
       iLengthReady.next <== iLengthReady();
 
       SWITCH (mode) {
@@ -79,105 +79,139 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
           IF (iLengthReady === true) {
             toread.next <== iLength;
             rowLengthData.next <== iLength;
-              firstReadPosition.next <== crtPos;
+            firstReadPosition.next <== crtPos;
             IF (iLength === 0) {
-              rowFinishedData.next <== 1;
-              readEnableData.next <== 0;
-              readMaskData.next <== 0;
-              rowLengthData.next <== 0;
-              cycleCounter.next <== 0;
-              readMaskOutValid.next <== true;
+              makeOutput(fls(), tru(), zero(inputWidth), zero(), zeroI(), crtPos);
               rowsProcessed.next <== rowsProcessed + 1;
-              //debug.simPrintf("Empty row \n");
             } ELSE {
               mode.next <== Mode.OutputtingCommands;
               iLengthReady.next <== false;
               cycleCounter.next <== -1;
-              //debug.simPrintf("Reading input %d\n", iLength);
             }
           }
         }
         CASE (Mode.OutputtingCommands) {
           IF (outputNotStall()) {
             rowsProcessed.next <== rowsProcessed + 1;
-            readMaskOutValid.next <== true;
-
-            DFEsmAssignableValue canread = assignable.value(dfeUInt(32));
-            IF ( inputWidth - crtPos < toread) {
-              canread <== inputWidth - crtPos;
-            } ELSE {
-              canread <== toread;
-            }
-
-            IF (crtPos === 0) {
-              readEnableData.next <== 1;
-            } ELSE {
-              readEnableData.next <== 0;
-            }
-
+            outValid.next <== true;
+            DFEsmValue canread = min(inputWidth - crtPos, toread);
+            readEnableData.next <== crtPos === 0;
             cycleCounter.next <== cycleCounter + 1;
+            readMaskData.next <== buildReadMask(canread);
 
-            DFEsmAssignableValue pattern = assignable.value(dfeUInt(64));
-            pattern <== 0;
-            for (long i = 0; i <= inputWidth; i++)
-              IF (canread === i)
-                pattern <== (1l << i) - 1l;
-
-            for (int i = 0; i <= inputWidth; i++)
-              IF (crtPos === i)
-                readMaskData.next <== pattern.shiftLeft(i).cast(dfeUInt(inputWidth));
-
-            // crtPos = (crtPos + canread ) % inputWidth;
             IF (crtPos + canread >= inputWidth) {
               crtPos.next <== 0;
             } ELSE {
               crtPos.next <== crtPos + canread;
             }
 
-            //debug.simPrintf(
-                //"Next State -- readMaskOutValid %d, canread %d toread %d readMask %d pattern %d cycleCounter %d\n",
-                //readMaskOutValid, canread, toread, readMaskData, pattern, cycleCounter);
-
             toread.next <== toread - canread;
             IF (toread - canread === 0) {
               iLengthRead.next <== true;
-              rowFinishedData.next <== 1;
+              rowFinishedData.next <== true;
               mode.next <== Mode.ReadingLength;
-              // debug.simPrintf("iLengthRead.next = true ");
             } ELSE {
               iLengthRead.next <== false;
-              rowFinishedData.next <== 0;
-              //  debug.simPrintf("iLengthRead.next = false ");
+              rowFinishedData.next <== false;
             }
-            //debug.simPrintf( "Sm: iLengthRead %d outEnable: %d, readEnable: %d, readmask: %d toread %d crtPos %d\n",
-                //iLengthRead, readMaskOutValid, readEnableData, readMaskData, toread, crtPos);
+            }
           }
         }
       }
+
+      @Override
+      protected void outputFunction() {
+        iLength.read <== iLengthReady();
+
+        oReadEnable.valid <== outValid;
+        oReadMask.valid <== outValid;
+        oRowLength.valid <== outValid;
+        oRowFinished.valid <== outValid;
+        oNnzCounter.valid <== outValid;
+        oFirstReadPosition.valid <== outValid;
+
+        oReadEnable <==readEnableData;
+        oReadMask <== readMaskData;
+        oRowLength <== rowLengthData;
+        oRowFinished <== rowFinishedData;
+        oNnzCounter <== cycleCounter.cast(dfeUInt(32));
+        oFirstReadPosition <== firstReadPosition;
+
+        if (dbg)
+          IF (outValid)
+            debug.simPrintf(
+                "ReadControl SM -- rowsProcessed %d, iLength %d, readmask: %d, readeenable: %d toread: %d, crtPos: %d, rowLength %d, rowFinished %d cycleCounter %d\n",
+                rowsProcessed, iLength, readMaskData, readEnableData, toread, crtPos, rowLengthData, rowFinishedData, cycleCounter);
+      }
+
+    void makeOutput(
+        DFEsmValue readEnable,
+        DFEsmValue rowFinished,
+        DFEsmValue readMask,
+        DFEsmValue rowLength,
+        DFEsmValue cycleCounterP,
+        DFEsmValue firstReadPositionP
+        )
+    {
+      outValid.next <== true;
+
+      readEnableData.next <== readEnable;
+      rowFinishedData.next <== rowFinished;
+      readMaskData.next <== readMask;
+      rowLengthData.next <== rowLength;
+      cycleCounter.next <== cycleCounterP;
+      firstReadPosition.next <== firstReadPositionP;
     }
 
-    @Override
-    protected void outputFunction() {
-      iLength.read <== iLengthReady();
-
-      oReadEnable.valid <== readMaskOutValid;
-      oReadMask.valid <== readMaskOutValid;
-      oRowLength.valid <== readMaskOutValid;
-      oRowFinished.valid <== readMaskOutValid;
-      oNnzCounter.valid <== readMaskOutValid;
-      oFirstReadPosition.valid <== readMaskOutValid;
-
-      oReadEnable <==readEnableData;
-      oReadMask <== readMaskData;
-      oRowLength <== rowLengthData;
-      oRowFinished <== rowFinishedData;
-      oNnzCounter <== cycleCounter.cast(dfeUInt(32));
-      oFirstReadPosition <== firstReadPosition;
-
-      if (dbg)
-        IF (readMaskOutValid)
-          debug.simPrintf(
-              "ReadControl SM -- rowsProcessed %d, iLength %d, readmask: %d, readeenable: %d toread: %d, crtPos: %d, rowLength %d, rowFinished %d cycleCounter %d\n",
-              rowsProcessed, iLength, readMaskData, readEnableData, toread, crtPos, rowLengthData, rowFinishedData, cycleCounter);
+    DFEsmValue min(DFEsmValue a, DFEsmValue b){
+      DFEsmAssignableValue min = assignable.value(dfeUInt(32));
+      IF ( a < b) {
+        min <== a;
+      } ELSE {
+        min <== b;
+      }
+      return min;
     }
+
+    DFEsmValue buildReadMask(DFEsmValue canread) {
+      DFEsmAssignableValue pattern = assignable.value(dfeUInt(64));
+      pattern <== 0;
+      for (long i = 0; i <= inputWidth; i++)
+        IF (canread === i)
+          pattern <== (1l << i) - 1l;
+
+      DFEsmAssignableValue newReadMask = assignable.value(dfeUInt(inputWidth));
+      newReadMask <== 0;
+      for (int i = 0; i <= inputWidth; i++)
+        IF (crtPos === i)
+          newReadMask <== pattern.shiftLeft(i).cast(dfeUInt(inputWidth));
+
+      return newReadMask;
+    }
+
+    DFEsmValue fls() {
+      return constant.value(false);
+    }
+
+    DFEsmValue tru(){
+      return constant.value(true);
+    }
+
+    DFEsmValue one() {
+      return constant.value(dfeUInt(32), 1);
+    }
+
+    DFEsmValue zero() {
+      return constant.value(dfeUInt(32), 0);
+    }
+
+    DFEsmValue zero(int bitWidth) {
+      return constant.value(dfeUInt(bitWidth), 0);
+    }
+
+    DFEsmValue zeroI() {
+      return constant.value(dfeInt(32), 0);
+    }
+
+
 }
