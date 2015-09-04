@@ -93,11 +93,17 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       IF (rowsProcessed === nRows - 1) {
         rowsProcessed.next <== 0;
         vectorLoadCommands.next <== 0;
+        crtPos.next <== 0;
+        iLengthReady.next <== false;
         mode.next <== Mode.VectorLoad;
         partitionsProcessed.next <== partitionsProcessed + 1;
-        IF (paddingCycles !== 0) {
-          mode.next <== Mode.Padding;
-          paddedOutputs.next <== 0;
+        IF (partitionsProcessed === nPartitions - 1) {
+          IF (paddingCycles !== 0) {
+            mode.next <== Mode.Padding;
+            paddedOutputs.next <== 0;
+          } ELSE {
+            mode.next <== Mode.Done;
+          }
         }
       } ELSE {
         mode.next <== Mode.ReadingLength;
@@ -118,12 +124,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
             paddedOutputs.next <== paddedOutputs + 1;
             makeOutput(fls(), fls(), zero(inputWidth), zero(), zeroI(), crtPos, fls());
             IF (paddedOutputs === paddingCycles - 1) {
-              IF (partitionsProcessed === nPartitions) {
                 mode.next <== Mode.Done;
-                //outValid.next <== false;
-              } ELSE {
-                mode.next <== Mode.VectorLoad;
-              }
             }
           }
         }
