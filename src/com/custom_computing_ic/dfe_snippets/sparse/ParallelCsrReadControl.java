@@ -15,7 +15,6 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
     ReadingLength,
     OutputtingCommands,
     Done,
-    Padding,
   }
 
   private final DFEsmStateEnum<Mode> mode;
@@ -23,7 +22,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
     private final DFEsmPullInput iLength;
     private final DFEsmStateValue iLengthReady;
     private final DFEsmPushOutput oReadMask, oReadEnable, oRowFinished, oRowLength, oNnzCounter, oFirstReadPosition;
-    private final DFEsmInput vectorLoadCycles, nRows, nPartitions, paddingCycles;
+    private final DFEsmInput vectorLoadCycles, nRows, nPartitions;
 
     private final DFEsmPushOutput oVectorLoad;
     private final DFEsmStateValue outValid;
@@ -46,7 +45,6 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       vectorLoadCycles = io.scalarInput("vectorLoadCycles", dfeUInt(32));
       nRows = io.scalarInput("nrows", dfeUInt(32));
       nPartitions = io.scalarInput("nPartitions", dfeUInt(32));
-      paddingCycles = io.scalarInput("paddingCycles", dfeUInt(32));
 
       oReadMask    = io.pushOutput("readmask", dfeUInt(inputWidth), 1);
       oReadEnable  = io.pushOutput("readenable", dfeBool(), 1);
@@ -98,12 +96,7 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
         mode.next <== Mode.VectorLoad;
         partitionsProcessed.next <== partitionsProcessed + 1;
         IF (partitionsProcessed === nPartitions - 1) {
-          IF (paddingCycles !== 0) {
-            mode.next <== Mode.Padding;
-            paddedOutputs.next <== 0;
-          } ELSE {
-            mode.next <== Mode.Done;
-          }
+          mode.next <== Mode.Done;
         }
       } ELSE {
         mode.next <== Mode.ReadingLength;
@@ -118,16 +111,6 @@ public class ParallelCsrReadControl extends ManagerStateMachine {
       iLengthReady.next <== iLengthReady();
 
       SWITCH (mode) {
-        CASE (Mode.Padding) {
-          IF (outputNotStall()) {
-            debug.simPrintf("OUTPUT PADDING\n");
-            paddedOutputs.next <== paddedOutputs + 1;
-            makeOutput(fls(), fls(), zero(inputWidth), zero(), zeroI(), crtPos, fls());
-            IF (paddedOutputs === paddingCycles - 1) {
-                mode.next <== Mode.Done;
-            }
-          }
-        }
         CASE (Mode.Done) {
           // do nothing
         }
