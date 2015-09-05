@@ -98,5 +98,12 @@ public class ManagerUtils {
         name,
         MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
   }
+
+  public static void addLinearStreamFromKernelToLmem(CustomManager m, KernelBlock kernel, String name) {
+    m.addStreamToOnCardMemory(
+        name,
+        MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== kernel.getOutput(name);
+  }
+
 }
 

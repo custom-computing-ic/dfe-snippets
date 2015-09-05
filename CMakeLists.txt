@@ -117,6 +117,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   add_fpga_build(LinearAlgebra AdjustedCSRSpMV SpmvBase fpgaNaiveManager)
   add_fpga_build(LinearAlgebra CsrDecoder CsrDecoder CsrDecoderManager)
   add_fpga_build(LinearAlgebra ParallelCsrDecoder ParallelCsrDecoder ParallelCsrDecoderManager)
+  add_fpga_build(Tests DramAccumulator DramAccumulator DramAccumulatorManager)
 
   # --- Tests
   add_fpga_test(LinearAlgebra DenseMatrixVectorMultiply)
@@ -140,6 +141,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
 #  this project is designed not to compile:
 #  add_fpga_test(Tests ManagerPropertyPassThrough)
   add_fpga_test(Tests NestedClass)
+  add_fpga_test(Tests DramAccumulator)
   add_fpga_test(LanguageFeatures PackUnpack)
   add_fpga_test(LanguageFeatures NestedCounterVariableBoundary)
   add_fpga_test(Infrastructure BRAMReadWrite)

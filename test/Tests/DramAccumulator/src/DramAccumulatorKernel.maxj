@@ -1,0 +1,17 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class DramAccumulatorKernel extends Kernel {
+
+    protected DramAccumulatorKernel(KernelParameters parameters) {
+        super(parameters);
+
+        DFEVar a = io.input("a", dfeUInt(32));
+
+        DFEVar k = io.scalarInput("k", dfeUInt(32));
+
+        io.output("output", a + k, dfeUInt(32));
+    }
+
+}

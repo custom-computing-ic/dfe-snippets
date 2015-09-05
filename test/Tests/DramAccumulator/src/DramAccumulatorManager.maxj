@@ -1,0 +1,77 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
+
+import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
+
+public class DramAccumulatorManager extends CustomManager{
+
+    private static final String s_kernelName  = "DramAccumulatorKernel";
+
+    DramAccumulatorManager(EngineParameters ep)
+    {
+        super(ep);
+
+        KernelBlock k = addKernel(new DramAccumulatorKernel(makeKernelParameters(s_kernelName)));
+
+        ManagerUtils.addLinearStreamFromLmemToKernel(this, k, "a");
+        ManagerUtils.addLinearStreamFromKernelToLmem(this, k, "output");
+
+        addStreamToCPU("tocpu") <== addStreamFromOnCardMemory("lmem2cpu",
+            MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+        addStreamToOnCardMemory("cpu2lmem",
+            MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <==
+        addStreamFromCPU("fromcpu");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface ei = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = ei.addParam("N", CPUTypes.INT);
+        InterfaceParam nIterations = ei.addParam("iterations", CPUTypes.INT);
+        InterfaceParam ZERO = ei.addConstant(0);
+
+        InterfaceParam sizeBytes = N * size;
+
+        ei.setTicks(s_kernelName, N * nIterations);
+
+        ei.setStream("a", type, sizeBytes);
+        ei.setLMemLinearWrapped(
+            "a",
+            ZERO,
+            N * size,
+            nIterations * N * size,
+            ZERO);
+        ei.setLMemLinearWrapped(
+            "output",
+            ZERO,
+            N * size,
+            nIterations * N * size,
+            ZERO);
+
+        ei.ignoreStream("fromcpu");
+        ei.ignoreStream("tocpu");
+        ei.ignoreLMem("cpu2lmem");
+        ei.ignoreLMem("lmem2cpu");
+        return ei;
+    }
+
+
+    public static void main(String[] args) {
+        DramAccumulatorManager manager = new DramAccumulatorManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.createSLiCinterface(
+            ManagerUtils.interfaceWrite(
+              "write", "fromcpu", "cpu2lmem"));
+        manager.createSLiCinterface(
+            ManagerUtils.interfaceRead(
+              "read", "tocpu", "lmem2cpu"));
+        manager.build();
+    }
+}
