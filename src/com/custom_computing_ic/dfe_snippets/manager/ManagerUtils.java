@@ -14,9 +14,19 @@ import com.maxeler.maxcompiler.v2.managers.BuildConfig;
 import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
 import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 
+import static com.maxeler.maxcompiler.v2.managers.custom.CustomManager.LMemFrequency.*;
+
 import java.util.HashMap;
 
 public class ManagerUtils {
+
+  public static void setDRAMMaxDeviceFrequency(CustomManager manager, EngineParameters ep) {
+    if (ep.getDFEModel() == DFEModel.MAIA) {
+      setDRAMFreq(manager, ep, 800);
+    } else {
+      setDRAMFreq(manager, ep, 400);
+    }
+  }
 
   public static void setDRAMFreq(CustomManager manager, EngineParameters ep, int freq) {
     MemoryControllerConfig memCfg = new MemoryControllerConfig();
@@ -29,20 +39,27 @@ public class ManagerUtils {
         memCfg.setMAX4qMode(true);
         memCfg.setDataReadFIFOExtraPipelineRegInFabric(true);  // for easier meeting LMem timing
 
-        intToFreq.put(400, CustomManager.LMemFrequency.MAX4MAIA_400);
-        intToFreq.put(533, CustomManager.LMemFrequency.MAX4MAIA_533);
-        intToFreq.put(666, CustomManager.LMemFrequency.MAX4MAIA_666);
-        intToFreq.put(733, CustomManager.LMemFrequency.MAX4MAIA_733);
-        intToFreq.put(800, CustomManager.LMemFrequency.MAX4MAIA_800);
+        intToFreq.put(400, MAX4MAIA_400);
+        intToFreq.put(533, MAX4MAIA_533);
+        intToFreq.put(666, MAX4MAIA_666);
+        intToFreq.put(733, MAX4MAIA_733);
+        intToFreq.put(800, MAX4MAIA_800);
     }
     else
     {
-        intToFreq.put(300, CustomManager.LMemFrequency.MAX3_300);
-        intToFreq.put(333, CustomManager.LMemFrequency.MAX3_333);
-        intToFreq.put(350, CustomManager.LMemFrequency.MAX3_350);
-        intToFreq.put(400, CustomManager.LMemFrequency.MAX3_400);
+        intToFreq.put(300, MAX3_300);
+        intToFreq.put(333, MAX3_333);
+        intToFreq.put(350, MAX3_350);
+        intToFreq.put(400, MAX3_400);
     }
-    manager.config.setOnCardMemoryFrequency(intToFreq.get(freq));
+
+    CustomManager.LMemFrequency frequency = intToFreq.get(freq);
+    if (frequency != null) {
+      manager.config.setOnCardMemoryFrequency(intToFreq.get(freq));
+    } else {
+      throw new RuntimeException("Unsupported memory frequency " + freq + " for device mode " + ep.getDFEModel());
+    }
+
     manager.config.setMemoryControllerConfig(memCfg);
   }
 
