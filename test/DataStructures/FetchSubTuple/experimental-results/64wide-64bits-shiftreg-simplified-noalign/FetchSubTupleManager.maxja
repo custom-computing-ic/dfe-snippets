@@ -1,8 +1,8 @@
     LUTs     FFs   BRAMs    DSPs : FetchSubTupleManager.maxj
-    2560   13008       1       0 : resources used by this file
-   0.49%   1.24%   0.04%   0.00% : % of available
-  25.95%  52.73%   0.70%   0.00% : % of total used
-  93.16%  87.28% 100.00%   0.00% : % of user resources
+   11888   17409       2       0 : resources used by this file
+   2.27%   1.66%   0.08%   0.00% : % of available
+  59.45%  49.42%   0.74%   0.00% : % of total used
+  99.44%  79.61% 100.00%   0.00% : % of user resources
 
                                  : import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
                                  : import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
@@ -14,7 +14,7 @@
                                  : public class FetchSubTupleManager extends CustomManager{
                                  : 
                                  :     private static final String s_kernelName  = "FetchSubTupleKernel";
-                                 :     private static final int tupleSize = 24;
+                                 :     private static final int tupleSize = 64;
                                  : 
                                  :     FetchSubTupleManager(EngineParameters ep)
                                  :     {
@@ -23,7 +23,7 @@
                                  :         config.setDefaultStreamClockFrequency(200);
                                  : 
                                  : 
-    2224     595       1       0 :         KernelBlock k = addKernel(new FetchSubTupleKernel(makeKernelParameters(s_kernelName), tupleSize));
+   11674     793       2       0 :         KernelBlock k = addKernel(new FetchSubTupleKernel(makeKernelParameters(s_kernelName), tupleSize));
                                  : 
                                  :         k.getInput("input") <== addStreamFromCPU("input");
                                  :         k.getInput("sizes") <== addStreamFromCPU("sizes");
@@ -52,9 +52,9 @@
                                  : 
                                  : 
                                  :     public static void main(String[] args) {
-    2224     595       1       0 :         FetchSubTupleManager manager = new FetchSubTupleManager(new EngineParameters(args));
+   11674     793       2       0 :         FetchSubTupleManager manager = new FetchSubTupleManager(new EngineParameters(args));
                                  :         manager.createSLiCinterface(interfaceDefault());
                                  :         manager.addMaxFileConstant("tupleSize", tupleSize);
-     336   12413       0       0 :         manager.build();
+     214   16616       0       0 :         manager.build();
                                  :     }
                                  : }

@@ -3,83 +3,83 @@ Total resource usage
 -----------------------------------------------------------------
     LUTs     FFs   BRAMs    DSPs                            
   524800 1049600    2567    1963  total available resources for FPGA
-    9865   24671     143       0  total resources used      
-   1.88%   2.35%   5.57%   0.00%  % of available
-    2748   14903       1       0  used by kernels           
-   0.52%   1.42%   0.04%   0.00%  % of available
-    6093    7865     129       0  used by manager           
-   1.16%   0.75%   5.03%   0.00%  % of available
-    4557   18878      95       0  stray resources           
-   0.87%   1.80%   3.70%   0.00%  % of available
+   19997   35229     272       0  total resources used      
+   3.81%   3.36%  10.60%   0.00%  % of available
+   11955   21868       2       0  used by kernels           
+   2.28%   2.08%   0.08%   0.00%  % of available
+    7047   11470     257       0  used by manager           
+   1.34%   1.09%  10.01%   0.00%  % of available
+   14586   29461     224       0  stray resources           
+   2.78%   2.81%   8.73%   0.00%  % of available
 
 High level manager breakdown aggregated by type
 -----------------------------------------------------------------
     LUTs     FFs   BRAMs    DSPs  Type                      Occurrences
       39      37       1       0  ChecksumMappedDRP         1
-     538     533       0       0  DualAspectMux             2
-       7    1547       0       0  DualAspectReg             1
-     367     490      88       0  Fifo                      6
-    2748   14903       1       0  Kernel                    1
+    1325    1432       0       0  DualAspectMux             2
+      13    4266       0       0  DualAspectReg             1
+     387     505     216       0  Fifo                      6
+   11955   21868       2       0  Kernel                    1
      169     216       0       0  MAX4CPLD                  1
-     731    1040       2       0  MAX4PCIeSlaveInterface    1
+     800    1023       2       0  MAX4PCIeSlaveInterface    1
       34      54       0       0  MAXEvents                 1
-     486      84       0       0  MappedElementSwitch       1
-     433     991       5       0  MappedMemoriesController  1
-     115     122       0       0  MappedRegistersControlle  1
-    1647     925       4       0  PCIeBase                  1
-    1132    1363      28       0  PCIeSlaveStreaming        1
-     171     204       0       0  PerfMonitor               1
-      17      23       0       0  ResetControl              2
-     114     145       0       0  SanityBlock               1
-      93      91       1       0  SignalForwardingAdapter   1
+     542      88       0       0  MappedElementSwitch       1
+     475     990       5       0  MappedMemoriesController  1
+     123     122       0       0  MappedRegistersControlle  1
+    1647     929       4       0  PCIeBase                  1
+    1143    1353      28       0  PCIeSlaveStreaming        1
+     168     205       0       0  PerfMonitor               1
+      17      22       0       0  ResetControl              2
+      71     145       0       0  SanityBlock               1
+      94      83       1       0  SignalForwardingAdapter   1
        0       0       0       0  Memory Controller         --
        0       0       0       0  Other InterFPGA           --
-    1058    1292       8       0  Other MappedElements      --
-    2603    3576      36       0  Other PCIe                --
+    1166    1302       8       0  Other MappedElements      --
+    2598    3537      36       0  Other PCIe                --
 
 Kernel breakdown
 -----------------------------------------------------------------
     LUTs     FFs   BRAMs    DSPs  category
-    2748   14903       1       0  total for all kernels
-   0.52%   1.42%   0.04%   0.00%  % of total available
+   11955   21868       2       0  total for all kernels
+   2.28%   2.08%   0.08%   0.00%  % of total available
 
 Totals for each kernel
     LUTs     FFs   BRAMs    DSPs  Kernel name
-    2748   14903       1       0  FetchSubTupleKernel (total)
-   0.52%   1.42%   0.04%   0.00%  % of total available
-    2224     595       1       0  FetchSubTupleKernel (user)
-   0.42%   0.06%   0.04%   0.00%  % of total available
-     336   12413       0       0  FetchSubTupleKernel (scheduling)
-   0.06%   1.18%   0.00%   0.00%  % of total available
-     188    1895       0       0  FetchSubTupleKernel (other Kernel resources)
-   0.04%   0.18%   0.00%   0.00%  % of total available
+   11955   21868       2       0  FetchSubTupleKernel (total)
+   2.28%   2.08%   0.08%   0.00%  % of total available
+   11674     793       2       0  FetchSubTupleKernel (user)
+   2.22%   0.08%   0.08%   0.00%  % of total available
+     214   16616       0       0  FetchSubTupleKernel (scheduling)
+   0.04%   1.58%   0.00%   0.00%  % of total available
+      67    4459       0       0  FetchSubTupleKernel (other Kernel resources)
+   0.01%   0.42%   0.00%   0.00%  % of total available
 
 
 Manager breakdown
 -----------------------------------------------------------------
     LUTs     FFs   BRAMs    DSPs  Type                      Instance
-    2748   14903       1       0  Kernel                    FetchSubTupleKernel
-      75     122       4       0  Fifo                      Stream_11
-      42      39      39       0  Fifo                      Stream_13
+   11955   21868       2       0  Kernel                    FetchSubTupleKernel
+      80     123       4       0  Fifo                      Stream_11
+      43      40     103       0  Fifo                      Stream_13
       38      32       1       0  Fifo                      Stream_15
-     103     139       1       0  Fifo                      Stream_17
-      37      33      39       0  Fifo                      Stream_19
-       7    1547       0       0  DualAspectReg             Stream_1
-      72     125       4       0  Fifo                      Stream_21
-      11       9       0       0  DualAspectMux             Stream_4
-     527     524       0       0  DualAspectMux             Stream_8
-     731    1040       2       0  MAX4PCIeSlaveInterface    MAX4PCIeSlaveInterface_i
-       9      12       0       0  ResetControl              control_streams_rst_ctl
-     486      84       0       0  MappedElementSwitch       MappedElementSwitch_i
-     433     991       5       0  MappedMemoriesController  MappedMemoriesController_i
-     115     122       0       0  MappedRegistersControlle  MappedRegistersController_i
-     171     204       0       0  PerfMonitor               perfm
-     114     145       0       0  SanityBlock               SanityBlock_i
-      93      91       1       0  SignalForwardingAdapter   SignalForwardingAdapter_i
+     108     147       1       0  Fifo                      Stream_17
+      39      37     103       0  Fifo                      Stream_19
+      13    4266       0       0  DualAspectReg             Stream_1
+      79     126       4       0  Fifo                      Stream_21
+      18      10       0       0  DualAspectMux             Stream_4
+    1307    1422       0       0  DualAspectMux             Stream_8
+     800    1023       2       0  MAX4PCIeSlaveInterface    MAX4PCIeSlaveInterface_i
+       9      11       0       0  ResetControl              control_streams_rst_ctl
+     542      88       0       0  MappedElementSwitch       MappedElementSwitch_i
+     475     990       5       0  MappedMemoriesController  MappedMemoriesController_i
+     123     122       0       0  MappedRegistersControlle  MappedRegistersController_i
+     168     205       0       0  PerfMonitor               perfm
+      71     145       0       0  SanityBlock               SanityBlock_i
+      94      83       1       0  SignalForwardingAdapter   SignalForwardingAdapter_i
       39      37       1       0  ChecksumMappedDRP         checksum_mem_drp
-    1132    1363      28       0  PCIeSlaveStreaming        dynpcie
+    1143    1353      28       0  PCIeSlaveStreaming        dynpcie
        8      11       0       0  ResetControl              reset_controller
-    1647     925       4       0  PCIeBase                  PCIeBase_i
+    1647     929       4       0  PCIeBase                  PCIeBase_i
      169     216       0       0  MAX4CPLD                  cpld_io_ext_inst
       34      54       0       0  MAXEvents                 max_events
 
@@ -88,7 +88,6 @@ Source files annotation report
 
 % of total used for each file (note: multiple files may share the same resources)
     LUTs     FFs   BRAMs    DSPs  filename
-  19.24%   0.44%   0.70%   0.00%  FetchSubTuple.maxj
-  20.23%   0.97%   0.70%   0.00%  FetchSubTupleKernel.maxj
-  25.95%  52.73%   0.70%   0.00%  FetchSubTupleManager.maxj
-  25.95%  52.73%   0.70%   0.00%  [ missing source files ]
+  57.24%   1.21%   0.74%   0.00%  FetchSubTupleKernel.maxj
+  59.45%  49.42%   0.74%   0.00%  FetchSubTupleManager.maxj
+ 100.00%  50.27%   1.47%   0.00%  [ missing source files ]
