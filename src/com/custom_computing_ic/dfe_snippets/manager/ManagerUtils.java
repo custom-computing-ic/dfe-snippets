@@ -75,6 +75,19 @@ public class ManagerUtils {
     return ei;
   }
 
+  public static EngineInterface dramWrite(CustomManager m) {
+    m.addStreamToOnCardMemory("cpu2lmem", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== m.addStreamFromCPU("fromcpu");
+    EngineInterface ei = new EngineInterface("dramWrite");
+    CPUTypes TYPE = CPUTypes.INT;
+    InterfaceParam size = ei.addParam("size_bytes", TYPE);
+    InterfaceParam start = ei.addParam("start_bytes", TYPE);
+    ei.setStream("fromcpu", CPUTypes.UINT8, size);
+    ei.setLMemLinear("cpu2lmem", start, size);
+    ei.ignoreAll(Direction.IN_OUT);
+    return ei;
+  }
+
+
   // A generic DRAM read interface
   public static EngineInterface interfaceRead(String name, String toCpuStream, String lmem2cpuStream) {
     EngineInterface ei = new EngineInterface(name);
@@ -83,6 +96,18 @@ public class ManagerUtils {
     InterfaceParam start = ei.addParam("start_bytes", TYPE);
     ei.setStream(toCpuStream, CPUTypes.UINT8, size);
     ei.setLMemLinear(lmem2cpuStream, start, size);
+    ei.ignoreAll(Direction.IN_OUT);
+    return ei;
+  }
+
+  public static EngineInterface dramRead(CustomManager m) {
+    m.addStreamToCPU("tocpu") <== m.addStreamFromOnCardMemory("lmem2cpu", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+    EngineInterface ei = new EngineInterface("dramRead");
+    CPUTypes TYPE = CPUTypes.INT;
+    InterfaceParam size = ei.addParam("size_bytes", TYPE);
+    InterfaceParam start = ei.addParam("start_bytes", TYPE);
+    ei.setStream("tocpu", CPUTypes.UINT8, size);
+    ei.setLMemLinear("lmem2cpu", start, size);
     ei.ignoreAll(Direction.IN_OUT);
     return ei;
   }
