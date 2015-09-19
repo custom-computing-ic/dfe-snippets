@@ -48,8 +48,6 @@ package com.custom_computing_ic.dfe_snippets.reductions;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
 import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
-
 
 
 public class TwoStageStoreReduce extends KernelLib
