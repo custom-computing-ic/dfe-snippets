@@ -1,8 +1,8 @@
     LUTs     FFs   BRAMs    DSPs : FetchSubTuple.maxj
-    1898     109       1       0 : resources used by this file
-   0.36%   0.01%   0.04%   0.00% : % of available
-  19.24%   0.44%   0.70%   0.00% : % of total used
-  69.07%   0.73% 100.00%   0.00% : % of user resources
+   37207     685       4       0 : resources used by this file
+   7.09%   0.07%   0.16%   0.00% : % of available
+  77.40%   0.91%   0.69%   0.00% : % of total used
+  98.13%   1.29% 100.00%   0.00% : % of user resources
 
                                  : //package com.custom_computing_ic.dfe_snippets.utils;
                                  : 
@@ -42,7 +42,7 @@
                                  : 
                                  : public class FetchSubTuple extends KernelLib
                                  : {
-                                 :     private static final int bufferDepth = 8;
+                                 :     private static final int bufferDepth = 4;
                                  : 
                                  :     private DFEVectorType<DFEVar> m_tupleType;
                                  :     private DFEVectorType<DFEVar> m_boolTupleType;
@@ -119,15 +119,15 @@
                                  :         DFEVar shiftLoop             = tupleIndexType.newInstance(this);
                                  : 
                                  :         optimization.pushPipeliningFactor(0.0);
-       4       2       0       0 :             DFEVar shift = control.count.pulse(1)? 0 : stream.offset(shiftLoop,-1);
-      10      10       0       0 :             shiftLoop <== KernelMath.modulo(shift.cast(dfeUInt(m_tupleBitWidth+1)) + 
-       6       0       0       0 :                                             numElements.cast(dfeUInt(m_tupleBitWidth+1)), m_tupleSize)
+       9       2       0       0 :             DFEVar shift = control.count.pulse(1)? 0 : stream.offset(shiftLoop,-1);
+      28      13       0       0 :             shiftLoop <== KernelMath.modulo(shift.cast(dfeUInt(m_tupleBitWidth+1)) + 
+       9       0       0       0 :                                             numElements.cast(dfeUInt(m_tupleBitWidth+1)), m_tupleSize)
                                  :                           .cast(tupleIndexType);
                                  :         optimization.popPipeliningFactor();
                                  : 
                                  :         for (int i = 0; i < m_tupleSize; i++)
                                  :         {
-      23      28       0       0 :             mask[i] <== (i < numElements);
+     177     162       0       0 :             mask[i] <== (i < numElements);
                                  :         }
                                  :         readEnable = null;
                                  :         if (m_tupleBitWidth == 0)
@@ -136,7 +136,7 @@
                                  :         }
                                  :         else
                                  :         {
-      99      64       1       0 :             readEnable = mask.rotateElementsLeft(shift);
+     750     504       4       0 :             readEnable = mask.rotateElementsLeft(shift);
                                  :         }
                                  :         optimization.pushPipeliningFactor(0.0);
                                  :             // all FIFOs have same depth +/-1 - just watching an arbitrary FIFO
@@ -145,8 +145,8 @@
                                  : 
                                  :             for (int i = 0; i < m_tupleSize; i++)
                                  :             {
-       3       4       0       0 :                 DFEVar pastDepth = control.count.pulse(1)? 0 : stream.offset(m_depth[i],-1);
-      72       0       0       0 :                 m_depth[i] <== pushEnable?
+       3       3       0       0 :                 DFEVar pastDepth = control.count.pulse(1)? 0 : stream.offset(m_depth[i],-1);
+     320       0       0       0 :                 m_depth[i] <== pushEnable?
                                  :                                     (readEnable[i]? pastDepth : (pastDepth+1))
                                  :                                    :(readEnable[i]? (pastDepth-1) : pastDepth);
                                  :             }
@@ -163,12 +163,12 @@
                                  :         for (int i = 0; i < m_tupleSize; i++)
                                  :         {
                                  : 
-      48       0       0       0 :             DFEVar pastDepth = control.count.pulse(1)? 0 : stream.offset(m_depth[i],-1);
+                                 :             DFEVar pastDepth = control.count.pulse(1)? 0 : stream.offset(m_depth[i],-1);
                                  : 
-      48       0       0       0 :             DFEVar asIfReadEnable = (pushEnable & pastDepth.eq(0))?
+     130       0       0       0 :             DFEVar asIfReadEnable = (pushEnable & pastDepth.eq(0))?
                                  :                                                inputTuple[i]
                                  :                                              : stream.offset(m_buffer[i][0],-1);
-    1536       0       0       0 :             tuple[i] <== readEnable[i]? asIfReadEnable
+   10240       0       0       0 :             tuple[i] <== readEnable[i]? asIfReadEnable
                                  :                                       : constant.var(m_contentType, 0);
                                  :             // shifting those FIFOs that are being read + inserting new entries
                                  :             for (int j = 0; j < bufferDepth; j++)
@@ -179,13 +179,13 @@
                                  :                 }
                                  :                 else
                                  :                 {
-      48       0       0       0 :                     DFEVar asIfReadDisabled = (pushEnable & pastDepth.eq(j))?
+     387       0       0       0 :                     DFEVar asIfReadDisabled = (pushEnable & pastDepth.eq(j))?
                                  :                                                inputTuple[i]
                                  :                                              : stream.offset(m_buffer[i][j],-1);
-                                 :                     DFEVar asIfReadEnabled  = (pushEnable & pastDepth.eq(j+1))?
+   16703       0       0       0 :                     DFEVar asIfReadEnabled  = (pushEnable & pastDepth.eq(j+1))?
                                  :                                                inputTuple[i]
                                  :                                              : stream.offset(m_buffer[i][j+1],-1);
-                                 :                     m_buffer[i][j] <== readEnable[i]? asIfReadEnabled
+    8450       0       0       0 :                     m_buffer[i][j] <== readEnable[i]? asIfReadEnabled
                                  :                                                     : asIfReadDisabled;
                                  :                 }
                                  :             }
