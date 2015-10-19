@@ -8,7 +8,7 @@
 namespace dfesnippets {
   namespace timing {
 
-    double clock_diff(
+    inline double clock_diff(
         std::chrono::high_resolution_clock::time_point start) {
       using namespace std::chrono;
       auto end = std::chrono::high_resolution_clock::now();
@@ -16,7 +16,7 @@ namespace dfesnippets {
     }
 
     /** Print the difference between now and start */
-    void print_clock_diff(
+    inline void print_clock_diff(
         std::string item,
         std::chrono::high_resolution_clock::time_point start) {
       using namespace std::chrono;
@@ -27,7 +27,7 @@ namespace dfesnippets {
     }
 
     /** Print the difference between end and start */
-    void print_clock_diff(std::string item,
+    inline void print_clock_diff(std::string item,
         std::chrono::high_resolution_clock::time_point end,
         std::chrono::high_resolution_clock::time_point start) {
       using namespace std::chrono;
@@ -36,7 +36,7 @@ namespace dfesnippets {
       std::cout << " seconds." << std::endl;
     }
 
-    void print_spmv_gflops(std::string item,
+    inline void print_spmv_gflops(std::string item,
         int nnzs,
         std::chrono::high_resolution_clock::time_point end,
         std::chrono::high_resolution_clock::time_point start) {
