@@ -1,0 +1,22 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+public class ThresholdKernel extends Kernel {
+	private final static int s_min = 0;
+	private final static int s_max = 255;
+	private final static int s_thresh = 10;
+
+	public ThresholdKernel(KernelParameters parameters) {
+		super(parameters);
+
+		DFEVar inStream = io.input("input", dfeUInt(8));
+
+		DFEVar min = constant.var(dfeUInt(8), s_min);
+		DFEVar max = constant.var(dfeUInt(8), s_max);
+
+		DFEVar result = (inStream > s_thresh) ? max : min;
+
+		io.output("output", dfeUInt(8)) <== result;
+	}
+}

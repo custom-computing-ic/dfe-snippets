@@ -1,0 +1,28 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+public class EdgeLaplaceKernel extends Kernel {
+	public EdgeLaplaceKernel(KernelParameters parameters, int width) {
+		super(parameters);
+
+		optimization.pushEnableBitGrowth(true);
+
+		DFEVar inStream = io.input("input", dfeUInt(8));
+
+		DFEVar window[] = new DFEVar[5];
+		window[0] = stream.offset(inStream, -3 * width);
+		window[1] = stream.offset(inStream, -3);
+		window[2] = inStream;
+		window[3] = stream.offset(inStream, 3);
+		window[4] = stream.offset(inStream, 3 * width);
+
+		DFEVar sum = constant.var(0);
+		for (int i = 0; i < 5; i++)
+			sum += (i != 2) ? window[i] : window[i] * -4;
+
+		DFEVar result = sum > 0 ? sum : -sum;
+
+		io.output("output", dfeUInt(8)) <== result.cast(dfeUInt(8));
+	}
+}

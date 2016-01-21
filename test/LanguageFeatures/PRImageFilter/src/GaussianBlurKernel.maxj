@@ -1,0 +1,36 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+public class GaussianBlurKernel extends Kernel{
+
+	public GaussianBlurKernel(KernelParameters parameters, int width) {
+		super(parameters);
+
+		optimization.pushEnableBitGrowth(true);
+
+		DFEVar inStream = io.input("input", dfeUInt(8));
+
+		DFEVar window[] = new DFEVar[9];
+		int i = 0;
+		for (int x = -3; x <= 3; x += 3) {
+			for (int y = -3; y <= 3; y += 3) {
+				window[i++] = stream.offset(inStream, x * width + y);
+			}
+		}
+
+		DFEVar sum = constant.var(0);
+		for (int j = 0; j < 9; j++) {
+			if (j % 2 == 0 && j != 4)
+				sum += window[j];
+			else if (j == 4)
+				sum += window[j] * 4;
+			else
+				sum += window[j] * 2;
+		}
+
+		DFEVar result = sum / 16;
+
+		io.output("output", dfeUInt(8)) <== result.cast(dfeUInt(8));
+	}
+}

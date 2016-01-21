@@ -1,0 +1,37 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+public class GrayScaleKernel extends Kernel {
+	public GrayScaleKernel(KernelParameters parameters) {
+		super(parameters);
+
+		optimization.pushEnableBitGrowth(true);
+
+		DFEVar inStream = io.input("input", dfeUInt(8));
+
+		DFEVar countColour = control.count.simpleCounter(2, 3);
+
+		DFEVar r = control.mux(countColour,
+			inStream,
+			stream.offset(inStream, -1),
+			stream.offset(inStream, -2));
+
+		DFEVar g = control.mux(countColour,
+			stream.offset(inStream, 1),
+			inStream,
+			stream.offset(inStream, -1));
+
+		DFEVar b = control.mux(countColour,
+			stream.offset(inStream, 2),
+			stream.offset(inStream, 1),
+			inStream);
+
+		DFEVar sum = r + g + b;
+
+		DFEVar result = sum / 3;
+
+		io.output("output", dfeUInt(8)) <== result.cast(dfeUInt(8));
+	}
+}
+

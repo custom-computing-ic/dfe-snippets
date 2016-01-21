@@ -1,0 +1,75 @@
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.partial_reconfiguration.PRConfiguration;
+import com.maxeler.maxcompiler.v2.managers.partial_reconfiguration.PRManager;
+import com.maxeler.maxcompiler.v2.managers.partial_reconfiguration.ReconfigurableBlock;
+
+public class PRImageFilterManager extends PRManager {
+
+	private final static int s_width = 256;
+
+	public PRImageFilterManager(EngineParameters engineParameters) {
+		super(engineParameters);
+
+		// Instantiate filter kernels
+		GrayScaleKernel gray = new GrayScaleKernel(makeKernelParameters("GrayScaleKernel"));
+		GaussianBlurKernel gauss = new GaussianBlurKernel(makeKernelParameters("GaussianBlurKernel"), s_width);
+	    EdgeLaplaceKernel edge = new EdgeLaplaceKernel(makeKernelParameters("EdgeLaplaceKernel"), s_width);
+		ThresholdKernel thresh = new ThresholdKernel(makeKernelParameters("ThresholdKernel"));
+
+		// Create block in clock region X0Y8, capable of taking Kernels 'gray' and 'edge'
+		ReconfigurableBlock block1 = addReconfigurableBlock("block1", 0, 8, 0, 8, gray, edge);
+
+		// Create block in clock region X0Y7, capable of taking Kernels 'gauss' and 'thresh'
+		ReconfigurableBlock block2 = addReconfigurableBlock("block2", 0, 7, 0, 7, gauss, thresh);
+
+		// Connect streams: CPU --> block1 --> block2 --> CPU
+		block1.getInput("input") <== addStreamFromCPU("input");
+		block2.getInput("input") <== block1.getOutput("output");
+		addStreamToCPU("output") <== block2.getOutput("output");
+	}
+
+	private static EngineInterface modeDefault() {
+		EngineInterface engine_interface = new EngineInterface();
+
+		InterfaceParam N = engine_interface.addParam("N", CPUTypes.UINT64);
+		engine_interface.setTicks("block1", N);
+		engine_interface.setTicks("block2", N);
+		engine_interface.setStream("input", CPUTypes.UINT8, N);
+		engine_interface.setStream("output", CPUTypes.UINT8, N);
+
+		return engine_interface;
+	}
+
+	private void configBuild(EngineParameters params) {
+		BuildConfig buildConfig = getBuildConfig();
+		buildConfig.setMPPRCostTableSearchRange(params.getMPPRStartCT(), params.getMPPREndCT());
+		buildConfig.setMPPRParallelism(params.getMPPRThreads());
+		buildConfig.setMPPRRetryNearMissesThreshold(params.getMPPRRetryThreshold());
+	}
+
+	public static void main(String[] args) {
+		EngineParameters params = new EngineParameters(args);
+		PRImageFilterManager manager = new PRImageFilterManager(params);
+
+        // Create configuration with GrayScale and GaussianBlur Kernels
+        PRConfiguration conf1 = new PRConfiguration("conf1");
+        conf1.setKernel("block1", "GrayScaleKernel");
+        conf1.setKernel("block2", "GaussianBlurKernel");
+
+        // Create configuration with EdgeLaplace and Threshold Kernels
+        PRConfiguration conf2 = new PRConfiguration("conf2");
+        conf2.setKernel("block1", "EdgeLaplaceKernel");
+        conf2.setKernel("block2", "ThresholdKernel");
+
+        manager.createSLiCinterface(modeDefault());
+        manager.configBuild(params);
+
+        // Build with conf1 as the default (initial) configuration
+        manager.build(conf1, conf2);
+	}
+}
+
