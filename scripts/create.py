@@ -129,9 +129,9 @@ def main():
     projectConcept = args.concept
 
     # copy template to the target location
-    dest = 'test/'
+    dest = ''
     if args.concept:
-        dest += projectConcept + "/" + projectName
+        dest += 'test/' + projectConcept + "/" + projectName
         projectRoot = "../../.."
     else:
         dest += projectName
