@@ -15,10 +15,13 @@ Implementations are grouped by concept (e.g. Summation, Infrastructure, Sorting)
 
 ```
 scripts/          ---> Useful scripts
-concept1/
-  implementation1/
-     src/          ---> source code
-     build         ---> build directory
+include/          ---> Header only C++ libraries
+src/              ---> MaxJ libraries
+test/             ---> Test projects, benchmarks, etc.
+  concept1/
+    implementation1/
+       src/          ---> source code
+       build         ---> build directory
 ```
 
 ## Using
@@ -36,10 +39,12 @@ You should then be able to import any class using the fully qualified name. For 
 ```
 // A Maxeler DFE kernel
 
-import com.custom_computing_ic.dfe_snippets.blas.DenseBlasLib; 
+import com.custom_computing_ic.dfe_snippets.blas.DenseBlasLib;
 
 class MyKernel extends Kernel {...}
 ```
+
+__Note__ Use a full, absolute path for dfe-snippets to avoid compilation issues.
 
 ### CPU Libraries
 
@@ -57,6 +62,8 @@ int main() {
   return 0;
 }
 ```
+
+__Note__ You may also have to add the `-std=c++11` flag to `CFLAGS` to ensure C++11 support is enabled.
 
 ## Creating new projects
 
