@@ -1,0 +1,112 @@
+/***
+      n_kernel pass through Kernels are instantiated on the DFE
+      Each Kernel has its own independent LMem channel
+      A fanout is used to send the same input data to each active LMem module
+*/
+
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.LMemCommandGroup;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.Direction;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.Fanout;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.LMemInterface;
+
+public class LMemMultiChannelManager extends CustomManager{
+
+    private static final String s_kernelName  = "LMemMultiChannelKernel";
+
+    private static final int n_kernel = 2;
+
+    LMemMultiChannelManager(EngineParameters ep)
+    {
+        super(ep);
+
+	// instantiate memory channels
+	LMemInterface[] iface = new LMemInterface[n_kernel];
+        for (int i = 0; i < n_kernel; i++) {
+	    iface[i] = addLMemInterface("ctrl" + i, 1);
+	}
+
+	// instantiate kernels
+	for (int i = 0; i < n_kernel; i++) {
+	    KernelBlock k = addKernel(new LMemMultiChannelKernel(makeKernelParameters(s_kernelName + i)));
+	
+	    DFELink lmemToKernel = iface[i].addStreamFromLMem("k_in" + i, LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
+	    k.getInput("k_in") <== lmemToKernel;
+	  
+	    DFELink kernelToHost = addStreamToCPU("k_out" + i);
+	    kernelToHost <== k.getOutput("k_out");
+	}
+
+	// data to LMem
+	DFELink hostToMger = addStreamFromCPU("hostToMger");
+        Fanout fan = fanout("fan");                                                                                                                                 
+        fan.getInput() <== hostToMger;
+	for (int i = 0; i < n_kernel; i++) {
+	    DFELink fanOut = fan.addOutput("fanOut" + i);
+	    DFELink mgerToLMem = iface[i].addStreamToLMem("mgerToLMem" + i, LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
+	    mgerToLMem <== fanOut;
+	}
+    }
+
+    // write data to LMem
+    private static EngineInterface interfaceWrite(String name) {
+        EngineInterface engine_interface = new EngineInterface(name);
+        CPUTypes type = CPUTypes.UINT32;
+        int size = type.sizeInBytes();
+
+	String routeString = "";
+        InterfaceParam N = engine_interface.addParam("N", type);
+        InterfaceParam sizeBytes = N * size;
+	InterfaceParam zero = engine_interface.addConstant(0l);
+		
+        engine_interface.setStream("hostToMger", type, sizeBytes);
+	for (int i = 0; i < n_kernel; i++) {
+	    engine_interface.setLMemLinear("ctrl" + i, "mgerToLMem" + i, zero, sizeBytes);
+	    String tmp;
+	    if (i < n_kernel-1)
+		tmp = String.format("fan -> fanOut%d, ", i);
+	    else 
+		tmp = String.format("fan -> fanOut%d", i);
+	    routeString += tmp;
+	}
+	
+	engine_interface.route(routeString);
+	engine_interface.ignoreAll(Direction.IN_OUT);
+
+	return engine_interface;
+    }
+
+    // run pass through kernel
+    private static EngineInterface interfaceExec(String name) {
+        EngineInterface engine_interface = new EngineInterface(name);
+        CPUTypes type = CPUTypes.UINT32;
+        int size = type.sizeInBytes();
+
+        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT);
+        InterfaceParam sizeBytes = N * size;
+	InterfaceParam zero = engine_interface.addConstant(0l);
+	
+	for (int i = 0; i < n_kernel; i++) {
+	    engine_interface.setTicks(s_kernelName + i, N);
+	    engine_interface.setStream("k_out" + i, type, sizeBytes);
+	    engine_interface.setLMemLinear("ctrl" + i, "k_in" + i, zero, sizeBytes);
+	}
+	engine_interface.ignoreAll(Direction.IN_OUT);
+        return engine_interface;
+    }
+
+
+    public static void main(String[] args) {
+        LMemMultiChannelManager manager = new LMemMultiChannelManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceWrite("Write"));
+	manager.createSLiCinterface(interfaceExec("Exec"));
+	manager.suppressDefaultInterface();
+        manager.build();
+    }
+}
