@@ -1,0 +1,20 @@
+/***
+	A simple pass-through Kernel
+
+	A single stream of data is read from LMem and directly output to host CPU
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class LMemMultiChannelKernel extends Kernel {
+
+    protected LMemMultiChannelKernel(KernelParameters parameters) {
+        super(parameters);
+
+        DFEVar a = io.input("k_in", dfeInt(32));
+        io.output("k_out", a, dfeInt(32));
+    }
+
+}
