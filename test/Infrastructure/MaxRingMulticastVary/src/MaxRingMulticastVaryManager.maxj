@@ -1,0 +1,72 @@
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.Max3RingConnection;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.Max4MAIARingConnection;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MaxRingBidirectionalStream;
+import com.maxeler.maxcompiler.v2.managers.DFEModel;
+
+public class MaxRingMulticastVaryManager extends CustomManager{
+
+	private static final String s_kernelName  = "MaxRingMulticastVaryKernel";
+	private static final int sim_kernels = 6;
+
+	MaxRingMulticastVaryManager(EngineParameters ep)
+	{
+		super(ep);
+
+		if (ep.getTarget() == EngineParameters.Target.DFE){
+			// Build target = DFE, connect MaxRing I/O
+			KernelBlock k = addKernel(
+				new MaxRingMulticastVaryKernel(makeKernelParameters(s_kernelName)));
+
+			MaxRingBidirectionalStream maxRingA, maxRingB;
+			if (ep.getDFEModel() == DFEModel.MAX4848A | ep.getDFEModel() == DFEModel.MAIA){
+				maxRingA = addMaxRingBidirectionalStream("maxRingA", Max4MAIARingConnection.MAXRING_A);
+				maxRingB = addMaxRingBidirectionalStream("maxRingB", Max4MAIARingConnection.MAXRING_B);
+			}
+			else {
+				maxRingA = addMaxRingBidirectionalStream("maxRingA", Max3RingConnection.MAXRING_A);
+				maxRingB = addMaxRingBidirectionalStream("maxRingB", Max3RingConnection.MAXRING_B);
+			}
+
+			maxRingA.getLinkToRemoteDFE() <== k.getOutput("dataOutA");
+			k.getInput("dataInA") <== maxRingA.getLinkFromRemoteDFE();
+
+			maxRingB.getLinkToRemoteDFE() <== k.getOutput("dataOutB");
+			k.getInput("dataInB") <== maxRingB.getLinkFromRemoteDFE();
+
+			addStreamToCPU("dataOut") <== k.getOutput("dataOut");
+		}
+		else {
+			// Build target = sim, instantiate 6 kernels instead
+			// since in/out can't be unconnected, 0 and 5 are connected
+			// but isn't used
+			KernelBlock[] k = new KernelBlock[sim_kernels];
+			for (int i = 0; i < sim_kernels; i++){
+				k[i] = addKernel(
+					new MaxRingMulticastVaryKernel(
+						makeKernelParameters(s_kernelName+i)));
+				addStreamToCPU("dataOut"+i) <== k[i].getOutput("dataOut");
+			}
+			for (int i = 0; i < sim_kernels; i+=2){
+				k[i].getInput("dataInA") <== k[i+1].getOutput("dataOutA");
+				k[i+1].getInput("dataInA") <== k[i].getOutput("dataOutA");
+				k[(i-1+sim_kernels) % sim_kernels].getInput("dataInB") <== k[i].getOutput("dataOutB");
+				k[i].getInput("dataInB") <== k[(i-1+sim_kernels) % sim_kernels].getOutput("dataOutB");
+			}
+		}
+		
+
+	}
+
+
+	public static void main(String[] args) {
+		MaxRingMulticastVaryManager manager =
+			new MaxRingMulticastVaryManager(new EngineParameters(args));
+
+		// this generates C defines in Maxfiles.h so that CPU code
+		// knows the constants
+		manager.build();
+	}
+}
