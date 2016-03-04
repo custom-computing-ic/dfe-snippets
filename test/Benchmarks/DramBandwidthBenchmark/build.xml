@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="MyProject" default="compile" basedir=".">
+	<description>
+	SLiC interface examples
+	</description>
+
+	<!-- set global properties for this build -->
+	<property environment="env"/>
+	<property name="src" location="src"/>
+	<property name="build" location="bin"/>
+	<property name="target" value="1.6"/>
+	<property name="source" value="1.6"/>
+	<property name="debuglevel" value="source,lines,vars"/>
+
+	<taskdef name="maxjcompiler" classname="org.eclipse.jdt.core.ant.taskdef.MaxjTask" 
+		classpath="${env.MAXCOMPILERDIR}/lib/MaxIDE/ecj.jar" />
+
+	<path id="maxcompiler_classpath">
+		<pathelement location="${env.MAXCOMPILERDIR}/lib/MaxCompiler.jar"/>
+	</path>
+	
+	<target name="init">
+		<!-- Create the time stamp -->
+		<tstamp/>
+		<!-- Create the build directory structure used by compile -->
+		<mkdir dir="${build}"/>
+	</target>
+	
+	<target name="compile" depends="init" description="compile the source" >
+		<!-- Compile the java code from ${src} into ${build} -->
+		<echo message="Using MaxCompiler from: ${env.MAXCOMPILERDIR}"/>
+		<maxjcompiler listfiles="no" failonerror="true" debug="true" debuglevel="${debuglevel}" source="${source}" target="${target}" srcdir="${src}" destdir="${build}">
+			<classpath refid="maxcompiler_classpath"/>
+		</maxjcompiler>
+	</target>
+	
+	<target name="clean"
+		description="clean up" >
+		<!-- Delete the ${build} and ${dist} directory trees -->
+		<delete dir="${build}"/>
+		<mkdir dir="${build}"/>
+	</target>
+</project>
