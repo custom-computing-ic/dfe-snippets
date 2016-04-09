@@ -1,28 +1,36 @@
 # dfe-snippets
 
-`dfe-snippets` is a collection of building blocks for projects using Maxeler Dataflow Engines (DFEs).
-It contains useful code both for the CPU side (C++) and the DFE side (MaxJ).
+`dfe-snippets` is a collection of building blocks for projects using Maxeler
+Dataflow Engines (DFEs).  It contains useful code both for the CPU side (C++)
+and the DFE side (MaxJ) as well as various benchmarking utilities:
 
-## Requires
+- library code for CPU and DFE designs ('include', 'src')
+- system benchmarks for DRAM, Interconnet and Resource Usage ('test/Benchmarks')
+- application benchmarks ('applications')
 
-1. MaxCompiler 2013+
-2. Compatible [Maxeler](http://www.maxeler.com/products/) hardware
-3. python 2.7 (for running scripts)
-
-## Structure
-
-Implementations are grouped by concept (e.g. Summation, Infrastructure, Sorting) as shown below:
+The structure is:
 
 ```
 scripts/          ---> Useful scripts
 include/          ---> Header only C++ libraries
 src/              ---> MaxJ libraries
+
 test/             ---> Test projects, benchmarks, etc.
+  Benchmarks/     ---> System benchmarks
   concept1/
     implementation1/
        src/          ---> source code
        build         ---> build directory
+  ...
+
+applications      ---> Application Benchmarks
 ```
+
+## Requirements
+
+1. MaxCompiler 2013+
+2. Compatible [Maxeler](http://www.maxeler.com/products/) hardware
+3. python 2.7 (for running scripts)
 
 ## Using
 
