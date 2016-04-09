@@ -1,0 +1,949 @@
+/**
+    FFT-16 Kernel by Xie Junyi
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplexType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplex;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Reductions;
+
+class FFT16Kernel1 extends Kernel {
+
+    protected FFT16Kernel1(KernelParameters parameters, int size_x, int size_y, int Kernel_Num) {
+        super(parameters);
+          
+          DFEType FLOAT_32 = dfeFloat(8,24);
+          //complex stream
+          DFEComplexType Comp_Type = new DFEComplexType (FLOAT_32);
+          DFEComplex DI = io.input("original", Comp_Type);
+          //debug.printf("*************************** FFTKernel1 ************************\n");
+          //debug.printf("Data_in Stage1 = %f + %f\n", DI.getReal(), DI.getImaginary());
+///////////////////////////////Module 1. Buffer 2x256RAM///////////////////////////////////////////
+ 
+          //////////////////RAM for FFT Stage 1//////////////////////
+          /* 
+          //if (Kernel_Num == 1) {
+          DFEVar FFT_Stage2_Enable = io.input("FFT_Stage2_Enable", dfeFix(1, 0, SignMode.UNSIGNED));
+          DFEVar RAM_Enable = (Kernel_Num == 1) ? FFT_Stage2_Enable : constant.var(dfeUInt(1), 1);
+          //DFEComplex tin = io.input("m70", Comp_Type);          
+          //size of RAM
+          int RAMSize = 512;
+          Count.Params addrChainParam0 = control.count.makeParams(32)
+                                                .withEnable(RAM_Enable)
+                                                .withMax(RAMSize/2)
+                                                .withInc(1);
+          Counter addr_RAW_counter = control.count.makeCounter(addrChainParam0);
+          DFEVar addr_RAW = addr_RAW_counter.getCount();
+
+
+          Count.Params addrChainParam1 = control.count.makeParams(32)
+                                                .withEnable(addr_RAW_counter.getWrap())
+                                                .withMax(2)
+                                                .withInc(1);
+          Counter half_counter = control.count.makeCounter(addrChainParam1);
+          DFEVar half_count = half_counter.getCount();
+          //}
+          */
+         
+          int RAMSize = 512;
+
+          //counter chain and addr generation
+          CounterChain addrChain = control.count.makeCounterChain();
+          DFEVar half_count = addrChain.addCounter(2, 1);
+          DFEVar addr_RAW = addrChain.addCounter(RAMSize/2, 1);
+
+
+          //write addr
+          DFEVar addr_W = (half_count === 0) ? addr_RAW.cast(dfeUInt(9)) : addr_RAW.cast(dfeUInt(9)) + constant.var(dfeUInt(9),256);
+
+          //read addr
+          DFEVar addr_R_pre = addr_RAW.slice(0, 4);           //4 LSB 
+          addr_R_pre = addr_R_pre.cat(addr_RAW.slice(4, 4));  //swap 4 LSB and 4 MSB to form read addr
+          DFEVar addr_R = (half_count === 0) ? ( addr_R_pre.cast(dfeUInt(8)).cast(dfeUInt(9)) + constant.var(dfeUInt(9), 256) ) : addr_R_pre.cast(dfeUInt(8)).cast(dfeUInt(9));
+
+          //2x256RAM for all points
+          //2x256RAM ports and RAM declaration
+          RamPortParams<DFEComplex> PtRAM_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, addr_W, Comp_Type)
+                        .withDataIn(DI)
+                        .withWriteEnable(constant.var(true));  //here set to 1, but should change accordingly later
+          RamPortParams<DFEComplex> PtRAM_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, addr_R, Comp_Type);
+          DualPortMemOutputs<DFEComplex> PtRAM = mem.ramDualPort(RAMSize, RamWriteMode.READ_FIRST, PtRAM_inputPort, PtRAM_outputPort);
+          DFEComplex Read_Value = PtRAM.getOutputB(); //Read_Value is DI in FFT16.v from OpenCore, output of buffer RAM, input of FFT 16
+  
+          /*           
+          if (Kernel_Num == 0)
+          {          
+          debug.printf("complext_DI = REAL%f + IMG%f\n", DI.getReal(), DI.getImaginary());
+          debug.printf("half_count = %d, addr_RAW = %d, addr_W = %d, addr_R_pre = %d, addr_R = %d\n", half_count, addr_RAW, addr_W, addr_R_pre, addr_R);
+          debug.printf("read value = REAL%f + IMG%f\n", Read_Value.getReal(), Read_Value.getImaginary());
+          }
+          */
+
+//////////////////////////////////Module 2. FFT 16/////////////////////////////////////////////////////
+          //I. OpenCore Version
+          //ct: 0-15 counter
+          
+          //sine and cosine constant calculation
+          double sin_pi_1_4 = Math.sin(Math.PI/4);
+          double cos_pi_1_4 = Math.cos(Math.PI/4);
+          double sin_pi_3_8 = Math.sin(Math.PI*3/8);
+          double cos_pi_3_8 = Math.cos(Math.PI*3/8);
+          double cos_pi_1_8_plus_cos_pi_3_8 = Math.cos(Math.PI/8) + Math.cos(Math.PI*3/8);
+          double cos_pi_3_8_minus_cos_pi_1_8 = Math.cos(Math.PI*3/8) - Math.cos(Math.PI/8);
+          double sin_pi_1_8_plus_sin_pi_3_8 = Math.sin(Math.PI/8) + Math.sin(Math.PI*3/8);
+          double sin_pi_1_8_minus_sin_pi_3_8 = Math.sin(Math.PI/8) - Math.sin(Math.PI*3/8);
+          /*
+          debug.printf("sin(pi/4) = %f\n", constant.var(sin_pi_1_4));
+          debug.printf("sin(3pi/8) = %f\n", constant.var(sin_pi_3_8));
+          debug.printf("cos(3pi/8) = %f\n", constant.var(cos_pi_3_8));
+          debug.printf("cos(pi/8)+cos(3pi/8) = %f\n", constant.var(cos_pi_1_8_plus_cos_pi_3_8));
+          debug.printf("sin(pi/8)-sin(3pi/8) = %f\n", constant.var(sin_pi_1_8_minus_sin_pi_3_8));
+          */
+          
+          //control counter
+          Count.Params ct_param = control.count.makeParams(4)
+                                  .withMax(16)
+                                  .withInc(1);
+          Counter ct_counter = control.count.makeCounter(ct_param);
+          DFEVar ct = ct_counter.getCount();
+
+          //Input Register File
+          
+          DFEComplex d0 = stream.offset(Read_Value, -1);  //d0 is dr in FFT16.v from OpenCore
+          DFEComplex d1 = stream.offset(d0, -1);
+          DFEComplex d2 = stream.offset(d1, -1);
+          DFEComplex d3 = stream.offset(d2, -1);
+          DFEComplex d4 = stream.offset(d3, -1);
+          DFEComplex d5 = stream.offset(d4, -1);
+          DFEComplex d6 = stream.offset(d5, -1);
+          DFEComplex d7 = stream.offset(d6, -1);
+          DFEComplex d8 = stream.offset(d7, -1);
+         
+          //S1, S2
+          DFEComplex s1_in = d8 + d0;
+          DFEComplex s1_pre = Reductions.streamHold(s1_in, (ct===9)|(ct===10)|(ct===11)|(ct===12)|(ct===13)|(ct===14)|(ct===15)|(ct===0));
+          DFEComplex s1 = stream.offset(s1_pre, -1);
+          DFEComplex s1d1 = stream.offset(s1, -1);
+          DFEComplex s1d2 = stream.offset(s1d1, -1);
+          DFEComplex s1d3 = stream.offset(s1d2, -1);
+          DFEComplex s1d4 = stream.offset(s1d3, -1);
+          DFEComplex s1d5 = stream.offset(s1d4, -1);
+          DFEComplex s1d6 = stream.offset(s1d5, -1);
+          DFEComplex s1d7 = stream.offset(s1d6, -1);
+          DFEComplex s1d8 = stream.offset(s1d7, -1);
+         
+          DFEComplex s2_in = d8 - d0;
+          DFEComplex s2_pre = Reductions.streamHold(s2_in, (ct===9)|(ct===10)|(ct===11)|(ct===12)|(ct===13)|(ct===14)|(ct===15)|(ct===0));
+          DFEComplex s2 = stream.offset(s2_pre, -1);
+          DFEComplex s2d1 = stream.offset(s2, -1);
+          DFEComplex s2d2 = stream.offset(s2d1, -1);
+          DFEComplex s2d3 = stream.offset(s2d2, -1);
+          DFEComplex s2d4 = stream.offset(s2d3, -1);
+          DFEComplex s2d5 = stream.offset(s2d4, -1);
+          DFEComplex s2d6 = stream.offset(s2d5, -1);
+          DFEComplex s2d7 = stream.offset(s2d6, -1);
+          DFEComplex s2d8 = stream.offset(s2d7, -1);
+         
+          DFEComplex m4_12_alt = Comp_Type.newInstance(this);
+          m4_12_alt.setReal(s2d8.getImaginary());
+          m4_12_alt.setImaginary(-s2d8.getReal());
+
+          DFEComplex m4_12_in = (ct===2) ? s2d8 : m4_12_alt;
+          DFEComplex m4_12_pre = Reductions.streamHold(m4_12_in, (ct===2|ct===6));
+          DFEComplex m4_12 = stream.offset(m4_12_pre, -1);
+
+                  
+          DFEComplex s3_alt1 = s1d4 + s1;
+          DFEComplex s3_alt2 = s1d6 - s1d2;
+          DFEComplex s3_alt3 = s1d6 + s1d2;
+          DFEComplex s3_alt4 = s1d8 - s1d4;
+
+          DFEComplex s3_in = (ct===14)|(ct===15) ? s3_alt1 : (
+                 (ct===0) |(ct===1)  ? s3_alt2 : (
+                 (ct===2) |(ct===3)  ? s3_alt3 : s3_alt4));
+          DFEComplex s3_pre = Reductions.streamHold(s3_in, (ct===14|ct===15|ct===0|ct===1|ct===2|ct===3|ct===4|ct===5));
+          DFEComplex s3 = stream.offset(s3_pre, -1);
+          DFEComplex s3d1 = stream.offset(s3, -1);
+          DFEComplex s3d2 = stream.offset(s3d1, -1);
+          DFEComplex s3d3 = stream.offset(s3d2, -1);
+          DFEComplex s3d4 = stream.offset(s3d3, -1);
+          DFEComplex s3d5 = stream.offset(s3d4, -1);
+          DFEComplex s3d6 = stream.offset(s3d5, -1);
+
+
+          //S4
+          DFEComplex s4_alt1 = s3d4 + s3;
+          DFEComplex s4_alt2 = s3d6 - s3d2;
+          DFEComplex s4_alt3 = s3d1 + s3d5;
+
+          DFEComplex s4_in = (ct===3)|(ct===4) ? s4_alt1 : (
+                 (ct===5)|(ct===6)|(ct===8) ? s4_alt2 : s4_alt3 //s4_alt3 is for ct===7
+                 );
+          DFEComplex s4_pre = Reductions.streamHold(s4_in, ct===3|ct===4|ct===5|ct===6|ct===8|ct===7);
+          DFEComplex s4 = stream.offset(s4_pre, -1);
+          DFEComplex s4d1 = stream.offset(s4, -1);
+          DFEComplex s4d2 = stream.offset(s4d1, -1);
+          DFEComplex s4d3 = stream.offset(s4d2, -1);
+          DFEComplex s4d4 = stream.offset(s4d3, -1);
+          DFEComplex s4d5 = stream.offset(s4d4, -1);
+          DFEComplex s4d6 = stream.offset(s4d5, -1);
+          DFEComplex s4d7 = stream.offset(s4d6, -1);
+          DFEComplex m3_pre = Reductions.streamHold(s3d6, ct===7);
+          DFEComplex m3 = stream.offset(m3_pre, -1);
+ 
+          //S7
+          optimization.pushPipeliningFactor(0);
+          DFEComplex s7 = Comp_Type.newInstance(this);
+          DFEComplex s7d1 = Comp_Type.newInstance(this);
+          DFEComplex s7_in = control.mux(ct,
+                                         s2d4 - s2, //0
+                                         s2d6 - s2, //1
+                                         s7 - s7d1, //2
+                                         s2d8 + s2d2, //3
+                                         s2d8 + s2d4, //4
+                                         s2d8 + s2d6, //5
+                                         s7 + s7d1, //6
+                                         s7, //7
+                                         s7, //8
+                                         s7, //9
+                                         s7, //10
+                                         s7, //11
+                                         s7, //12
+                                         s7, //13
+                                         s7, //14
+                                         s2d2 - s2 //15
+                                         );
+          /*
+          DFEComplex s7_in = ct===0 ? s2d4 - s2 : 
+                            (ct===1 ? s2d6 - s2 : 
+                            (ct===2 ? s7 - s7d1 : 
+                            (ct===3 ? s2d8 + s2d2 :
+                            (ct===4 ? s2d8 + s2d4 : 
+                            (ct===5 ? s2d8 + s2d6 : 
+                            (ct===6 ? s7 + s7d1 : s2d2 - s2)))))); //s2d2 -s2 is for ct==15
+          */
+
+          DFEComplex s7_pre = Reductions.streamHold(s7_in, ct===0|ct===1|ct===2|ct===3|ct===4|ct===5|ct===6|ct===15);
+          s7 <== stream.offset(s7_pre, -1);
+          
+          //DFEComplex s7d1_in =  (ct===0|ct===4) ? s7 : s7d1;
+          //DFEComplex s7d1_pre = Reductions.streamHold(s7d1_in, ct===0|ct===4);
+          DFEComplex s7d1_pre = Reductions.streamHold(s7, ct===0|ct===4);
+          s7d1 <== stream.offset(s7d1_pre, -1);
+          optimization.pushPipeliningFactor(1);
+
+
+
+
+          //////////////////////////////debug panel//////////////////////////
+          /* 
+          debug.printf("d0 = %f + i %f, d1 = %f + i %f, d2 = %f + i %f, d3 = %f + i %f, d4 = %f + i%f, d5 = %f + i %f, d6 = %f + i %f, d7 = %f + i %f, d8 = %f + i %f\n", d0.getReal(), d0.getImaginary(), d1.getReal(), d1.getImaginary(), d2.getReal(), d2.getImaginary(), d3.getReal(), d3.getImaginary(), d4.getReal(), d4.getImaginary(), d5.getReal(), d5.getImaginary(), d6.getReal(), d6.getImaginary(), d7.getReal(), d7.getImaginary(), d8.getReal(), d8.getImaginary()); 
+
+ 
+          debug.printf("///////////////////////////////S1//////////////////////////\n");
+          debug.printf("s1 = %f + i %f, s1d1 = %f + i %f, s1d2 = %f + i %f, s1d3 = %f + i %f, s1d4 = %f + i %f, s1d5 = %f + i %f, s1d6 = %f + i %f, s1d7 = %f + i %f, s1d8 = %f + i %f\n", s1.getReal(), s1.getImaginary(), s1d1.getReal(), s1d1.getImaginary(), s1d2.getReal(), s1d2.getImaginary(), s1d3.getReal(), s1d3.getImaginary(), s1d4.getReal(), s1d4.getImaginary(), s1d5.getReal(), s1d5.getImaginary(), s1d6.getReal(), s1d6.getImaginary(), s1d7.getReal(), s1d7.getImaginary(), s1d8.getReal(), s1d8.getImaginary());
+
+          debug.printf("//////////////////////////////S2///////////////////////////\n");
+          debug.printf("s2_in = d8 - d0 = %f + i %f, s2 = %f + i %f\n", s2_in.getReal(), s2_in.getImaginary(), s2.getReal(), s2.getImaginary());
+          debug.printf("s2d1 = %f + i %f, s2d2 = %f + i %f, s2d3 = %f + i %f, s2d4 = %f + i %f, s2d5 = %f + i %f, s2d6 = %f + i %f, s2d7 = %f + i %f, s2d8 = %f + i %f\n", s2d1.getReal(), s2d1.getImaginary(), s2d2.getReal(), s2d2.getImaginary(), s2d3.getReal(), s2d3.getImaginary(), s2d4.getReal(), s2d4.getImaginary(), s2d5.getReal(), s2d5.getImaginary(), s2d6.getReal(), s2d6.getImaginary(), s2d7.getReal(), s2d7.getImaginary(), s2d8.getReal(), s2d8.getImaginary()); 
+           
+          debug.printf("ct = %d, m4_12 = %f + i %f\n", ct, m4_12.getReal(), m4_12.getImaginary());
+          
+          debug.printf("////////////////////////S3///////////////////////////\n");
+          debug.printf("s3 = %f + i%f, s3d1 = %f + i%f, s3d2 = %f + i%f, s3d3 = %f + i%f, s3d4 = %f +i%f, s3d5 = %f + i%f, s3d6 = %f + i%f\n", s3.getReal(), s3.getImaginary(), s3d1.getReal(), s3d1.getImaginary(), s3d2.getReal(), s3d2.getImaginary(), s3d3.getReal(), s3d3.getImaginary(), s3d4.getReal(), s3d4.getImaginary(), s3d5.getReal(), s3d5.getImaginary(), s3d6.getReal(), s3d6.getImaginary());
+          debug.printf("ct = %d, s3_in = %f +i %f, s3 = %f + i %f\n", ct, s3_in.getReal(), s3_in.getImaginary(), s3.getReal(), s3.getImaginary());          
+        
+          debug.printf("/////////////////////////S4////////////////////////\n");
+          debug.printf("s4 = %f +i %f\n", s4.getReal(), s4.getImaginary());
+          debug.printf("s4d1 = %f +i %f, s4d2 = %f +i %f, s4d3 = %f +i %f, s4d4 = %f +i %f, s4d5 = %f +i %f, s4d6 = %f +i %f, s4d7 = %f +i %f\n", s4d1.getReal(), s4d1.getImaginary(), s4d2.getReal(), s4d2.getImaginary(),  s4d3.getReal(), s4d3.getImaginary(),  s4d4.getReal(), s4d4.getImaginary(),  s4d5.getReal(), s4d5.getImaginary(), s4d6.getReal(), s4d6.getImaginary(), s4d7.getReal(), s4d7.getImaginary());
+
+          debug.printf("/////////////////////////m3//////////////////////\n");
+          debug.printf("m3 = %f +i %f\n", m3.getReal(), m3.getImaginary());
+
+          debug.printf("////////////////////////s7///////////////////////\n");
+          debug.printf("s7 = %f + i %f, s7d1 = %f + i %f\n", s7.getReal(), s7.getImaginary(), s7d1.getReal(), s7d1.getImaginary());
+          */ 
+          
+          /////////////////////sin(pi/4) multiplier///////////////////
+          //pipelined multiplier signals
+          DFEVar em707 = (ct===8)|(ct===10)|(ct===1)|(ct===5);
+          DFEVar mpyj = (ct===8)|(ct===5);
+          DFEComplex m70 = ((ct===1)|(ct===5)) ? s7 : s4;
+          //DFEComplex m70 = tin; //test
+
+          DFEVar em707_d1 = stream.offset(em707, -1); //edd
+          DFEVar em707_d2 = stream.offset(em707_d1, -1);  //edd2
+          DFEVar em707_d3 = stream.offset(em707_d2, -1);  //edd3
+          DFEVar mpyjd1 = stream.offset(mpyj, -1);
+          DFEVar mpyjd2 = stream.offset(mpyjd1, -1);
+          DFEVar mpyjd3 = stream.offset(mpyjd2, -1);
+          
+          
+          DFEVar dii_pre = Reductions.streamHold(m70.getImaginary(), em707===1);
+          DFEVar dii = stream.offset(dii_pre, -1);
+         
+          //dx5
+          DFEVar dx5_in = (em707===1) ? (m70.getReal() * 5) : (dii * 5);
+          DFEVar dx5 = stream.offset(dx5_in, -1);
+
+          //dt
+          DFEVar dt_in = (em707===1) ? (m70.getReal()) : dii;
+          DFEVar dt = stream.offset(dt_in, -1);
+          
+          //dx5p
+          DFEVar dx5p = constant.var(2.25) * dx5;
+
+          //dot
+          DFEVar dot = dx5p + constant.var(0.0625) * dt + constant.var(1/8192) * dx5;
+          
+          //doo
+          DFEVar doo_in = constant.var(0.0625) * dot;
+          DFEVar doo = stream.offset(doo_in, -1);
+
+          //droo
+          DFEVar droo_in = doo;
+          DFEVar droo = stream.offset(droo_in, -1);
+ 
+          optimization.pushPipeliningFactor(0); 
+          //DOR
+          DFEVar DOR = FLOAT_32.newInstance(this);
+          DFEVar DOR_in = (em707_d3===1 & mpyjd3===1) ? doo : ((em707_d3===1 & mpyjd3===0) ? droo : DOR);
+          DOR <== stream.offset(DOR_in, -1);
+         
+          //DOI
+          DFEVar DOI = FLOAT_32.newInstance(this);
+          DFEVar DOI_in = (em707_d3===1 & mpyjd3===1) ? -droo : ((em707_d3===1 & mpyjd3===0) ? doo : DOI);
+          DOI <== stream.offset(DOI_in, -1);
+          optimization.pushPipeliningFactor(1);
+
+          //m707
+          DFEComplex m707 = Comp_Type.newInstance(this);
+          m707.setReal(DOR);
+          m707.setImaginary(DOI);
+
+
+          ///////////////////////////707 multiplier debug/////////////////////////
+          /* 
+          debug.printf("////////////////////////MULT 707//////////////////////\n"); 
+          debug.printf("ct = %d\n", ct);
+          debug.printf("m70 = %f + i %f\n", m70.getReal(), m70.getImaginary());
+          debug.printf("ED = %d, edd = %d, edd2 = %d, edd3 = %d\n", em707, em707_d1, em707_d2, em707_d3);
+          debug.printf("MPYJ = %d, mpyjd = %d, mpyjd2 = %d, mpyjd3 = %d\n", mpyj, mpyjd1, mpyjd2, mpyjd3);
+          debug.printf("dx5 = %f\n", dx5);
+          debug.printf("dt = %f\n", dt);
+          debug.printf("dii = %f\n", dii);
+          debug.printf("dx5p = %f\n", dx5p);
+          debug.printf("dot = %f\n", dot);
+          debug.printf("doo = %f\n", doo);
+          debug.printf("droo = %f\n", droo);
+          debug.printf("DOR = %f\n", DOR);
+          debug.printf("DOI = %f\n", DOI);
+          debug.printf("m707 = %f + i %f\n", m707.getReal(), m707.getImaginary()); 
+          */ 
+
+          ////////////////////////////end of multiplier///////////////////////////
+
+          
+          //s3j
+          
+          DFEComplex s3j = Comp_Type.newInstance(this);
+          DFEVar s3jr_in = (ct===11) ? s3d6.getImaginary() : s4d7.getImaginary(); //s4d7 is for ct===14
+          DFEVar s3ji_in = (ct===11) ? -s3d6.getReal() : -s4d7.getReal(); //s4d7 is for ct===14
+          DFEVar s3jr_pre = Reductions.streamHold(s3jr_in, ct===11|ct===14);
+          DFEVar s3ji_pre = Reductions.streamHold(s3ji_in, ct===11|ct===14);
+          DFEVar s3jr = stream.offset(s3jr_pre, -1);
+          DFEVar s3ji = stream.offset(s3ji_pre, -1);
+          s3j.setReal(s3jr);
+          s3j.setImaginary(s3ji);
+          
+          /*
+          debug.printf("//////////////////////s3j///////////////////////////\n");
+          debug.printf("ct = %d\n", ct);
+          debug.printf("s3j = %f + i %f\n", s3j.getReal(), s3j.getImaginary());
+          //debug.printf("\n\n");
+          */
+          
+          //m10
+          DFEComplex m10_pre = Reductions.streamHold(s3j, ct===1);
+          DFEComplex m10 = stream.offset(m10_pre, -1);
+          
+          //debug.printf("/////////////////////m10///////////////////////////\n");
+          //debug.printf("m10 = %f + i %f\n", m10.getReal(), m10.getImaginary());
+            
+          //S5
+          DFEComplex s5_in = control.mux(ct,
+                                        m3 - m707, //0
+                                        m3 - m707, //1
+                                        m3 - m707, //2
+                                        m3 - m707, //3
+                                        m3 - m707, //4
+                                        m3 - m707, //5
+                                        m3 - m707, //6
+                                        m3 - m707, //7
+                                        m3 - m707, //8
+                                        m3 - m707, //9
+                                        s4d5 + s4d6, //10
+                                        s4d7 - s4d6, //11
+                                        m707 + s3j, //12
+                                        m707 - s3j, //13
+                                        m3 + m707, //14
+                                        m3 - m707 //15
+                                        );
+          DFEComplex s5_pre = Reductions.streamHold(s5_in, (ct===10|ct===11|ct===12|ct===13|ct===14|ct===15));
+          DFEComplex s5 = stream.offset(s5_pre, -1);
+
+          DFEComplex s5d1 = stream.offset(s5, -1);
+          DFEComplex s5d2 = stream.offset(s5d1, -1);
+          DFEComplex s5d3 = stream.offset(s5d2, -1);
+          DFEComplex s5d4 = stream.offset(s5d3, -1);
+          DFEComplex s5d5 = stream.offset(s5d4, -1);
+          DFEComplex s5d6 = stream.offset(s5d5, -1);
+          DFEComplex s5d7 = stream.offset(s5d6, -1);
+          DFEComplex s5d8 = stream.offset(s5d7, -1);
+
+          DFEComplex s5d9_pre = Reductions.streamHold(s5d8, ct===4|ct===5|ct===6|ct===7);
+          DFEComplex s5d9 = stream.offset(s5d9_pre, -1);
+
+          DFEComplex s5d10_pre = Reductions.streamHold(s5d9, ct===6);
+          DFEComplex s5d10 = stream.offset(s5d10_pre, -1);
+
+          /*
+          debug.printf("/////////////////////////S5/////////////////////////\n");
+          debug.printf("s5 = %f + i %f\n", s5.getReal(), s5.getImaginary());
+          debug.printf("s5 = %f + i %f, s5d1 = %f + i %f, s5d2 = %f + i %f, s5d3 = %f + i %f, s5d4 = %f + i %f, s5d5 = %f + i %f, s5d6 = %f + i %f, s5d7 = %f + i %f, s5d8 = %f + i %f, s5d9 = %f + i %f, s5d10 = %f + i %f\n", s5.getReal(), s5.getImaginary(), s5d1.getReal(), s5d1.getImaginary(), s5d2.getReal(), s5d2.getImaginary(), s5d3.getReal(), s5d3.getImaginary(), s5d4.getReal(), s5d4.getImaginary(),s5d5.getReal(), s5d5.getImaginary(), s5d6.getReal(), s5d6.getImaginary(), s5d7.getReal(), s5d7.getImaginary(), s5d8.getReal(), s5d8.getImaginary(), s5d9.getReal(), s5d9.getImaginary(), s5d10.getReal(), s5d10.getImaginary());
+          */
+          
+          //m2
+          DFEComplex m2_pre = Reductions.streamHold(s4d7, ct===13);
+          DFEComplex m2 = stream.offset(m2_pre, -1);
+
+          //m2d
+          DFEComplex m2d_pre = Reductions.streamHold(m2, ct===1);
+          DFEComplex m2d = stream.offset(m2d_pre, -1);
+          
+          
+          
+          //debug.printf("m2 = %f + i %f, m2d = %f + i %f\n", m2.getReal(), m2.getImaginary(), m2d.getReal(), m2d.getImaginary());
+          //debug.printf("\n\n");
+          
+          //S6
+          /*
+          DFEComplex s6 = Comp_Type.newInstance(this);
+          DFEComplex s6_in = Comp_Type.newInstance(this);
+          DFEVar s6r_in = control.mux(ct,
+                          s6.getReal(), //0
+                          m2.getReal() + s3j.getReal(), //1
+                          s6.getReal(), //2
+                          s5d3.getReal() + s5d5.getReal(), //3
+                          s6.getReal(), //4
+                          s5d9.getReal(), //5
+                          s6.getReal(), //6
+                          s5d7.getReal() - s5d9.getReal(), //7
+                          s6.getReal(), //8
+                          m2d.getReal() - m10.getReal(), //9
+                          s6.getReal(), //10
+                          s5d9.getReal() - s5d10.getReal(), //11
+                          s6.getReal(), //12
+                          s5d2.getReal(), //13
+                          s6.getReal(), //14
+                          s5d2.getReal() + s5.getReal() //15
+                          );
+
+          DFEVar s6i_in = control.mux(ct,
+                          s6.getImaginary(), //0
+                          m2.getImaginary() + s3j.getImaginary(), //1
+                          s6.getImaginary(), //2
+                          s5d3.getImaginary() + s5d5.getImaginary(), //3
+                          s6.getImaginary(), //4
+                          s5d9.getImaginary(), //5
+                          s6.getImaginary(), //6
+                          s5d7.getImaginary() - s5d9.getImaginary(), //7
+                          s6.getImaginary(), //8
+                          m2d.getImaginary() - m10.getImaginary(), //9
+                          s6.getImaginary(), //10
+                          s5d9.getImaginary() - s5d10.getImaginary(), //11
+                          s6.getImaginary(), //12
+                          s5d2.getImaginary(), //13
+                          s6.getImaginary(), //14
+                          s5d2.getImaginary() + s5.getImaginary() //15
+                          );
+          
+          s6_in.setReal(s6r_in);
+          s6_in.setImaginary(s6i_in);
+          s6 <== stream.offset(s6_in, -1);
+          
+          /*
+          DFEComplex s6_in = ct===1 ? m2 + s3j :
+                            (ct===3 ? s5d3 + s5d5 :
+                            (ct===5 ? s5d9 : 
+                            (ct===7 ? s5d7 - s5d9 :
+                            (ct===9 ? m2d - m10 :
+                            (ct===11 ? s5d9 - s5d10 :
+                            (ct===13 ? s5d2 : 
+                             ))))));
+          */
+          DFEComplex s6_in = control.mux(ct,
+                          s5d2 + s5, //0 dummy
+                          m2 + s3j, //1
+                          m2 + s3j, //2 dummy
+                          s5d3 + s5d5, //3
+                          s5d3 + s5d5, //4 dummy
+                          s5d9, //5
+                          s5d9, //6 dummy
+                          s5d7 - s5d9, //7
+                          s5d7 - s5d9, //8 dummy
+                          m2d - m10, //9
+                          m2d - m10, //10 dummy
+                          s5d9 - s5d10, //11
+                          s5d9 - s5d10, //12 dummy
+                          s5d2, //13
+                          s5d2, //14 dummy
+                          s5d2 + s5 //15
+                          );
+
+          DFEComplex s6_pre = Reductions.streamHold(s6_in, ct===1|ct===3|ct===5|ct===7|ct===9|ct===11|ct===13|ct===15);
+          DFEComplex s6 = stream.offset(s6_pre, -1);
+
+          //debug.printf("////////////////////S6//////////////////////////////\n");
+          //debug.printf("s6 = %f + i %f\n", s6.getReal(), s6.getImaginary());          
+          //debug.printf("\n\n");
+
+           
+          //////////multiplier by 0.541/////////////
+          DFEVar em541 = (ct===0 | ct===4);
+          DFEVar mpyj541 = (ct===4);
+
+          DFEVar em541_d1 = stream.offset(em541, -1);
+          DFEVar em541_d2 = stream.offset(em541_d1, -1);
+          DFEVar em541_d3 = stream.offset(em541_d2, -1);
+
+          DFEVar mpyj541_d1 = stream.offset(mpyj541, -1);
+          DFEVar mpyj541_d2 = stream.offset(mpyj541_d1, -1);
+          DFEVar mpyj541_d3 = stream.offset(mpyj541_d2, -1);
+          
+          //dii_541
+          DFEVar dii_541 = FLOAT_32.newInstance(this);
+          DFEVar dii_541_in = (em541===1) ? s7.getImaginary() : dii_541;
+          //DFEVar dii_541_in = (em541===1) ? tin.getImaginary() : dii_541; //test
+          dii_541 <== stream.offset(dii_541_in, -1);
+          
+          //dx5_541
+          DFEVar dx5_541_in = (em541===1) ? (s7.getReal() * constant.var(1.25)) : (dii_541 * constant.var(1.25));
+          //DFEVar dx5_541_in = (em541===1) ? (tin.getReal() * constant.var(1.25)) : (dii_541 * constant.var(1.25)); //test
+          DFEVar dx5_541 = stream.offset(dx5_541_in, -1);
+          
+          //dx3_541
+          DFEVar dx3_541_in = (em541===1) ? (s7.getReal() * constant.var(1.5)) : (dii_541 * constant.var(1.5));
+          //DFEVar dx3_541_in = (em541===1) ? (tin.getReal() * constant.var(1.5)) : (dii_541 * constant.var(1.5)); //test
+          DFEVar dx3_541 = stream.offset(dx3_541_in, -1);
+
+          //dt_541
+          DFEVar dt_541_in = (em541===1) ? s7.getReal() : dii_541;
+          //DFEVar dt_541_in = (em541===1) ? tin.getReal() : dii_541; //test
+          DFEVar dt_541 = stream.offset(dt_541_in, -1);
+
+          //dx5p
+          DFEVar dx5p_541 = constant.var(2) * dt_541 + constant.var(0.125) * dx5_541;
+          DFEVar dot_541 = dx5p_541 + constant.var(0.0078125) * dt_541 + constant.var(0.00048828125) * dx3_541;
+          
+          //doo_541
+          DFEVar doo_541_in = constant.var(0.25) * dot_541;
+          DFEVar doo_541 = stream.offset(doo_541_in, -1);
+
+          //droo_541
+          DFEVar droo_541_in = doo_541;
+          DFEVar droo_541 = stream.offset(droo_541_in, -1);
+
+          optimization.pushPipeliningFactor(0);
+          //DOR_541
+          DFEVar DOR_541 = FLOAT_32.newInstance(this);
+          DFEVar DOR_541_in = (em541_d3===1 & mpyj541_d3===1) ? doo_541 : ((em541_d3===1 & mpyj541_d3===0) ? droo_541 : DOR_541);
+          DOR_541 <== stream.offset(DOR_541_in, -1);
+
+          //DOI_541
+          DFEVar DOI_541 = FLOAT_32.newInstance(this);
+          DFEVar DOI_541_in = (em541_d3===1 & mpyj541_d3===1) ? -droo_541 : ((em541_d3===1 & mpyj541_d3===0) ? doo_541 : DOI_541);
+          DOI_541 <== stream.offset(DOI_541_in, -1);
+          optimization.pushPipeliningFactor(1);
+
+          //m541
+          DFEComplex m541 = Comp_Type.newInstance(this);
+          m541.setReal(DOR_541);
+          m541.setImaginary(DOI_541);
+
+          /*
+          debug.printf("////////////////////////////MULT 541////////////////////\n");
+          debug.printf("ct = %d\n", ct);
+          debug.printf("s7 = %f + i %f\n", s7.getReal(), s7.getImaginary());
+          debug.printf("ED = %d, edd = %d, edd2 = %d, edd3 = %d\n", em541, em541_d1, em541_d2, em541_d3);
+          debug.printf("MPYJ = %d, mpyjd = %d, mpyjd2 = %d, mpyjd3 = %d\n", mpyj541, mpyj541_d1, mpyj541_d2, mpyj541_d3);
+          debug.printf("dx5 = %f\n", dx5_541);
+          debug.printf("dt = %f\n", dt_541);
+          debug.printf("dii = %f\n", dii_541);
+          debug.printf("dx5p = %f\n", dx5p_541);
+          debug.printf("dot = %f\n", dot_541);
+          debug.printf("doo = %f\n", doo_541);
+          debug.printf("droo = %f\n", droo_541);
+          debug.printf("DOR = %f\n", DOR_541);
+          debug.printf("DOI = %f\n", DOI_541);
+          
+          debug.printf("\n");
+          */ 
+
+          ///////////////////end of multiplier 541////////////////////////////////////////////////
+
+          //has problem here 
+          ///////////////////multiplier 1307//////////////////////////////////////////////////
+          //original version
+          DFEVar em1307 = (ct===2 | ct===6);
+          DFEVar mpyj1307 = (ct===6);
+
+          DFEVar em1307_d1 = stream.offset(em1307, -1); //edd
+          DFEVar em1307_d2 = stream.offset(em1307_d1, -1); //edd2
+          DFEVar em1307_d3 = stream.offset(em1307_d2, -1); //edd3
+
+          DFEVar mpyj1307_d1 = stream.offset(mpyj1307, -1);
+          DFEVar mpyj1307_d2 = stream.offset(mpyj1307_d1, -1);
+          DFEVar mpyj1307_d3 = stream.offset(mpyj1307_d2, -1);
+
+          //dii_1307
+          //DFEVar dii_1307 = FLOAT_32.newInstance(this);
+          //DFEVar dii_1307_in = (em1307===1) ? s7.getImaginary() : dii_1307;
+          //DFEVar dii_1307_in = (em1307===1) ? tin.getImaginary() : dii_1307; //test
+          DFEVar dii_1307_pre = Reductions.streamHold(s7.getImaginary(), em1307);
+          DFEVar dii_1307 = stream.offset(dii_1307_pre, -1);
+
+          //dx5_1307
+          DFEVar dx5_1307_in = constant.var(5) * ( (em1307===1) ? s7.getReal() : dii_1307 );
+          //DFEVar dx5_1307_in = 5 * ( (em1307===1) ? tin.getReal() : dii_1307 );  //test
+          DFEVar dx5_1307 = stream.offset(dx5_1307_in, -1);
+
+          //dx7_1307
+          DFEVar dx7_1307_in = constant.var(0.875) * ( (em1307===1) ? s7.getReal() : dii_1307);
+          //DFEVar dx7_1307_in = constant.var(0.875) * ( (em1307===1) ? tin.getReal() : dii_1307); //test
+          DFEVar dx7_1307 = stream.offset(dx7_1307_in, -1);
+
+          //dt_1307
+          DFEVar dt_1307_in = (em1307===1) ? s7.getReal() : dii_1307; 
+          //DFEVar dt_1307_in = (em1307===1) ? tin.getReal() : dii_1307; //test
+          DFEVar dt_1307 = stream.offset(dt_1307_in, -1);
+
+          //dx5p_1307
+          DFEVar dx5p_1307 = constant.var(2) * dx5_1307 + constant.var(0.5) * dx7_1307;
+          DFEVar dot_1307 = dx5p_1307 + constant.var(0.015625) * dt_1307 - constant.var(0.0001220703125) * dx5_1307;
+          
+          //doo_1307
+          DFEVar doo_1307_in = constant.var(0.125) * dot_1307;
+          DFEVar doo_1307 = stream.offset(doo_1307_in, -1);  
+         
+          //droo_1307
+          DFEVar droo_1307_in = doo_1307;
+          DFEVar droo_1307 = stream.offset(droo_1307_in, -1);
+
+          optimization.pushPipeliningFactor(0);
+          //DOR_1307
+          DFEVar DOR_1307 = FLOAT_32.newInstance(this);
+          DFEVar DOR_1307_in = (em1307_d3===1 & mpyj1307_d3===1) ? doo_1307 : ((em1307_d3===1 & mpyj1307_d3===0) ? droo_1307 : DOR_1307);
+          DOR_1307 <== stream.offset(DOR_1307_in, -1);
+
+          //DOI_1307
+          DFEVar DOI_1307 = FLOAT_32.newInstance(this);
+          DFEVar DOI_1307_in = (em1307_d3===1 & mpyj1307_d3===1) ? -droo_1307 : ( (em1307_d3===1 & mpyj1307_d3===0) ? doo_1307 : DOI_1307);
+          DOI_1307 <== stream.offset(DOI_1307_in, -1);
+          optimization.pushPipeliningFactor(1);
+
+          //m1307
+          DFEComplex m1307 = Comp_Type.newInstance(this);
+          m1307.setReal(DOR_1307);
+          m1307.setImaginary(DOI_1307);
+          
+           
+          //DFEComplex m1307_pre = s7 * constant.var(1.3065629);
+          //DFEComplex m1307 = stream.offset(m1307_pre, -6);
+
+          //debug.printf("/////////////////////MULT 1307////////////////\n");  
+          //debug.printf("ct = %d\n", ct);
+          //debug.printf("s7/tin = %f + i %f\n", tin.getReal(), tin.getImaginary());
+          /*
+          debug.printf("ED = %d, edd = %d, edd2 = %d, edd3 = %d\n", em1307, em1307_d1, em1307_d2, em1307_d3);
+          debug.printf("MPYJ = %d, mpyjd = %d, mpyjd2 = %d, mpyjd3 = %d\n", mpyj1307, mpyj1307_d1, mpyj1307_d2, mpyj1307_d3);
+          debug.printf("dx5 = %f\n", dx5_1307);
+          debug.printf("dt = %f\n", dt_1307);
+          debug.printf("dii = %f\n", dii_1307);
+          debug.printf("dx5p = %f\n", dx5p_1307);
+          debug.printf("dot = %f\n", dot_1307);
+          debug.printf("doo = %f\n", doo_1307);
+          debug.printf("droo = %f\n", droo_1307);
+          debug.printf("DOR = %f\n", DOR_1307);
+          debug.printf("DOI = %f\n", DOI_1307);
+          */
+          
+          //debug.printf("DOR = %f\n", m1307.getReal());
+          //debug.printf("DOI = %f\n", m1307.getImaginary()); 
+          //debug.printf("\n");
+         
+
+          /////////////////////////end of multiplier////////////////////////////
+
+          
+          /////////////////////////multiplier by 0.383//////////////////////////
+          DFEVar em383 = (ct===3 | ct===7);
+          DFEVar mpyj383 = (ct===7);
+          DFEVar c383 = (ct===3);
+          
+          DFEVar em383_d1 = stream.offset(em383, -1);
+          DFEVar em383_d2 = stream.offset(em383_d1, -1);
+          DFEVar em383_d3 = stream.offset(em383_d2, -1);
+          
+          DFEVar mpyj383_d1 =stream.offset(mpyj383, -1);
+          DFEVar mpyj383_d2 =stream.offset(mpyj383_d1, -1);
+          DFEVar mpyj383_d3 =stream.offset(mpyj383_d2, -1);
+
+          DFEVar c383_d1 = stream.offset(c383, -1);
+          DFEVar c383_d2 = stream.offset(c383_d1, -1);
+          DFEVar c383_d3 = stream.offset(c383_d2, -1);
+
+          //dii_383
+          DFEVar dii_383 = FLOAT_32.newInstance(this);
+          DFEVar dii_383_in = (em383===1) ? s7.getImaginary() : dii_383;
+          //DFEVar dii_383_in = (em383===1) ? tin.getImaginary() : dii_383; //test
+          dii_383 <== stream.offset(dii_383_in, -1);
+
+          //dx7_383
+          DFEVar dx7_383_in = constant.var(3.5) * ( (em383===1) ? s7.getReal() : dii_383 );
+          //DFEVar dx7_383_in = constant.var(3.5) * ( (em383===1) ? tin.getReal() : dii_383 ); //test
+          DFEVar dx7_383 = stream.offset(dx7_383_in, -1);
+
+          //dx3_383
+          DFEVar dx3_383_in = constant.var(1.5) * ( (em383===1) ? s7.getReal() : dii_383 );
+          //DFEVar dx3_383_in = constant.var(1.5) * ( (em383===1) ? tin.getReal() : dii_383 ); //test
+          DFEVar dx3_383 = stream.offset(dx3_383_in, -1);
+
+          //dt_383
+          DFEVar dt_383_in = (em383===1) ? s7.getReal() : dii_383;
+          //DFEVar dt_383_in = (em383===1) ? tin.getReal() : dii_383; //test
+          DFEVar dt_383 = stream.offset(dt_383_in, -1);
+
+          //dx5p_383
+          DFEVar dx5p_383 = (c383_d1===1|c383_d2===1) ? (constant.var(0.03125) * dt_383 + dx3_383) : (dx7_383 + constant.var(0.125) * dx3_383);
+
+          //dot_383
+          DFEVar dot_383 = (c383_d1===1|c383_d2===1) ? (dx5p_383 - dt_383 * constant.var(0.00048828125)) : (dx5p_383 + dt_383 * constant.var(0.0078125) + dx3_383 * constant.var(0.0001220703125));
+
+          //doo_383
+          DFEVar doo_383_in = dot_383 * constant.var(0.25);
+          DFEVar doo_383 = stream.offset(doo_383_in, -1);
+
+          //droo_383
+          DFEVar droo_383 = stream.offset(doo_383, -1);
+
+          optimization.pushPipeliningFactor(0);
+          //DOR_383
+          DFEVar DOR_383 = FLOAT_32.newInstance(this);
+          DFEVar DOR_383_in = (em383_d3===1 & mpyj383_d3===1) ? doo_383 : ((em383_d3===1 & mpyj383_d3===0) ? droo_383 : DOR_383);
+          DOR_383 <== stream.offset(DOR_383_in, -1);
+
+          //DOI_383
+          DFEVar DOI_383 = FLOAT_32.newInstance(this);
+          DFEVar DOI_383_in = (em383_d3===1 & mpyj383_d3===1) ? -droo_383 : ((em383_d3===1 & mpyj383_d3===0) ? doo_383 : DOI_383);
+          DOI_383 <== stream.offset(DOI_383_in, -1);
+          optimization.pushPipeliningFactor(1);
+
+          //m383
+          DFEComplex m383 = Comp_Type.newInstance(this);
+          m383.setReal(DOR_383);
+          m383.setImaginary(DOI_383);
+       
+          /* 
+          debug.printf("////////////////////MULT 383////////////////////////\n"); 
+          debug.printf("ct = %d\n", ct);
+          debug.printf("s7 = %f + i %f\n", tin.getReal(), tin.getImaginary());
+          debug.printf("ED = %d, edd = %d, edd2 = %d, edd3 = %d\n", em383, em383_d1, em383_d2, em383_d3);
+          debug.printf("MPYJ = %d, mpyjd = %d, mpyjd2 = %d, mpyjd3 = %d\n", mpyj383, mpyj383_d1, mpyj383_d2, mpyj383_d3);
+          debug.printf("dx7 = %f\n", dx7_383);
+          debug.printf("dx3 = %f\n", dx3_383);
+          debug.printf("dt = %f\n", dt_383);
+          debug.printf("dii = %f\n", dii_383);
+          debug.printf("dx5p = %f\n", dx5p_383);
+          debug.printf("dot = %f\n", dot_383);
+          debug.printf("doo = %f\n", doo_383);
+          debug.printf("droo = %f\n", droo_383);
+          debug.printf("DOR = %f\n", DOR_383);
+          debug.printf("DOI = %f\n", DOI_383);
+          
+          debug.printf("\n");
+          */
+          /////////////////////////end of multiplier 383///////////////////////////
+
+          
+          //Reg-S
+          DFEComplex m8_17_pre = Reductions.streamHold(m1307, ct===6|ct===10);
+          DFEComplex m8_17 = stream.offset(m8_17_pre, -1);
+          DFEComplex m9_16_pre = Reductions.streamHold(m541, ct===4|ct===8);
+          DFEComplex m9_16 = stream.offset(m9_16_pre, -1);
+           
+          //S8
+          /*
+          DFEComplex s8 = Comp_Type.newInstance(this);
+          DFEComplex s8_in = control.mux(ct,
+                                        s8, //0
+                                        s8, //1
+                                        s8, //2
+                                        s8, //3
+                                        s8, //4
+                                        m4_12 + m707, //5
+                                        m4_12 - m707, //6
+                                        m8_17 - m383, //7
+                                        m9_16 - m383, //8
+                                        m4_12 + m707, //9
+                                        m4_12 - m707, //10
+                                        m383 - m9_16, //11
+                                        m383 - m8_17, //12
+                                        s8, //13
+                                        s8, //14
+                                        s8 //15
+                                        );
+          
+          s8 <== stream.offset(s8_in, -1);
+          */
+
+          //S8
+          DFEComplex s8_in = control.mux(ct,
+                                         m383 - m8_17, //0 dummy
+                                         m383 - m8_17, //1 dummy
+                                         m383 - m8_17, //2 dummy
+                                         m383 - m8_17, //3 dummy
+                                         m383 - m8_17, //4 dummy
+                                         m4_12 + m707, //5
+                                         m4_12 - m707, //6
+                                         m8_17 - m383, //7
+                                         m9_16 - m383, //8
+                                         m4_12 + m707, //9
+                                         m4_12 - m707, //10
+                                         m383 - m9_16, //11
+                                         m383 - m8_17, //12
+                                         m383 - m8_17, //13 dummy
+                                         m383 - m8_17, //14 dummy
+                                         m383 - m8_17  //15 dummy
+                                         );
+
+          DFEComplex s8_pre = Reductions.streamHold(s8_in, (ct===5|ct===6|ct===7|ct===8|ct===9|ct===10|ct===11|ct===12));
+          DFEComplex s8 = stream.offset(s8_pre, -1);
+          DFEComplex s8d1 = stream.offset(s8, -1);
+          DFEComplex s8d2 = stream.offset(s8d1, -1);
+          DFEComplex s8d3 = stream.offset(s8d2, -1);
+          DFEComplex s8d4 = stream.offset(s8d3, -1);
+          
+          
+          
+          //S9
+          DFEComplex s9_in = control.mux(ct,
+                                        s8d4 + s8d2, //0 dummy
+                                        s8d4 + s8d2, //1 dummy
+                                        s8d4 + s8d2, //2 dummy
+                                        s8d4 + s8d2, //3 dummy
+                                        s8d4 + s8d2, //4 dummy
+                                        s8d4 + s8d2, //5 dummy
+                                        s8d4 + s8d2, //6 dummy
+                                        s8d4 + s8d2, //7 dummy
+                                        s8 + s8d2, //8
+                                        s8 + s8d2, //9   
+                                        s8d4 - s8d2, //10
+                                        s8d4 - s8d2, //11
+                                        s8 + s8d2, //12
+                                        s8d2 - s8, //13
+                                        s8d4 - s8d2, //14
+                                        s8d4 + s8d2 //15
+                                        );
+          DFEComplex s9_pre = Reductions.streamHold(s9_in, (ct===8|ct===9|ct===10|ct===11|ct===12|ct===13|ct===14|ct===15));
+          DFEComplex s9 = stream.offset(s9_pre, -1);
+
+          DFEComplex s9d1 = stream.offset(s9, -1);
+          DFEComplex s9d2 = stream.offset(s9d1, -1);
+          DFEComplex s9d3 = stream.offset(s9d2, -1);
+          DFEComplex s9d4 = stream.offset(s9d3, -1);
+          DFEComplex s9d5 = stream.offset(s9d4, -1);
+          DFEComplex s9d6 = stream.offset(s9d5, -1);
+          DFEComplex s9d7 = stream.offset(s9d6, -1);
+          DFEComplex s9d8 = stream.offset(s9d7, -1); 
+          DFEComplex s9d9 = stream.offset(s9d8, -1);
+          DFEComplex s9d10_pre = Reductions.streamHold(s9d9, ct!==8);
+          DFEComplex s9d10 = stream.offset(s9d10_pre, -1);
+          DFEComplex s9d11_pre = Reductions.streamHold(s9d10, ct!==8);
+          DFEComplex s9d11 = stream.offset(s9d11_pre, -1);
+          DFEComplex s9d12_pre = Reductions.streamHold(s9d11, (ct===4|ct===5|ct===7|ct===9));
+          DFEComplex s9d12 = stream.offset(s9d12_pre, -1);
+          DFEComplex s9d13_pre = Reductions.streamHold(s9d12, ct===5);
+          DFEComplex s9d13 = stream.offset(s9d13_pre, -1);
+
+          //S10
+          DFEComplex s10_in = control.mux(ct,
+                                        s9d7 + s9d1, //0 dummy
+                                        s9d7 + s9d1, //1
+                                        s9d7 + s9d1, //2 dummy
+                                        s9d8 - s9d4, //3
+                                        s9d8 - s9d4, //4 dummy
+                                        s9d10 + s9d6, //5
+                                        s9d10 + s9d6, //6 dummy
+                                        s9d12 - s9d7, //7
+                                        s9d12 - s9d7, //8 dummy
+                                        s9d12 + s9d10, //9
+                                        s9d12 + s9d10, //10 dummy
+                                        s9d13 - s9d12, //11
+                                        s9d13 - s9d12, //12 dummy
+                                        s9d4 + s9, //13
+                                        s9d4 + s9, //14 dummy
+                                        s9d3 - s9d1 //15
+                                        );
+          DFEComplex s10_pre = Reductions.streamHold(s10_in, (ct===1|ct===3|ct===5|ct===7|ct===9|ct===11|ct===13|ct===15));
+          DFEComplex s10 = stream.offset(s10_pre, -1);
+          DFEComplex s10d = stream.offset(s10, -1);
+
+          DFEVar selo = ct-(ct/constant.var(2)) * 2;
+          //debug.printf("ct = %d, selo = %d, selo>0 = %d\n", ct, selo, selo>0);
+          DFEComplex Stage1_out = (selo > 0) ? s10d : s6;
+
+          //overall counter
+          Count.Params all_param = control.count.makeParams(32);
+          DFEVar all_count = control.count.makeCounter(all_param).getCount();
+ 
+          //Rotator Enable
+          if (Kernel_Num==0) {
+            DFEVar Rotator_Enable = (all_count >= 286);
+            //debug.printf("ct_FFT_1 = %d\n", ct);
+            //debug.printf("FFT16_out = %f + i %f\n", Stage1_out.getReal(), Stage1_out.getImaginary());
+            //debug.printf("Rotator_Enable = %d\n", Rotator_Enable);
+            //debug.printf("FFT_1 overall count = %d\n", all_count);
+          //output streams////////////////
+          //for 1st stage 16pts FFT Kernel
+            io.output("Stage1_out", Stage1_out, Comp_Type);
+            io.output("Rotator_Enable",Rotator_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+          } 
+
+          if (Kernel_Num==1) {
+            //debug.printf("FFT_2 overall count = %d\n", all_count);
+            //debug.printf("FFT256_out = %f + i%f\n", Stage1_out.getReal(), Stage1_out.getImaginary());
+          }
+
+        //io.output("i3_bgs_positive", i3_pos, FLOAT_32, (img_num === 1 & x_count > 0 ) | (img_num === 2 & x_count === 0));
+        //io.output("i3_norm", i3_norm, FLOAT_32, (img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0));
+
+        //io.output("i4_bgs_positive", i4_pos, FLOAT_32, (img_num === 1 & x_count > 0 ) | (img_num === 2 & x_count === 0));
+        //io.output("i4_norm", i4_norm, FLOAT_32, (img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0));
+        //io.output("Stage1_out", Stage1_out, Comp_Type);
+
+    }
+}

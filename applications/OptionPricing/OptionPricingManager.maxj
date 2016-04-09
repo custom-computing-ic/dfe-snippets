@@ -1,0 +1,56 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class OptionPricingManager extends CustomManager{
+
+    private static final String s_kernelName  = "OptionPricingKernel";
+
+    OptionPricingManager(EngineParameters ep) {
+        super(ep);
+
+        KernelBlock k =addKernel(new OptionPricingKernel(makeKernelParameters(s_kernelName)));
+
+        k.getInput("fin")          <== addStreamFromCPU("fin")          ;
+        k.getInput("maturity")     <== addStreamFromCPU("maturity")     ;
+        k.getInput("maturity_diff")<== addStreamFromCPU("maturity_diff");
+        k.getInput("seed")         <== addStreamFromCPU("seed")         ;
+        k.getInput("seed2")        <== addStreamFromCPU("seed2")        ;
+        addStreamToCPU("randOut" ) <== k.getOutput("randOut");
+        addStreamToCPU("randOut2") <== k.getOutput("randOut2");
+        addStreamToCPU("result"  ) <== k.getOutput("result");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.DOUBLE;
+        CPUTypes seedtype = CPUTypes.UINT32;
+        int size = type.sizeInBytes();
+        int ssize = seedtype.sizeInBytes();
+
+        InterfaceParam seedsize = engine_interface.addParam("seedsize", CPUTypes.INT);
+        InterfaceParam initsize = engine_interface.addParam("initsize", CPUTypes.INT);
+        InterfaceParam nodesize = engine_interface.addParam("nodesize", CPUTypes.INT);
+        InterfaceParam pathsize = engine_interface.addParam("pathsize", CPUTypes.INT);
+
+        engine_interface.setStream("fin"          ,type,     initsize*size);
+        engine_interface.setStream("maturity"     ,type,     initsize*size);
+        engine_interface.setStream("maturity_diff",type,     initsize*size);
+        engine_interface.setStream("seed"         ,seedtype, seedsize*ssize);
+        engine_interface.setStream("seed2"        ,seedtype, seedsize*ssize);
+
+        engine_interface.setStream("result",       type, nodesize*size);
+        engine_interface.setStream("randOut",      type, pathsize*size);
+        engine_interface.setStream("randOut2",     type, pathsize*size);
+        return engine_interface;
+    }
+
+    public static void main(String[] args) {
+        OptionPricingManager manager = new OptionPricingManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}

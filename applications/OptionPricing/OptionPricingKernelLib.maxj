@@ -1,0 +1,250 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.RamPortMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.RamPortParams;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.RamWriteMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+
+
+public class OptionPricingKernelLib extends KernelLib {
+
+    public static final int WORDLENGTH = OptionPricingKernel.WORDLENGTH;
+    public static final int wE = OptionPricingKernel.wE;
+    public static final int wF = OptionPricingKernel.wF;
+    final int ARRAYSIZE = OptionPricingKernel.ARRAYSIZE;
+    final int paraNode = OptionPricingKernel.paraNode;
+    final int initMax = OptionPricingKernel.initMax;
+    final DFEType b128 = dfeRawBits(128);
+    final DFEType u1= dfeUInt(1);
+    final DFEType inputType = dfeFloat(11, 53);
+    final DFEType internalType = dfeFloat(wE, wF);
+    final DFEType sType = dfeUInt(WORDLENGTH);
+
+    final DFEType addressType = dfeUInt(7);
+    RamPortParams<DFEVar> inputPort;
+
+    public DFEVar init;
+    private DFEVar init2;
+    public DFEVar isInit;
+    private DFEVar myResult;
+    private DFEVar outputControl;
+    private DFEVar shouldOutput;
+    private DFEVar W_double;
+    private DFEVar W_double2;
+
+    public DFEVar getURandInit1()
+    {
+        return init;
+    }
+
+    public DFEVar getURandInit2()
+    {
+        return init2;
+    }
+
+    public DFEVar getCurveInit()
+    {
+        return isInit;
+    }
+
+    public DFEVar getResult()
+    {
+        return myResult;
+    }
+
+    public DFEVar getResultCtrl()
+    {
+        return outputControl;
+    }
+
+    public DFEVar getRandOutCtrl()
+    {
+        return shouldOutput;
+    }
+
+    public DFEVar getRandStream1()
+    {
+        return W_double;
+    }
+
+    public DFEVar getRandStream2()
+    {
+        return W_double2;
+    }
+
+
+    public OptionPricingKernelLib (KernelLib owner,
+                                   DFEVar seed,
+                                   DFEVar seed2,
+                                   DFEVar in_strike,
+                                   DFEVar in_sigma,
+                                   DFEVar in_myT,
+                                   DFEVar in_sqrt_T,
+                                   DFEVar in_discount,
+                                   DFEVar in_numPathGroup,
+                                   DFEVar in_f_init,
+                                   DFEVar in_maturity_init,
+                                   DFEVar in_maturity_diff_init,
+                                   DFEVar in_outputRand,
+                                   DFEVar numMaturity
+                                   ) {
+        super(owner);
+
+
+        //inputs
+        //64 bit words, first initMax clock cycles used to initialise
+        Count.Params paramsOne = control.count.makeParams(WORDLENGTH)
+            .withMax(initMax)
+            .withWrapMode(WrapMode.STOP_AT_MAX);
+        Counter initCounter = control.count.makeCounter(paramsOne);
+        DFEVar initCount = initCounter.getCount();
+        isInit = initCount.neq(initMax);
+
+        /*cast to internal type*/
+        DFEVar strike = in_strike.cast( internalType );
+        DFEVar sigma =  in_sigma.cast( internalType );
+        DFEVar myT =  in_myT.cast( internalType );
+        DFEVar sqrt_T =  in_sqrt_T.cast( internalType );
+        DFEVar discount =  in_discount.cast( internalType );
+        //total path = numPathGroup * paraNode;
+        DFEVar numPathGroup  =  in_numPathGroup;
+        DFEVar outputRand  =  in_outputRand;
+        DFEVar f_init = in_f_init.cast( internalType );
+        DFEVar maturity_init = in_maturity_init.cast( internalType );
+        DFEVar maturity_diff_init = in_maturity_diff_init.cast( internalType );
+
+        /*setup random number generators*/
+        init = u1.newInstance(this);
+        //Input seed
+        UrandomCore urandom = new UrandomCore( this, seed );
+        init.connect( urandom.getInit() );
+        DFEVar urand = urandom.getRandOut();
+        //second urand
+        init2 = u1.newInstance(this);
+        UrandomCore urandom2 = new UrandomCore( this, seed2 );
+        init2.connect( urandom2.getInit() );
+        DFEVar urand2 = urandom2.getRandOut();
+
+        //convert it to Nrandom
+        NrandomCore nrandom = new NrandomCore( this, 11, 53, urand );
+        NrandomCore nrandom2 = new NrandomCore( this, 11, 53, urand2 );
+        W_double = nrandom.getOutput();
+        W_double2 = nrandom2.getOutput();
+
+        DFEVar W1 = W_double.cast( internalType );
+        DFEVar W2 = W_double2.cast( internalType );
+
+        /*setup counters and initialise memory*/
+        Count.Params paramsFour = control.count.makeParams(WORDLENGTH)
+            .withEnable(isInit.neq(1))
+            .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP)
+            .withMax(paraNode);
+        Counter counterK = control.count.makeCounter(paramsFour);
+
+        Count.Params paramsThree = control.count.makeParams(WORDLENGTH)
+            .withEnable(isInit.neq(1)&counterK.getWrap())
+            .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP)
+            .withMax(numMaturity-1);
+        Counter counterJ = control.count.makeCounter(paramsThree);
+
+        Count.Params paramsTwo = control.count.makeParams(WORDLENGTH)
+            .withEnable(isInit.neq(1)&counterJ.getWrap())
+            .withWrapMode(WrapMode.COUNT_LT_MAX_THEN_WRAP)
+            .withMax(numPathGroup);
+        Counter counterI = control.count.makeCounter(paramsTwo);
+
+        //each node do numPath paths
+        //loop over number path group
+        DFEVar countI = counterI.getCount();
+        DFEVar countJ = counterJ.getCount();
+        DFEVar countK = counterK.getCount();
+        DFEVar inAddress = initCount.cast(addressType);
+        DFEVar outAddress = countJ.cast(addressType);
+        DFEVar outAddress2 = countJ.cast(addressType)+1;
+
+        inputPort = mem.makeRamPortParams(RamPortMode.WRITE_ONLY, inAddress, internalType)
+            .withDataIn(f_init)
+            .withWriteEnable(isInit);
+        RamPortParams<DFEVar> outputPort = mem.makeRamPortParams(RamPortMode.READ_ONLY, outAddress2, internalType);
+        DFEVar f0 = mem.ramDualPort(ARRAYSIZE, RamWriteMode.READ_FIRST, inputPort, outputPort).getOutputB();
+        //debug.simPrintf(isInit, "now initialising...\n");
+        //debug.simPrintf(isInit, "%d fin[%d] = %f, isInit=%d ", initCount, inAddress, f_init, isInit);
+        //debug.simPrintf(isInit, " maturity_init[%d] = %f, maturity_diff_init[%d]=%f ", inAddress, maturity_init, inAddress, maturity_diff_init);
+
+        //debug.simPrintf(~isInit, "now processing...\n");
+        //debug.simPrintf(~isInit, "ParaNode %d PathGroup %d, j=%d f[%d] = %f\n", countK, countI, countJ, outAddress, f0);
+
+        inputPort = mem.makeRamPortParams(RamPortMode.WRITE_ONLY, inAddress, internalType)
+            .withDataIn(maturity_init)
+            .withWriteEnable(isInit);
+        outputPort = mem.makeRamPortParams(RamPortMode.READ_ONLY, outAddress, internalType);
+        //time interval
+        DFEVar maturity = mem.ramDualPort(ARRAYSIZE, RamWriteMode.READ_FIRST, inputPort, outputPort).getOutputB();
+        //debug.simPrintf(~isInit, "maturity = %f\n", maturity);
+
+        inputPort = mem.makeRamPortParams(RamPortMode.WRITE_ONLY, inAddress, internalType)
+            .withDataIn(maturity_diff_init)
+            .withWriteEnable(isInit);
+        //time interval
+        DFEVar maturity_diff = mem.ramDualPort(ARRAYSIZE, RamWriteMode.READ_FIRST, inputPort, outputPort).getOutputB();
+        //debug.simPrintf(~isInit, "maturity_diff = %f\n", maturity_diff);
+
+
+        DFEVar isFinished = countI.cast(sType).eq(numPathGroup-1);
+        DFEVar isLastInCurve = countJ.eq(numMaturity-2);
+
+        //DFEVar f1 = internalType.newInstance(this);
+        DFEVar N1_delay1 = internalType.newInstance(this);
+        DFEVar N1 = countJ.eq(0)? W1: N1_delay1;
+        N1_delay1.connect(stream.offset(N1, -paraNode));
+        DFEVar N2_delay1 = internalType.newInstance(this);
+        DFEVar N2 = countJ.eq(0)? W2: N2_delay1;
+        N2_delay1.connect(stream.offset(N2, -paraNode));
+        //debug.simPrintf("N1 = %f\n", N1);
+        shouldOutput = outputRand&countJ.eq(0)&~isInit;
+        //debug.simPrintf(shouldOutput, "N1Output = %f\n", W_double);
+
+        DFEVar f1 = f0;//stream.offset(f0, paraNode);
+        DFEVar realT = maturity+myT;
+        DFEVar miu = 0.5*sigma*sigma*(realT*realT - maturity*maturity);
+        DFEVar fnew = f1+miu+ sqrt_T*(sigma*N1+sigma*N2);
+        DFEVar ftime = fnew*maturity_diff;
+        //debug.simPrintf(~isInit, "f1 = %f, miu = %f, sqrt_T=%f, N1 = %f, N2 = %f, fnew = %f, ftime=%f\n", f1,  miu, sqrt_T, N1, N2, fnew, ftime);
+
+        DFEVar zeroRate_delayed = internalType.newInstance(this);
+        DFEVar zeroRate = countJ.eq(0)? ftime : zeroRate_delayed+ftime;
+        zeroRate_delayed.connect(stream.offset(zeroRate, -paraNode));
+
+        FPExpCore fpexp1 = new FPExpCore( this, wE, wF, -zeroRate);
+        DFEVar zeroPrice_i_j = fpexp1.getOutput();
+        //debug.simPrintf(~isInit&countK.eq(0), "zeroRate = %f\n", zeroRate);
+        //debug.simPrintf(~isInit, "zeroPrice = %f\n", zeroPrice_i_j);
+
+        DFEVar annuity_delayed = internalType.newInstance(this);
+        DFEVar annuity = countJ.eq(0)? zeroPrice_i_j : annuity_delayed+zeroPrice_i_j;
+        annuity_delayed.connect(stream.offset(annuity, -paraNode));
+        //debug.simPrintf(~isInit&countK.eq(0), "annuity = %f\n", annuity);
+
+
+        DFEVar swapRate = (1-zeroPrice_i_j)/annuity;
+        DFEVar HJMTemp = swapRate-strike;
+        DFEVar payoff_i = HJMTemp>0? HJMTemp*annuity : 0;
+        DFEVar swapPrice = payoff_i*discount;
+        //debug.simPrintf("swapRate = %f, swapPrice = %f\n", swapRate, swapPrice);
+
+        DFEVar sum_delayed = internalType.newInstance(this);
+        DFEVar sum = countI.eq(0)? swapPrice :isLastInCurve? sum_delayed+swapPrice: sum_delayed;
+        sum_delayed.connect(stream.offset(sum, -paraNode));
+
+        //debug.simPrintf("\n");
+
+        // NOTE: we ensure the output is in double format regardless of the internal format
+        //io.output("result", sum.cast( dfeFloat(11,53) ), dfeFloat(11, 53), isLast);
+        //debug.simPrintf("isFinished = %d, isLastInCurve = %d\n", isFinished, isLastInCurve);
+        outputControl = isFinished&isLastInCurve;
+        myResult = sum.cast( dfeFloat(11,53) );
+    }
+}

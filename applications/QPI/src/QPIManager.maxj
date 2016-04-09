@@ -1,0 +1,275 @@
+/***
+    The manager for this design just streams data from CPU to DFE and back via PCI-E.
+*/
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig.Level;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig.Effort;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import java.util.ArrayList;
+import java.util.List;
+
+public class QPIManager extends CustomManager{
+
+    //private static final String s_kernelName  = "QPIKernel";
+    private static final int size_x = 256;
+    private static final int size_y = 256;
+
+    private static final int Kernel_Num0 = 0;
+    private static final int Kernel_Num1 = 1;
+    private static final int Kernel_Num2 = 2;
+    private static final int Kernel_Num3 = 3;
+
+    private static final int Rotator_Num1 = 1;
+    private static final int Rotator_Num2 = 2;
+    private static final int Rotator_Num3 = 3;
+    private static final int Rotator_Num4 = 4;
+    private static final int FFTorIFFT_1 = 1;
+    private static final int FFTorIFFT_0 = 0;
+
+    private static final int FFTShift_Num1 = 1;
+    private static final int FFTShift_Num2 = 2;  
+    
+    private static final int RAM2D_1 = 1;
+    private static final int RAM2D_2 = 2;  
+    QPIManager(EngineParameters ep) {
+        super(ep);
+        ////////// Kernel Declaration /////////
+        //QPI_SpaceDomain
+        KernelBlock QPI_SpaceDomain = addKernel(new QPIKernel(makeKernelParameters("QPI_SpaceDomain"), size_x, size_y));
+        //2D FFT 256 * 256 point
+        
+        KernelBlock FFT16_1 = addKernel(new FFT16Kernel3(makeKernelParameters("FFT16Kernel_1"), size_x, size_y, Kernel_Num0));
+                
+        KernelBlock Rotator1 = addKernel(new RotatorKernel(makeKernelParameters("Rotator1"), Rotator_Num1, FFTorIFFT_1));
+
+        KernelBlock FFT16_2 = addKernel(new FFT16Kernel2(makeKernelParameters("FFT16Kernel_2"), size_x, size_y, Kernel_Num1));
+        
+        KernelBlock FFT2DRAM_1 = addKernel(new FFT2DRAM(makeKernelParameters("FFT2DRAM_1"), RAM2D_1));
+        
+        KernelBlock FFT16_3 = addKernel(new FFT16Kernel3(makeKernelParameters("FFT16Kernel_3"), size_x, size_y, Kernel_Num2));
+        
+        KernelBlock Rotator2 = addKernel(new RotatorKernel(makeKernelParameters("Rotator2"), Rotator_Num2, FFTorIFFT_1));
+        
+        KernelBlock FFT16_4 = addKernel(new FFT16Kernel2(makeKernelParameters("FFT16Kernel_4"), size_x, size_y, Kernel_Num3));
+
+        //FFTShift and Phi Compute
+        //KernelBlock FFTShift_1 = addKernel(new FFTShiftKernel(makeKernelParameters("FFTShift_1"), FFTShift_Num1));        
+        
+        KernelBlock Phi_Compute = addKernel(new PhiComputeKernel(makeKernelParameters("Phi_Compute")));
+        //KernelBlock FFTShift_2 = addKernel(new FFTShiftKernel(makeKernelParameters("FFTShift_2"), FFTShift_Num2)); 
+         
+        //IFFT 256 * 256
+        KernelBlock IFFT16_1 = addKernel(new IFFT16Kernel3(makeKernelParameters("IFFT16Kernel_1"), size_x, size_y, Kernel_Num0));
+        
+        KernelBlock Rotator3 = addKernel(new RotatorKernel(makeKernelParameters("Rotator3"), Rotator_Num3, FFTorIFFT_0));
+        
+        KernelBlock IFFT16_2 = addKernel(new IFFT16Kernel2(makeKernelParameters("IFFT16Kernel_2"), size_x, size_y, Kernel_Num1));
+         
+        KernelBlock FFT2DRAM_2 = addKernel(new FFT2DRAM(makeKernelParameters("FFT2DRAM_2"), RAM2D_2));
+         
+        KernelBlock IFFT16_3 = addKernel(new IFFT16Kernel3(makeKernelParameters("IFFT16Kernel_3"), size_x, size_y, Kernel_Num2));
+        
+        KernelBlock Rotator4 = addKernel(new RotatorKernel(makeKernelParameters("Rotator4"), Rotator_Num4, FFTorIFFT_0));
+        
+        KernelBlock IFFT16_4 = addKernel(new IFFT16Kernel2(makeKernelParameters("IFFT16Kernel_4"), size_x, size_y, Kernel_Num3));
+        
+
+        ////////// Stream Declaration ////////
+         
+        //Total design
+        //QPI_Space Domain
+        QPI_SpaceDomain.getInput("i1") <== addStreamFromCPU("i1");
+        QPI_SpaceDomain.getInput("i2") <== addStreamFromCPU("i2");
+        QPI_SpaceDomain.getInput("i3") <== addStreamFromCPU("i3");
+        QPI_SpaceDomain.getInput("i4") <== addStreamFromCPU("i4");
+       
+        //2D FFT 256 * 256 point
+        FFT16_1.getInput("original") <== QPI_SpaceDomain.getOutput("G");
+        FFT16_1.getInput("FFT_Stage_Enable") <== QPI_SpaceDomain.getOutput("Next_Enable");
+        Rotator1.getInput("DIN") <== FFT16_1.getOutput("Stage_out");
+        Rotator1.getInput("Rotator_Enable") <== FFT16_1.getOutput("Next_Enable");
+        FFT16_2.getInput("original") <== Rotator1.getOutput("DO");
+        FFT16_2.getInput("FFT_Stage2_Enable") <== Rotator1.getOutput("FFT_Stage2_Enable");
+        
+        //2D RAM
+        FFT2DRAM_1.getInput("DIN") <== FFT16_2.getOutput("Stage_out");
+        FFT2DRAM_1.getInput("FFT2DRAM_Enable") <== FFT16_2.getOutput("Next_Enable");
+        
+        //2nd FFT 256
+        FFT16_3.getInput("original") <== FFT2DRAM_1.getOutput("Stage_out");
+        FFT16_3.getInput("FFT_Stage_Enable") <== FFT2DRAM_1.getOutput("Next_Enable");
+        Rotator2.getInput("DIN") <== FFT16_3.getOutput("Stage_out");
+        Rotator2.getInput("Rotator_Enable") <== FFT16_3.getOutput("Next_Enable");
+        FFT16_4.getInput("original") <== Rotator2.getOutput("DO");
+        FFT16_4.getInput("FFT_Stage2_Enable") <== Rotator2.getOutput("FFT_Stage2_Enable");
+        
+        //1st FFTShift
+        //FFTShift_1.getInput("DI") <== FFT16_4.getOutput("Stage_out");
+        //FFTShift_1.getInput("FFT_Shift_Enable") <== FFT16_4.getOutput("Next_Enable");
+
+        //Phi Compute
+        //Phi_Compute.getInput("original") <== FFTShift_1.getOutput("DOUT");
+        //Phi_Compute.getInput("Phi_Compute_Enable") <== FFTShift_1.getOutput("Next_Enable");
+        Phi_Compute.getInput("original") <== FFT16_4.getOutput("Stage_out");
+        Phi_Compute.getInput("Phi_Compute_Enable") <== FFT16_4.getOutput("Next_Enable");
+
+        //2nd FFTShift
+        //FFTShift_2.getInput("DI") <== Phi_Compute.getOutput("DOUT");
+        //FFTShift_2.getInput("FFT_Shift_Enable") <== Phi_Compute.getOutput("Next_Enable");
+ 
+        //2D IFFT 256 * 256 point
+        //IFFT16_1.getInput("original") <== FFTShift_2.getOutput("DOUT");
+        //IFFT16_1.getInput("FFT_Stage_Enable") <== FFTShift_2.getOutput("Next_Enable");
+        IFFT16_1.getInput("original") <== Phi_Compute.getOutput("DOUT");
+        IFFT16_1.getInput("FFT_Stage_Enable") <== Phi_Compute.getOutput("Next_Enable");
+        
+        Rotator3.getInput("DIN") <== IFFT16_1.getOutput("Stage_out");
+        Rotator3.getInput("Rotator_Enable") <== IFFT16_1.getOutput("Next_Enable");
+        IFFT16_2.getInput("original") <== Rotator3.getOutput("DO");
+        IFFT16_2.getInput("FFT_Stage2_Enable") <== Rotator3.getOutput("FFT_Stage2_Enable");
+        
+        //2D RAM
+        FFT2DRAM_2.getInput("DIN") <== IFFT16_2.getOutput("Stage_out");
+        FFT2DRAM_2.getInput("FFT2DRAM_Enable") <== IFFT16_2.getOutput("FFT2DRAM_Enable");
+         
+        //2nd IFFT 256
+        IFFT16_3.getInput("original") <== FFT2DRAM_2.getOutput("Stage_out");
+        IFFT16_3.getInput("FFT_Stage_Enable") <== FFT2DRAM_2.getOutput("Next_Enable");
+        Rotator4.getInput("DIN") <== IFFT16_3.getOutput("Stage_out");
+        Rotator4.getInput("Rotator_Enable") <== IFFT16_3.getOutput("Next_Enable");
+        IFFT16_4.getInput("original") <== Rotator4.getOutput("DO");
+        IFFT16_4.getInput("FFT_Stage2_Enable") <== Rotator4.getOutput("FFT_Stage2_Enable");
+
+        addStreamToCPU("phi") <== IFFT16_4.getOutput("phi");
+        
+
+        ////////////////////////for resource test
+        /*
+        QPI_SpaceDomain.getInput("i1") <== addStreamFromCPU("i1");
+        QPI_SpaceDomain.getInput("i2") <== addStreamFromCPU("i2");
+        QPI_SpaceDomain.getInput("i3") <== addStreamFromCPU("i3");
+        QPI_SpaceDomain.getInput("i4") <== addStreamFromCPU("i4");
+         
+        //2D FFT 256 * 256 point
+         
+        FFT16_1.getInput("original") <== QPI_SpaceDomain.getOutput("G");
+        FFT16_1.getInput("FFT_Stage_Enable") <== QPI_SpaceDomain.getOutput("Next_Enable");
+        Rotator1.getInput("DIN") <== FFT16_1.getOutput("Stage_out");
+        Rotator1.getInput("Rotator_Enable") <== FFT16_1.getOutput("Next_Enable");
+        FFT16_2.getInput("original") <== Rotator1.getOutput("DO");
+        FFT16_2.getInput("FFT_Stage2_Enable") <== Rotator1.getOutput("FFT_Stage2_Enable");
+        FFT2DRAM_1.getInput("DIN") <== FFT16_2.getOutput("Stage_out");
+        FFT2DRAM_1.getInput("FFT2DRAM_Enable") <== FFT16_2.getOutput("Next_Enable");
+        FFT16_3.getInput("original") <== FFT2DRAM_1.getOutput("Stage_out");
+        FFT16_3.getInput("FFT_Stage_Enable") <== FFT2DRAM_1.getOutput("Next_Enable");
+        Rotator2.getInput("DIN") <== FFT16_3.getOutput("Stage_out");
+        Rotator2.getInput("Rotator_Enable") <== FFT16_3.getOutput("Next_Enable");
+        FFT16_4.getInput("original") <== Rotator2.getOutput("DO");
+        FFT16_4.getInput("FFT_Stage2_Enable") <== Rotator2.getOutput("FFT_Stage2_Enable");
+        Phi_Compute.getInput("original") <== FFT16_4.getOutput("Stage_out");
+        Phi_Compute.getInput("Phi_Compute_Enable") <== FFT16_4.getOutput("Next_Enable");
+        addStreamToCPU("phi") <== Phi_Compute.getOutput("phi");
+        */
+        /*addStreamToCPU("mean1") <== QPI_SpaceDoamin.getOutput("mean1");
+        addStreamToCPU("mean2") <== QPI_SpaceDomain.getOutput("mean2");
+        addStreamToCPU("mean3") <== QPI_SpaceDomain.getOutput("mean3");
+        addStreamToCPU("mean4") <== QPI_SpaceDOmain.getOutput("mean4");
+        */
+        /* 
+        addStreamToCPU("i1_bgs") <== QPI_SpaceDomain.getOutput("i1_bgs");
+        //addStreamToCPU("i1_bgs_newMin") <== QPI_SpaceDomain.getOutput("i1_bgs_newMin");
+        addStreamToCPU("i1_bgs_positive") <== QPI_SpaceDomain.getOutput("i1_bgs_positive");
+        //addStreamToCPU("i1_pos_newMax") <== QPI_SpaceDomain.getOutput("i1_pos_newMax");
+        addStreamToCPU("i1_norm") <== QPI_SpaceDomain.getOutput("i1_norm");
+        addStreamToCPU("i2_bgs_positive") <== QPI_SpaceDomain.getOutput("i2_bgs_positive");
+        addStreamToCPU("i2_norm") <== QPI_SpaceDomain.getOutput("i2_norm");
+        addStreamToCPU("i6") <== QPI_SpaceDomain.getOutput("i6");
+        //addStreamToCPU("i8") <== QPI_SpaceDomain.getOutput("i8");
+        addStreamToCPU("theta_y") <== QPI_SpaceDomain.getOutput("theta_y");
+        addStreamToCPU("dphi_y") <== QPI_SpaceDomain.getOutput("dphi_y");
+        */
+        //addStreamToCPU("G") <== QPI_SpaceDomain.getOutput("G");
+
+        addMaxFileConstant("size_x", size_x);
+        addMaxFileConstant("size_y", size_y);
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        CPUTypes type = CPUTypes.INT32;
+        int INT_size = type.sizeInBytes();
+        int FLOAT_size = CPUTypes.FLOAT.sizeInBytes();
+        InterfaceParam N = engine_interface.addParam("N", CPUTypes.INT32);
+        InterfaceParam num_img = engine_interface.addParam("num_img", CPUTypes.INT32);
+        InterfaceParam sizeBytes = N * INT_size;
+
+        engine_interface.setStream("i1", CPUTypes.FLOAT, CPUTypes.FLOAT.sizeInBytes() * N);
+        engine_interface.setStream("i2", CPUTypes.FLOAT, CPUTypes.FLOAT.sizeInBytes() * N);
+        engine_interface.setStream("i3", CPUTypes.FLOAT, CPUTypes.FLOAT.sizeInBytes() * N);
+        engine_interface.setStream("i4", CPUTypes.FLOAT, CPUTypes.FLOAT.sizeInBytes() * N);
+         
+        engine_interface.setTicks("QPI_SpaceDomain", N);
+        engine_interface.setTicks("FFT16Kernel_1", N);
+        engine_interface.setTicks("Rotator1", N);
+        engine_interface.setTicks("FFT16Kernel_2", N);
+        engine_interface.setTicks("FFT2DRAM_1", N);
+        engine_interface.setTicks("FFT16Kernel_3", N);
+        engine_interface.setTicks("Rotator2", N);
+        engine_interface.setTicks("FFT16Kernel_4", N);
+        engine_interface.setTicks("Phi_Compute", N);
+        engine_interface.setTicks("IFFT16Kernel_1", N);
+        engine_interface.setTicks("Rotator3", N);
+        engine_interface.setTicks("IFFT16Kernel_2", N);
+        engine_interface.setTicks("FFT2DRAM_2", N);
+        engine_interface.setTicks("IFFT16Kernel_3", N);
+        engine_interface.setTicks("Rotator4", N);
+        engine_interface.setTicks("IFFT16Kernel_4", N);
+
+        /* 
+        engine_interface.setStream("mean1", CPUTypes.FLOAT, INT_size * size_x);
+        engine_interface.setStream("mean2", CPUTypes.FLOAT, INT_size * size_x);
+        engine_interface.setStream("mean3", CPUTypes.FLOAT, INT_size * size_x);
+        engine_interface.setStream("mean4", CPUTypes.FLOAT, INT_size * size_x);
+        */
+        //engine_interface.setStream("i1_bgs", CPUTypes.FLOAT, INT_size * size_x * size_y);
+        //engine_interface.setStream("i1_bgs_newMin", CPUTypes.FLOAT, INT_size * 4);
+        //engine_interface.setStream("i1_bgs_positive", CPUTypes.FLOAT, INT_size * size_x * size_y);
+        //engine_interface.setStream("i1_pos_newMax", CPUTypes.FLOAT, INT_size * 4);
+        //engine_interface.setStream("i1_norm", CPUTypes.FLOAT, FLOAT_size * size_x * size_y);
+        
+        //engine_interface.setStream("i2_bgs_positive", CPUTypes.FLOAT, FLOAT_size * size_x * size_y);
+        //engine_interface.setStream("i2_norm", CPUTypes.FLOAT, FLOAT_size * size_x * size_y);
+        //engine_interface.setStream("i6", CPUTypes.FLOAT, FLOAT_size * size_x * size_y);
+        //engine_interface.setStream("i8", CPUTypes.FLOAT, FLOAT_size * size_x * size_y);
+        //engine_interface.setStream("theta_y", CPUTypes.FLOAT, FLOAT_size * size_x * size_y);
+        //engine_interface.setStream("dphi_y", CPUTypes.FLOAT, FLOAT_size * size_x * size_y);
+        //engine_interface.setStream("G", CPUTypes.FLOAT, FLOAT_size * size_x * size_y * 2);
+        engine_interface.setStream("phi", CPUTypes.FLOAT, FLOAT_size * size_x * size_y * num_img);
+        return engine_interface;
+    }
+
+    public static void main(String[] args) {
+        QPIManager manager = new QPIManager(new EngineParameters(args));
+        BuildConfig config = new BuildConfig(Level.FULL_BUILD);
+        config.setBuildEffort(Effort.HIGH);
+        config.setEnableTimingAnalysis(true);
+        config.setMPPRCostTableSearchRange(1,4);
+        config.setMPPRParallelism(4);
+        manager.setBuildConfig(config);
+        manager.config.setDefaultStreamClockFrequency(100);
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+
+    
+    }
+}

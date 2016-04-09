@@ -1,0 +1,135 @@
+/**
+    FFT-16 Kernel by Xie Junyi
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplexType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplex;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Reductions;
+
+class FFTShiftKernel extends Kernel {
+
+    protected FFTShiftKernel(KernelParameters parameters, int Kernel_Num) {
+        super(parameters);
+          
+          DFEType FLOAT_32 = dfeFloat(8,24);
+          DFEType INT_32 = dfeInt(32);
+          //complex stream
+          DFEComplexType Comp_Type = new DFEComplexType (FLOAT_32);
+          DFEComplex DI = io.input("DI", Comp_Type);
+          DFEVar FFT_Shift_Enable = io.input("FFT_Shift_Enable", dfeFix(1, 0, SignMode.UNSIGNED));
+          //DFEVar FFT_Shift_Enable = constant.var(dfeUInt(1), 1); 
+
+          //overall counter
+          Count.Params all_param = control.count.makeParams(32)
+                                                .withEnable(FFT_Shift_Enable);
+          DFEVar all_count = control.count.makeCounter(all_param).getCount();
+          /////////////////RAM for FFT Shift//////////////////////
+           
+          //size of RAM
+          int RAMSize = 65536;
+          
+          //RAW Write Address Counter         
+          Count.Params addrWChainParam0 = control.count.makeParams(32)
+                                                .withEnable(FFT_Shift_Enable)
+                                                .withMax(RAMSize)
+                                                .withInc(1);
+          Counter addr_RAW_counter = control.count.makeCounter(addrWChainParam0);
+          DFEVar addr_RAW = addr_RAW_counter.getCount();
+
+          Count.Params addrWChainParam1 = control.count.makeParams(1)
+                                                .withEnable(addr_RAW_counter.getWrap())
+                                                .withMax(2)
+                                                .withInc(1);
+          Counter half_counter = control.count.makeCounter(addrWChainParam1);
+          DFEVar half_count = half_counter.getCount();
+          
+          //Write Address
+          DFEVar addrW = (addr_RAW + constant.var(65536) * half_count.cast(dfeUInt(32))).cast(dfeUInt(17));
+
+          //Read Address Counter
+          Count.Params addrRChainParam0 = control.count.makeParams(32)
+                                                .withEnable(FFT_Shift_Enable)
+                                                .withMax(256)
+                                                .withInitValue(128)
+                                                .withInc(1);
+          Counter addrR_0_counter = control.count.makeCounter(addrRChainParam0);
+          DFEVar addrR_Col = addrR_0_counter.getCount();
+          DFEVar addrR_1_counter_Enable = (addrR_Col===127);
+
+          Count.Params addrRChainParam1 = control.count.makeParams(32)
+                                                //.withEnable(addrR_0_counter.getWrap())
+                                                .withEnable(addrR_1_counter_Enable)
+                                                .withMax(256)
+                                                .withInitValue(128)
+                                                .withInc(1);
+          Counter addrR_1_counter = control.count.makeCounter(addrRChainParam1);
+          DFEVar addrR_Row = addrR_1_counter.getCount();
+          
+          //Read Address of 4 quadrants
+          DFEVar addrR = (addrR_Row * constant.var(256) + addrR_Col + (half_count-1).cast(dfeUInt(32)) * constant.var(65536)).cast(dfeUInt(17));
+         
+          //RAM ports
+          RamPortParams<DFEComplex> ShiftRAM_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, addrW, Comp_Type)
+                        .withDataIn(DI)
+                        .withWriteEnable(FFT_Shift_Enable);
+          
+          RamPortParams<DFEComplex> ShiftRAM_outputPort = 
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, addrR, Comp_Type);
+          
+          //FFT Shift RAM
+          DualPortMemOutputs<DFEComplex> ShiftRAM = mem.ramDualPort(RAMSize*2, RamWriteMode.READ_FIRST, ShiftRAM_inputPort, ShiftRAM_outputPort);
+          DFEComplex Read_Value = ShiftRAM.getOutputB();
+       
+          DFEVar Next_Enable = all_count > 65535;
+
+/////////////////////////////////////////// Output Port /////////////////////////////////////////
+          if (Kernel_Num==1)
+          {
+            /*
+            debug.printf("------------------ FFTShift 1 ----------------\n");
+            debug.printf("all_count in FS 1= %d\n", all_count);
+            debug.printf("FS 1 enable = %d\n", FFT_Shift_Enable);
+            debug.printf("DI = %f + i %f\n", DI.getReal(), DI.getImaginary());
+            debug.printf("addrW = %d\n", addrW);
+            debug.printf("addrR_Col = %d, addrR_Row = %d\n", addrR_Col, addrR_Row);
+            debug.printf("addrR = %d\n", addrR);
+            debug.printf("Read_Value = %f + i %f\n", Read_Value.getReal(), Read_Value.getImaginary());
+            debug.printf("Next_Enable in FS 1= %d\n", Next_Enable);
+            */
+            io.output("DOUT", Read_Value, Comp_Type);
+            io.output("Next_Enable", Next_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+          }
+
+          if (Kernel_Num==2)
+          {
+            /*
+            debug.printf("------------------ FFTShift 2 ----------------\n");
+            debug.printf("all_count in FS 2= %d\n", all_count);
+            debug.printf("FS 2 enable = %d\n", FFT_Shift_Enable);
+            debug.printf("DI = %f + i %f\n", DI.getReal(), DI.getImaginary());
+            debug.printf("addrW = %d\n", addrW);
+            debug.printf("addrR_Col = %d, addrR_Row = %d\n", addrR_Col, addrR_Row);
+            debug.printf("addrR = %d\n", addrR);
+            debug.printf("Read_Value = %f + i %f\n", Read_Value.getReal(), Read_Value.getImaginary());
+            debug.printf("Next_Enable in FS 2= %d\n", Next_Enable);
+            */
+            io.output("DOUT", Read_Value, Comp_Type);
+            io.output("Next_Enable", Next_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+          }
+
+ 
+        }
+}

@@ -1,0 +1,94 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+
+class FPExpCore extends KernelLib
+{
+	//the hardware type
+	private DFEType inputType;
+	private	DFEType roughType;
+
+	private DFEVar dout;
+	private DFEVar din;
+
+	private int wF;
+	
+	FPExpCore(KernelLib owner, int wE, int ext_wF, DFEVar ext_din)
+	{
+		super(owner);
+		int guardBits = 3;
+
+		if( ext_wF > 50-2-guardBits )
+		{
+			wF = 50-2-guardBits;
+			din = ext_din.cast( dfeFloat(wE, wF) );
+		}
+		else
+		{
+			wF = ext_wF;
+			din = ext_din;
+		}
+
+		//define the type and input stream
+		inputType = dfeFloat(wE, wF);
+
+		//define the rough type			
+		if( wF > 10 )
+			roughType = dfeFloat(wE, 10);	
+		else
+			roughType = dfeFloat(wE, wF);
+
+		DFEVar roughInput = din.cast( roughType );
+		// 1/log(2)
+		DFEVar log2_1 = constant.var( roughType, 1.44269504);
+
+		DFEVar E_mul = roughInput * log2_1;
+		//E should be in wE length, so that we can easily add back to wE
+		DFEVar E = KernelMath.floor( E_mul, dfeInt(wE+1) );
+
+		//debug.printf("E is %d\n", E);
+
+		//compute Y
+		DFEVar E_float = E.cast( dfeFloat(wE, wF) );
+		DFEVar log2 = constant.var( dfeFloat(wE, wF), Math.log(2) );
+		//debug.printf("E_float is %g\n", E_float);
+		DFEVar Y = din - (E_float*log2);
+
+		//correct Y if it is neg
+		//advoid using too small
+		DFEVar rangeAdj = (Y < 0.2);
+		DFEVar newY = rangeAdj ? Y + log2 : Y;
+		DFEVar newE = rangeAdj ? E-1 : E;
+
+		//debug.printf("Y = %g\n", Y);
+
+		//debug.printf("Y is %g\n", Y);
+
+		//eval eY using the fixed point evaluator
+		//and then recombine it to floating point format
+		DFEVar Y_fix = newY.cast( dfeFix(0, wF+guardBits, SignMode.UNSIGNED) );
+		KernelMath.Range range = new KernelMath.Range(0, 0.95);
+		DFEVar eY = KernelMath.exp( range, Y_fix, dfeFix(2, wF+guardBits, SignMode.UNSIGNED) );
+
+		DFEVar eY_float = eY.cast( inputType );
+		//debug.printf("eY is %g\n", eY_float );
+
+		DFEVar eY_raw = eY_float.cast( dfeRawBits( wE+wF ) );
+		DFEVar eY_f = eY_raw.slice(0, wF-1);
+		DFEVar eY_e = eY_raw.slice(wF-1, wE);
+		DFEVar eY_s = eY_raw.slice(wF+wE-1, 1);
+
+		DFEVar new_e = (eY_e.cast( dfeUInt(wE) ).cast(dfeInt(wE+1)) + newE).cast(dfeUInt(wE));
+		DFEVar new_e_raw = new_e.cast( dfeRawBits(wE) );
+		DFEVar out = eY_s.cat( new_e_raw ).cat( eY_f );
+		dout = out.cast( inputType ).cast( dfeFloat(wE, ext_wF) );
+
+	}
+	
+	public DFEVar getOutput()
+	{
+		return dout;
+	}
+}

@@ -1,0 +1,142 @@
+/*
+* FFT 2D RAM
+* by Xie Junyi
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplexType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplex;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Reductions;
+
+class FFT2DRAM extends Kernel {
+
+    protected FFT2DRAM(KernelParameters parameters, int Kernel_Num) {
+        super(parameters);
+          int RAMSize = 131072;
+
+          DFEType FLOAT_32 = dfeFloat(8,24);
+          DFEType type_fix0 = dfeFix(30, 15, SignMode.TWOSCOMPLEMENT);
+          //complex stream
+          DFEComplexType Comp_Type_float = new DFEComplexType (FLOAT_32);
+          DFEComplexType Comp_Type_fix = new DFEComplexType(type_fix0);
+          DFEVar FFT2DRAM_Enable = io.input("FFT2DRAM_Enable", dfeFix(1, 0, SignMode.UNSIGNED));
+          DFEComplex DIN_pre = io.input("DIN", Comp_Type_fix);
+          DFEComplex DIN = DIN_pre.cast(Comp_Type_float);
+
+          //DFEComplexType Comp_Type = new DFEComplexType (FLOAT_32);
+          //DFEComplex DIN = io.input("DIN", Comp_Type);
+          //DFEVar FFT2DRAM_Enable = io.input("FFT2DRAM_Enable", dfeFix(1, 0, SignMode.UNSIGNED));
+
+          //optimization DSP
+          optimization.pushDSPFactor(1);
+
+          //overall counter
+          Count.Params all_param = control.count.makeParams(32)
+                                                .withEnable(FFT2DRAM_Enable);
+          DFEVar all_count = control.count.makeCounter(all_param).getCount();
+
+          //addrW counter
+          Count.Params addrW_param = control.count.makeParams(17)
+                                  .withMax(RAMSize)
+                                  .withInc(1)
+                                  .withEnable(FFT2DRAM_Enable);
+
+          Counter addrW_counter = control.count.makeCounter(addrW_param);
+          DFEVar addrW = addrW_counter.getCount();
+           
+          //addrR counter
+          /*
+          CounterChain addrRChain = control.count.makeCounterChain();
+          DFEVar Block_Num = addrRChain.addCounter(2, 1);
+          DFEVar addrR_Row = addrRChain.addCounter(256, 1);
+          DFEVar addrR_Col = addrRChain.addCounter(256, 1);
+          DFEVar addrR = addrR_Col.cast(dfeUInt(17)) * constant.var(dfeUInt(17), 256) + addrR_Row.cast(dfeUInt(17));
+          */
+
+          //control counter
+          Count.Params addrR_Col_param = control.count.makeParams(17)
+                                  .withMax(256)
+                                  .withInc(1)
+                                  .withEnable(FFT2DRAM_Enable);
+                                 
+          Counter addrR_Col_counter = control.count.makeCounter(addrR_Col_param);
+          DFEVar addrR_Col = addrR_Col_counter.getCount();
+
+          Count.Params addrR_Row_param = control.count.makeParams(17)
+                                  .withMax(256)
+                                  .withInc(1)
+                                  .withEnable(addrR_Col_counter.getWrap());
+
+          Counter addrR_Row_counter = control.count.makeCounter(addrR_Row_param);
+          DFEVar addrR_Row = addrR_Row_counter.getCount();
+
+          Count.Params Block_Num_param = control.count.makeParams(17)
+                                  .withMax(2)
+                                  .withInc(1)
+                                  .withInitValue(1)
+                                  .withEnable(addrR_Row_counter.getWrap());
+          Counter Block_Num_counter = control.count.makeCounter(Block_Num_param);
+          DFEVar Block_Num = Block_Num_counter.getCount();
+
+          DFEVar addrR = Block_Num * constant.var(dfeUInt(17), 65536) + addrR_Col * constant.var(dfeUInt(17), 256) + addrR_Row;
+          
+
+          RamPortParams<DFEComplex> FFT2DRAM_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, addrW, Comp_Type_float)
+                        .withDataIn(DIN)
+                        .withWriteEnable(constant.var(true));  //here set to 1, but should change accordingly later
+          
+          RamPortParams<DFEComplex> FFT2DRAM_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, addrR, Comp_Type_float);
+          
+          DualPortMemOutputs<DFEComplex> FFT2DRAM = mem.ramDualPort(RAMSize, RamWriteMode.READ_FIRST, FFT2DRAM_inputPort, FFT2DRAM_outputPort);
+          
+          DFEComplex Read_Value = FFT2DRAM.getOutputB(); //Read_Value is DI in FFT16.v from OpenCore, output of buffer RAM, input of FFT 16
+          //DFEVar Next_Enable = all_count > 66366;
+          DFEVar Next_Enable = all_count > 65535;
+          
+          optimization.popDSPFactor();
+////////////////////////////////////////// output ////////////////////////////////////////////
+        
+          if (Kernel_Num == 1)
+          {
+            /*
+            debug.printf("******************** 2DRAM for FFT**********************\n");
+            debug.printf("2DRAM_Enable in FFT = %d\n", FFT2DRAM_Enable);
+            debug.printf("2D RAM count = %d\n", all_count);
+            debug.printf("addrW = %d\tDIN = %f + i %f\n", addrW, DIN.getReal(), DIN.getImaginary());
+            debug.printf("addrR = %d\tRead_Value = %f + i %f\n\n", addrR, Read_Value.getReal(), Read_Value.getImaginary()); 
+            debug.printf("Next_Enable in FFT2DRAM = %d\n", Next_Enable);
+            */
+            io.output("Stage_out", Read_Value, Comp_Type_float);
+            io.output("Next_Enable", Next_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+            //io.output("phi", Read_Value.getReal().cast(FLOAT_32), FLOAT_32, Next_Enable);
+          }
+          
+          if (Kernel_Num == 2)
+          {
+            /*
+            debug.printf("******************** 2DRAM for IFFT**********************\n");
+            debug.printf("2DRAM_Enable in IFFT = %d\n", FFT2DRAM_Enable);
+            debug.printf("2D RAM count = %d\n", all_count);
+            debug.printf("addrW = %d\tDIN = %f + i %f\n", addrW, DIN.getReal(), DIN.getImaginary());
+            debug.printf("addrR = %d\tRead_Value = %f + i %f\n", addrR, Read_Value.getReal(), Read_Value.getImaginary()); 
+            debug.printf("Next_Enable in IFFT2DRAM = %d\n", Next_Enable);
+            */
+            io.output("Stage_out", Read_Value.cast(Comp_Type_fix), Comp_Type_fix);
+            io.output("Next_Enable", Next_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+          }
+
+    }
+}          

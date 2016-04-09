@@ -1,0 +1,90 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+
+
+public class OptionPricingKernel extends Kernel {
+
+  public static final int wE = 8;
+  public static final int wF = 24;
+  public static final int WORDLENGTH = 24;
+  public static final int ARRAYSIZE = 128;
+  public static final int paraNode = 50;
+  public static final int initMax = 8;
+  final DFEType b128 = dfeRawBits(128);
+  final DFEType u1= dfeUInt(1);
+  final DFEType inputType = dfeFloat(11, 53);
+  final DFEType outputType = dfeFloat(11, 53);
+  final DFEType sType = dfeUInt(WORDLENGTH);
+
+  final DFEType scalarInputIntType = dfeUInt(64);
+
+  final int numPE = 4;
+  final DFEVectorType<DFEVar> array_inputType = new DFEVectorType<DFEVar>(inputType, numPE);
+  final DFEVectorType<DFEVar> array_outputType = new DFEVectorType<DFEVar>(outputType, numPE);
+  final DFEVectorType<DFEVar> array_sType = new DFEVectorType<DFEVar>(sType, numPE);
+  final DFEVectorType<DFEVar> array_u1 = new DFEVectorType<DFEVar>(u1, numPE);
+  final DFEVectorType<DFEVar> array_b128 = new DFEVectorType<DFEVar>(b128, numPE);
+
+  public OptionPricingKernel (KernelParameters parameters) {
+    super(parameters);
+
+    /*scalar*/
+    DFEVar in_strike        =  io.scalarInput("strike", inputType);
+    DFEVar in_sigma         =  io.scalarInput("sigma", inputType);
+    DFEVar in_myT           =  io.scalarInput("T", inputType);
+    DFEVar in_sqrt_T        =  io.scalarInput("sqrt_t", inputType);
+    DFEVar in_discount      =  io.scalarInput("discount", inputType);
+    //total path = numPathGroup * paraNode;
+    DFEVar in_numPathGroup  =  io.scalarInput("numPath", sType);
+    DFEVar in_outputRand    =  io.scalarInput("outputRand", u1 );
+    DFEVar numMaturity      =  io.scalarInput("numMaturity", sType);
+
+    /*****************************************/
+    DFEVector<DFEVar> isInit_array = array_u1.newInstance(this);
+    DFEVector<DFEVar> init_array = array_u1.newInstance(this);
+    DFEVector<DFEVar> init2_array = array_u1.newInstance(this);
+
+    DFEVector<DFEVar> in_f_init_array             = io.input("fin", array_inputType, isInit_array[0]);
+    DFEVector<DFEVar> in_maturity_init_array      = io.input("maturity", array_inputType, isInit_array[0]);
+    DFEVector<DFEVar> in_maturity_diff_init_array = io.input("maturity_diff", array_inputType, isInit_array[0]);
+    DFEVector<DFEVar> seed_array                  = io.input("seed", array_b128, init_array[0]);
+    DFEVector<DFEVar> seed2_array                 = io.input("seed2", array_b128, init2_array[0]);
+
+    DFEVector<DFEVar> finalResult_array = array_outputType.newInstance(this);
+    DFEVector<DFEVar> randStream1_array = array_outputType.newInstance(this);
+    DFEVector<DFEVar> randStream2_array = array_outputType.newInstance(this);
+    DFEVector<DFEVar> resultCtrl_array = array_u1.newInstance(this);
+    DFEVector<DFEVar> shoudOutRand_array = array_u1.newInstance(this);
+
+    for(int i = 0; i<numPE; i++){
+
+      OptionPricingKernelLib pricingKernel =
+	  new OptionPricingKernelLib(this, seed_array[i], seed2_array[i],
+				     in_strike, in_sigma,
+				     in_myT, in_sqrt_T,
+				     in_discount, in_numPathGroup,
+				     in_f_init_array[i], in_maturity_init_array[i],
+				     in_maturity_diff_init_array[i], in_outputRand,
+				     numMaturity
+				     );
+      isInit_array.connect(i, pricingKernel.isInit);
+      init_array.connect(i, pricingKernel.getURandInit1());
+      init2_array.connect(i, pricingKernel.getURandInit2());
+
+      finalResult_array.connect(i, pricingKernel.getResult());
+      resultCtrl_array.connect(i, pricingKernel.getResultCtrl());
+
+      shoudOutRand_array.connect(i, pricingKernel.getRandOutCtrl());
+      randStream1_array.connect(i, pricingKernel.getRandStream1());
+      randStream2_array.connect(i, pricingKernel.getRandStream2());
+    }
+
+    io.output( "randOut", randStream1_array, array_outputType, shoudOutRand_array[0] );
+    io.output( "randOut2", randStream2_array, array_outputType, shoudOutRand_array[0] );
+    io.output("result", finalResult_array, array_outputType, resultCtrl_array[0]);
+  }
+}

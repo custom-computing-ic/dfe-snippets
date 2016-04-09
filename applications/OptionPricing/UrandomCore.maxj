@@ -1,0 +1,173 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelLib;
+
+public class UrandomCore extends KernelLib {
+	
+	//define the type
+	final DFEType b128 = dfeRawBits(128);
+	final DFEType b32 = dfeRawBits(32);
+
+	//randOut and init
+	private DFEVar randOut;
+	private DFEVar init;
+
+	public DFEVar getInit()
+	{
+		return init;
+	}
+
+	public DFEVar getRandOut()
+	{
+		return randOut;
+	}
+
+	public UrandomCore(KernelLib owner, DFEVar seed) {
+		super(owner);
+
+		//create a one hot counter
+		Count.Params paramsOne = control.count.makeParams(2)
+			.withWrapMode(Count.WrapMode.STOP_AT_MAX)
+			.withMax(3);
+		Counter init_counter = control.count.makeCounter( paramsOne );
+
+		init = init_counter.getCount() < 3;
+
+		//the delayed version of randOut
+		DFEVar lastRand = b128.newInstance(this);
+
+		randOut = init ? seed : (lastRand[17]^lastRand[64]^lastRand[110])
+		.cat(lastRand[1]^lastRand[3]^lastRand[69])
+		.cat(lastRand[50]^lastRand[78]^lastRand[102])
+		.cat(lastRand[9]^lastRand[63]^lastRand[66])
+		.cat(lastRand[4]^lastRand[25]^lastRand[109])
+		.cat(lastRand[34]^lastRand[35]^lastRand[97])
+		.cat(lastRand[49]^lastRand[90]^lastRand[110])
+		.cat(lastRand[20]^lastRand[59]^lastRand[86])
+		.cat(lastRand[3]^lastRand[31]^lastRand[66])
+		.cat(lastRand[47]^lastRand[76]^lastRand[88])
+		.cat(lastRand[7]^lastRand[21]^lastRand[106])
+		.cat(lastRand[58]^lastRand[120])
+		.cat(lastRand[28]^lastRand[74]^lastRand[121])
+		.cat(lastRand[53]^lastRand[103]^lastRand[125])
+		.cat(lastRand[9]^lastRand[53]^lastRand[113])
+		.cat(lastRand[11]^lastRand[72]^lastRand[107])
+		.cat(lastRand[6]^lastRand[93]^lastRand[105])
+		.cat(lastRand[ 71  ]^lastRand[ 98   ]^lastRand[ 99   ])
+		.cat(lastRand[ 112  ]^lastRand[  85  ]^lastRand[ 4   ])
+		.cat(lastRand[ 54  ]^lastRand[ 122   ]^lastRand[ 126   ])
+		.cat(lastRand[ 9  ]^lastRand[ 34   ]^lastRand[  57  ])
+		.cat(lastRand[ 26  ]^lastRand[ 81   ]^lastRand[  106  ])
+		.cat(lastRand[ 23  ]^lastRand[ 66   ]^lastRand[  116  ])
+		.cat(lastRand[ 35  ]^lastRand[ 76   ]^lastRand[ 118   ])
+		.cat(lastRand[ 49  ]^lastRand[ 105   ]^lastRand[  112  ])
+		.cat(lastRand[ 24  ]^lastRand[ 36   ]^lastRand[ 65   ])
+		.cat(lastRand[ 33  ]^lastRand[ 36   ]^lastRand[ 114   ])
+		.cat(lastRand[ 6  ]^lastRand[ 19   ]^lastRand[  111  ])
+		.cat(lastRand[ 24  ]^lastRand[ 67   ]^lastRand[  84  ])
+		.cat(lastRand[  17 ]^lastRand[ 64   ]^lastRand[  102  ])
+		.cat(lastRand[ 18  ]^lastRand[ 26   ]^lastRand[  73  ])
+		.cat(lastRand[ 31  ]^lastRand[ 40   ]^lastRand[ 78   ])
+		.cat(lastRand[ 1  ]^lastRand[ 58   ]^lastRand[ 76   ])
+		.cat(lastRand[ 35  ]^lastRand[ 99   ]^lastRand[  103  ])
+		.cat(lastRand[ 15  ]^lastRand[ 60   ]^lastRand[  88  ])
+		.cat(lastRand[ 0  ]^lastRand[ 24   ]^lastRand[  101  ])
+		.cat(lastRand[ 30  ]^lastRand[ 62   ]^lastRand[ 106   ])
+		.cat(lastRand[ 13  ]^lastRand[ 87   ]^lastRand[  122  ])
+		.cat(lastRand[ 0  ]^lastRand[  79  ]^lastRand[ 115   ])
+		.cat(lastRand[ 17  ]^lastRand[ 39   ]^lastRand[ 96   ])
+		.cat(lastRand[ 50  ]^lastRand[ 64   ]^lastRand[ 87   ])
+		.cat(lastRand[ 42  ]^lastRand[ 80   ]^lastRand[  85  ])
+		.cat(lastRand[ 53  ]^lastRand[  77  ]^lastRand[  115  ])
+		.cat(lastRand[ 50  ]^lastRand[ 55   ]^lastRand[ 90   ])
+		.cat(lastRand[ 65  ]^lastRand[  123  ]^lastRand[ 125   ])
+		.cat(lastRand[ 44  ]^lastRand[ 83   ])
+		.cat(lastRand[ 8  ]^lastRand[ 113   ]^lastRand[ 122   ])
+		.cat(lastRand[ 23  ]^lastRand[ 43   ]^lastRand[  52  ])
+		.cat(lastRand[ 12  ]^lastRand[ 38   ]^lastRand[ 112   ])
+		.cat(lastRand[ 40  ]^lastRand[ 68   ]^lastRand[  72  ])
+		.cat(lastRand[  29 ]^lastRand[ 34   ]^lastRand[ 45   ])
+		.cat(lastRand[ 19  ]^lastRand[ 33   ]^lastRand[ 36   ])
+		.cat(lastRand[ 4  ]^lastRand[ 37   ]^lastRand[ 63   ])
+		.cat(lastRand[ 31  ]^lastRand[ 81   ]^lastRand[ 105   ])
+		.cat(lastRand[ 18  ]^lastRand[ 74   ]^lastRand[ 75   ])
+		.cat(lastRand[ 84  ]^lastRand[  119  ]^lastRand[ 127   ])
+		.cat(lastRand[ 70  ]^lastRand[ 71   ]^lastRand[ 80   ])
+		.cat(lastRand[ 3  ]^lastRand[  25  ]^lastRand[ 54   ])
+		.cat(lastRand[ 12  ]^lastRand[  30  ]^lastRand[ 88   ])
+		.cat(lastRand[ 41  ]^lastRand[  45  ]^lastRand[  82  ])
+		.cat(lastRand[ 2  ]^lastRand[ 27   ]^lastRand[ 37   ])
+		.cat(lastRand[ 46  ]^lastRand[ 51   ]^lastRand[ 99   ])
+		.cat(lastRand[ 93  ]^lastRand[ 96   ]^lastRand[ 111   ])
+		.cat(lastRand[ 20  ]^lastRand[ 29   ]^lastRand[ 91   ])
+		.cat(lastRand[ 71  ]^lastRand[  74  ]^lastRand[ 117   ])
+		.cat(lastRand[ 43  ]^lastRand[  70  ]^lastRand[ 126   ])
+		.cat(lastRand[ 47  ]^lastRand[ 56   ]^lastRand[ 65   ])
+		.cat(lastRand[ 11  ]^lastRand[  56  ]^lastRand[ 123   ])
+		.cat(lastRand[ 28  ]^lastRand[ 51   ]^lastRand[  89  ])
+		.cat(lastRand[ 5  ]^lastRand[ 32   ]^lastRand[ 75   ])
+		.cat(lastRand[ 15  ]^lastRand[ 32   ]^lastRand[  94  ])
+		.cat(lastRand[ 7  ]^lastRand[  52  ]^lastRand[  87  ])
+		.cat(lastRand[ 22  ]^lastRand[  116  ]^lastRand[ 124   ])
+		.cat(lastRand[ 27  ]^lastRand[  97  ]^lastRand[ 124   ])
+		.cat(lastRand[ 85  ]^lastRand[ 97   ]^lastRand[ 107   ])
+		.cat(lastRand[ 10  ]^lastRand[ 29   ]^lastRand[ 84   ])
+		.cat(lastRand[ 22  ]^lastRand[  81  ]^lastRand[ 92   ])
+		.cat(lastRand[ 43  ]^lastRand[  62  ]^lastRand[ 109   ])
+		.cat(lastRand[ 26  ]^lastRand[  40  ]^lastRand[ 68   ])
+		.cat(lastRand[ 23  ]^lastRand[ 100   ]^lastRand[  115  ])
+		.cat(lastRand[ 8  ]^lastRand[ 41   ]^lastRand[  101  ])
+		.cat(lastRand[ 12  ]^lastRand[  68  ]^lastRand[ 93   ])
+		.cat(lastRand[ 27  ]^lastRand[ 62   ]^lastRand[  98  ])
+		.cat(lastRand[ 41  ]^lastRand[ 61   ]^lastRand[  98  ])
+		.cat(lastRand[ 22  ]^lastRand[ 77   ]^lastRand[ 79   ])
+		.cat(lastRand[ 16  ]^lastRand[ 69   ]^lastRand[  118  ])
+		.cat(lastRand[ 20  ]^lastRand[ 30   ]^lastRand[  67  ])
+		.cat(lastRand[ 10  ]^lastRand[ 61   ]^lastRand[ 100   ])
+		.cat(lastRand[ 54  ]^lastRand[ 67   ]^lastRand[  104  ])
+		.cat(lastRand[ 44  ]^lastRand[ 109   ]^lastRand[ 116   ])
+		.cat(lastRand[ 19  ]^lastRand[ 39   ]^lastRand[ 78   ])
+		.cat(lastRand[ 14  ]^lastRand[ 72   ]^lastRand[  73  ])
+		.cat(lastRand[ 14  ]^lastRand[ 44   ]^lastRand[  51  ])
+		.cat(lastRand[ 59  ]^lastRand[ 92   ]^lastRand[  100  ])
+		.cat(lastRand[ 59  ]^lastRand[ 103   ]^lastRand[  127  ])
+		.cat(lastRand[ 6  ]^lastRand[ 7   ]^lastRand[  117  ])
+		.cat(lastRand[ 0  ]^lastRand[ 48   ]^lastRand[ 90   ])
+		.cat(lastRand[ 82  ]^lastRand[  91  ]^lastRand[  119  ])
+		.cat(lastRand[ 56  ]^lastRand[ 108   ]^lastRand[ 110   ])
+		.cat(lastRand[ 63  ]^lastRand[ 104   ]^lastRand[ 125   ])
+		.cat(lastRand[ 10  ]^lastRand[ 89   ]^lastRand[ 123   ])
+		.cat(lastRand[ 60  ]^lastRand[ 111   ]^lastRand[ 114   ])
+		.cat(lastRand[ 2  ]^lastRand[ 69   ]^lastRand[ 124   ])
+		.cat(lastRand[ 48  ]^lastRand[ 126   ]^lastRand[ 127   ])
+		.cat(lastRand[ 18  ]^lastRand[ 42   ]^lastRand[ 89   ])
+		.cat(lastRand[ 46  ]^lastRand[ 86   ]^lastRand[ 119   ])
+		.cat(lastRand[ 32  ]^lastRand[  45  ]^lastRand[ 118   ])
+		.cat(lastRand[ 2  ]^lastRand[ 82   ]^lastRand[ 95   ])
+		.cat(lastRand[ 37  ]^lastRand[ 120   ]^lastRand[ 121   ])
+		.cat(lastRand[ 61  ]^lastRand[ 83   ]^lastRand[ 86   ])
+		.cat(lastRand[ 8  ]^lastRand[ 57   ]^lastRand[  91  ])
+		.cat(lastRand[ 16  ]^lastRand[ 52   ]^lastRand[ 120   ])
+		.cat(lastRand[ 15  ]^lastRand[  42  ]^lastRand[  49  ])
+		.cat(lastRand[ 13  ]^lastRand[  38  ]^lastRand[ 73   ])
+		.cat(lastRand[ 46  ]^lastRand[  48  ]^lastRand[ 55   ])
+		.cat(lastRand[ 13  ]^lastRand[ 14   ]^lastRand[ 104   ])
+		.cat(lastRand[ 21  ]^lastRand[ 33   ]^lastRand[  92  ])
+		.cat(lastRand[ 79  ]^lastRand[ 94   ]^lastRand[  113  ])
+		.cat(lastRand[ 16  ]^lastRand[ 102   ]^lastRand[ 114   ])
+		.cat(lastRand[ 55  ]^lastRand[  95  ])
+		.cat(lastRand[ 1  ]^lastRand[ 101   ]^lastRand[ 121  ])
+		.cat(lastRand[ 28  ]^lastRand[ 77   ]^lastRand[  117  ])
+		.cat(lastRand[ 21  ]^lastRand[  25  ]^lastRand[ 60   ])
+		.cat(lastRand[ 47  ]^lastRand[ 80   ]^lastRand[ 96   ])
+		.cat(lastRand[ 94  ]^lastRand[ 108   ])
+		.cat(lastRand[ 38  ]^lastRand[ 57   ]^lastRand[ 70   ])
+		.cat(lastRand[ 5  ]^lastRand[  75  ])
+		.cat(lastRand[ 11  ]^lastRand[  39  ]^lastRand[ 107   ]);
+
+		lastRand.connect( stream.offset( randOut, -3 ) );
+
+	}
+}

@@ -1,0 +1,488 @@
+/**
+    QPI Kernel by Xie Junyi
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplexType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplex;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode;
+
+class QPIKernel extends Kernel {
+
+    protected QPIKernel(KernelParameters parameters, int size_x, int size_y) {
+        super(parameters);
+    //pre-calculated values
+    int size_MinRAM = 2;
+    int size_MaxRAM = 2;  
+    double NA = 0.66;
+    double lambda = 1064e-9;
+    double PI = 3.141592653589793238; 
+
+        DFEType INT_32 = dfeInt(32);
+        DFEType FLOAT_32 = dfeFloat(8, 24);
+        DFEType INT_16 = dfeInt(16);
+        DFEType type_fix0 = dfeFix(25, 15, SignMode.TWOSCOMPLEMENT);
+        DFEType type_fix1 = dfeFix(2, 14, SignMode.TWOSCOMPLEMENT);
+        DFEComplexType Comp_Type = new DFEComplexType(FLOAT_32);        
+
+        //counter chain
+        CounterChain img_chain = control.count.makeCounterChain();
+        DFEVar img_num = img_chain.addCounter(5,1);
+        DFEVar x_count = img_chain.addCounter(size_x, 1);
+        DFEVar y_count = img_chain.addCounter(size_y, 1);
+
+        //all count
+        Count.Params all_param = control.count.makeParams(32);
+        DFEVar all_count = control.count.makeCounter(all_param).getCount();
+
+        DFEVar i1_in = io.input("i1", FLOAT_32);
+        DFEVar i2_in = io.input("i2", FLOAT_32);
+        DFEVar i3_in = io.input("i3", FLOAT_32);
+        DFEVar i4_in = io.input("i4", FLOAT_32);
+        
+        /*
+        DFEVar i1 = i1_in;
+        DFEVar i2 = i2_in;
+        DFEVar i3 = i3_in;
+        DFEVar i4 = i4_in;
+        */
+        DFEVar i1 = i1_in.cast(type_fix0);
+        DFEVar i2 = i2_in.cast(type_fix0);
+        DFEVar i3 = i3_in.cast(type_fix0);
+        DFEVar i4 = i4_in.cast(type_fix0);
+        
+///////////////////////Step 1. Original Image Normalization//////////////////////////
+
+  ////Step 1.1 background subtraction
+        /*
+        DFEVar carriedSum1 = FLOAT_32.newInstance(this);
+        DFEVar carriedSum2 = FLOAT_32.newInstance(this);
+        DFEVar carriedSum3 = FLOAT_32.newInstance(this);
+        DFEVar carriedSum4 = FLOAT_32.newInstance(this);
+        */
+        DFEVar carriedSum1 = type_fix0.newInstance(this);
+        DFEVar carriedSum2 = type_fix0.newInstance(this);
+        DFEVar carriedSum3 = type_fix0.newInstance(this);
+        DFEVar carriedSum4 = type_fix0.newInstance(this);
+
+        ////sum up each column and store in RAM, get max and min for each image
+        optimization.pushPipeliningFactor(0);
+        //img1
+        DFEVar sum1 = (y_count.eq(0) ? 0 : carriedSum1);
+        //DFEVar newSum1 = sum1 + i1;
+        DFEVar newSum1 = sum1 + i1.cast(type_fix0);
+        carriedSum1 <== stream.offset(newSum1, -1);
+
+        //img2
+        DFEVar sum2 = (y_count.eq(0) ? 0 : carriedSum2);
+        //DFEVar newSum2 = sum2 + i2;
+        DFEVar newSum2 = sum2 + i2.cast(type_fix0);
+        carriedSum2 <== stream.offset(newSum2, -1);
+
+        //img3
+        DFEVar sum3 = (y_count.eq(0) ? 0 : carriedSum3);
+        //DFEVar newSum3 = sum3 + i3;
+        DFEVar newSum3 = sum3 + i3.cast(type_fix0);
+        carriedSum3 <== stream.offset(newSum3, -1);
+
+        //img4
+        DFEVar sum4 = (y_count.eq(0) ? 0 : carriedSum4);
+        //DFEVar newSum4 = sum4 + i4;
+        DFEVar newSum4 = sum4 + i4.cast(type_fix0);
+        carriedSum4 <== stream.offset(newSum4, -1);
+        optimization.pushPipeliningFactor(1);
+        ////end of column sum DFE
+
+
+  ////ColumnSumRAM declaration 
+        DFEVar ColumnSumRAM_WAddr = x_count.cast(dfeUInt(MathUtils.bitsToAddress(size_x))); //write addr 
+        DFEVar ColumnSumRAM_RAddr = stream.offset(ColumnSumRAM_WAddr, -size_y); //read addr
+        DFEVar ColumnSumRAM_WEnable = (y_count.eq(size_y-1));// & x_count < size_x-1); //write enalbe
+
+  //ColumnSumRAM for image 1
+        RamPortParams<DFEVar> ColumnSumRAM1_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, ColumnSumRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(newSum1)
+                        .withWriteEnable(ColumnSumRAM_WEnable);
+
+        RamPortParams<DFEVar> ColumnSumRAM1_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, ColumnSumRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> ColumnSumRAM1 = mem.ramDualPort(size_x, RamWriteMode.READ_FIRST, ColumnSumRAM1_inputPort, ColumnSumRAM1_outputPort);
+        //DFEVar ColumnSumRAM1_RValue = stream.offset(ColumnSumRAM1.getOutputB(), 1);
+        DFEVar ColumnSumRAM1_RValue = ColumnSumRAM1.getOutputB();
+
+
+  //ColumnSumRAM for image 2
+        RamPortParams<DFEVar> ColumnSumRAM2_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, ColumnSumRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(newSum2)
+                        .withWriteEnable(ColumnSumRAM_WEnable);
+
+        RamPortParams<DFEVar> ColumnSumRAM2_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, ColumnSumRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> ColumnSumRAM2 = mem.ramDualPort(size_x, RamWriteMode.READ_FIRST, ColumnSumRAM2_inputPort, ColumnSumRAM2_outputPort);
+        DFEVar ColumnSumRAM2_RValue = ColumnSumRAM2.getOutputB();
+
+
+  //ColumnSumRAM for image 3
+        RamPortParams<DFEVar> ColumnSumRAM3_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, ColumnSumRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(newSum3)
+                        .withWriteEnable(ColumnSumRAM_WEnable);
+
+        RamPortParams<DFEVar> ColumnSumRAM3_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, ColumnSumRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> ColumnSumRAM3 = mem.ramDualPort(size_x, RamWriteMode.READ_FIRST, ColumnSumRAM3_inputPort, ColumnSumRAM3_outputPort);
+        DFEVar ColumnSumRAM3_RValue = ColumnSumRAM3.getOutputB();
+  
+
+  //ColumnSumRAM for image 4
+        RamPortParams<DFEVar> ColumnSumRAM4_inputPort = 
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, ColumnSumRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(newSum4)
+                        .withWriteEnable(ColumnSumRAM_WEnable);
+
+        RamPortParams<DFEVar> ColumnSumRAM4_outputPort = 
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, ColumnSumRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> ColumnSumRAM4 = mem.ramDualPort(size_x, RamWriteMode.READ_FIRST, ColumnSumRAM4_inputPort, ColumnSumRAM4_outputPort);
+        DFEVar ColumnSumRAM4_RValue = ColumnSumRAM4.getOutputB();
+  
+        //Mean calculation
+        DFEVar ColumnMean1 = ColumnSumRAM1_RValue / size_y;
+        DFEVar ColumnMean2 = ColumnSumRAM2_RValue / size_y;
+        DFEVar ColumnMean3 = ColumnSumRAM3_RValue / size_y;
+        DFEVar ColumnMean4 = ColumnSumRAM4_RValue / size_y;
+  
+        //subtraction 
+        DFEVar i1_delay = stream.offset(i1, -size_y);
+        DFEVar i1_bgs = i1_delay - ColumnMean1;
+        
+        DFEVar i2_delay = stream.offset(i2, -size_y);
+        DFEVar i2_bgs = i2_delay - ColumnMean2;
+ 
+        DFEVar i3_delay = stream.offset(i3, -size_y);
+        DFEVar i3_bgs = i3_delay - ColumnMean3;
+
+        DFEVar i4_delay = stream.offset(i4, -size_y);
+        DFEVar i4_bgs = i4_delay - ColumnMean4;
+        //debug.printf("im = %d, x = %d, y = %d, i1_bgs = i1_delay - mean1 = %f - %f = %f\n", img_num, x_count, y_count, i1_delay, ColumnMean1, i1_bgs);
+        //debug.printf("im = %d, x = %d, y = %d, i1_bgs = %f, i2_bgs = %f, i3_bgs = %f, i4_bgs = %f\n", img_num, x_count, y_count, i1_bgs, i2_bgs, i3_bgs, i4_bgs);
+        
+        ////Step 1.2 get pixel value positive
+        /*
+        DFEVar i1_bgs_carriedMin = FLOAT_32.newInstance(this); 
+        DFEVar i2_bgs_carriedMin = FLOAT_32.newInstance(this); 
+        DFEVar i3_bgs_carriedMin = FLOAT_32.newInstance(this); 
+        DFEVar i4_bgs_carriedMin = FLOAT_32.newInstance(this); 
+
+        DFEVar i1_bgs_carriedMax = FLOAT_32.newInstance(this);
+        DFEVar i2_bgs_carriedMax = FLOAT_32.newInstance(this);
+        DFEVar i3_bgs_carriedMax = FLOAT_32.newInstance(this);
+        DFEVar i4_bgs_carriedMax = FLOAT_32.newInstance(this);
+        */
+        DFEVar i1_bgs_carriedMin = type_fix0.newInstance(this); 
+        DFEVar i2_bgs_carriedMin = type_fix0.newInstance(this); 
+        DFEVar i3_bgs_carriedMin = type_fix0.newInstance(this); 
+        DFEVar i4_bgs_carriedMin = type_fix0.newInstance(this); 
+
+        DFEVar i1_bgs_carriedMax = type_fix0.newInstance(this);
+        DFEVar i2_bgs_carriedMax = type_fix0.newInstance(this);
+        DFEVar i3_bgs_carriedMax = type_fix0.newInstance(this);
+        DFEVar i4_bgs_carriedMax = type_fix0.newInstance(this);
+
+        //set pipelining factor for minimum finder
+        optimization.pushPipeliningFactor(0);
+        //note here: ix_bgs is only ready after 1st column, so min/max should be reset when x_count === 1
+        //minimum finder
+        //i1_bgs min
+        DFEVar i1_bgs_min_temp = (y_count.eq(0)&x_count.eq(1)) ? 100 : i1_bgs_carriedMin;
+        DFEVar i1_bgs_newMin = (i1_bgs < i1_bgs_min_temp) ? i1_bgs : i1_bgs_min_temp;
+        i1_bgs_carriedMin <== stream.offset(i1_bgs_newMin, -1);
+        
+        //i2_bgs min
+        DFEVar i2_bgs_min_temp = (y_count.eq(0)&x_count.eq(1)) ? 100 : i2_bgs_carriedMin;
+        DFEVar i2_bgs_newMin = (i2_bgs < i2_bgs_min_temp) ? i2_bgs : i2_bgs_min_temp;
+        i2_bgs_carriedMin <== stream.offset(i2_bgs_newMin, -1);
+        //debug.printf("i2_bgs_newMin = %f\n", i2_bgs_newMin); 
+
+        //i3_bgs min
+        DFEVar i3_bgs_min_temp = (y_count.eq(0)&x_count.eq(1)) ? 100 : i3_bgs_carriedMin;
+        DFEVar i3_bgs_newMin = (i3_bgs < i3_bgs_min_temp) ? i3_bgs : i3_bgs_min_temp;
+        i3_bgs_carriedMin <== stream.offset(i3_bgs_newMin, -1);
+
+        //i4_bgs min
+        DFEVar i4_bgs_min_temp = (y_count.eq(0)&x_count.eq(1)) ? 100 : i4_bgs_carriedMin;
+        DFEVar i4_bgs_newMin = (i4_bgs < i4_bgs_min_temp) ? i4_bgs : i4_bgs_min_temp;
+        i4_bgs_carriedMin <== stream.offset(i4_bgs_newMin, -1);
+        
+        //i1_bgs max
+        DFEVar i1_bgs_max_temp = (y_count.eq(0)&x_count.eq(1)) ? 0 : i1_bgs_carriedMax;
+        DFEVar i1_bgs_newMax = (i1_bgs > i1_bgs_max_temp) ? i1_bgs : i1_bgs_max_temp;
+        i1_bgs_carriedMax <== stream.offset(i1_bgs_newMax, -1);
+        
+        //i2_bgs max
+        DFEVar i2_bgs_max_temp = (y_count.eq(0)&x_count.eq(1)) ? 0 : i2_bgs_carriedMax;
+        DFEVar i2_bgs_newMax = (i2_bgs > i2_bgs_max_temp) ? i2_bgs : i2_bgs_max_temp;
+        i2_bgs_carriedMax <== stream.offset(i2_bgs_newMax, -1);
+        //debug.printf("i2_bgs_newMax = %f\n", i2_bgs_newMax);
+
+        //i3_bgs max
+        DFEVar i3_bgs_max_temp = (y_count.eq(0)&x_count.eq(1)) ? 0 : i3_bgs_carriedMax;
+        DFEVar i3_bgs_newMax = (i3_bgs > i3_bgs_max_temp) ? i3_bgs : i3_bgs_max_temp;
+        i3_bgs_carriedMax <== stream.offset(i3_bgs_newMax, -1);
+ 
+        //i4_bgs max
+        DFEVar i4_bgs_max_temp = (y_count.eq(0)&x_count.eq(1)) ? 0 : i4_bgs_carriedMax;
+        DFEVar i4_bgs_newMax = (i4_bgs > i4_bgs_max_temp) ? i4_bgs : i4_bgs_max_temp;
+        i4_bgs_carriedMax <== stream.offset(i4_bgs_newMax, -1);
+
+        optimization.pushPipeliningFactor(1);
+
+  //store Min value of ix_bgs to MinRAM
+  //port declaration
+        DFEVar MinRAM_WAddr = constant.var(0).cast(dfeUInt(MathUtils.bitsToAddress(2))); //write addr 
+        DFEVar MinRAM_RAddr = constant.var(0).cast(dfeUInt(MathUtils.bitsToAddress(2))); //read addr
+        DFEVar MinRAM_WEnable = (y_count.eq(size_y-1) & x_count.eq(0)); //write enalbe
+  
+        //MinRAM1
+        RamPortParams<DFEVar> MinRAM1_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MinRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(i1_bgs_newMin)
+                        .withWriteEnable(MinRAM_WEnable);
+
+        RamPortParams<DFEVar> MinRAM1_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MinRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> MinRAM1 = mem.ramDualPort(size_MinRAM, RamWriteMode.READ_FIRST, MinRAM1_inputPort, MinRAM1_outputPort);
+        DFEVar MinRAM1_RValue = MinRAM1.getOutputB();
+
+
+        //MinRAM2
+        RamPortParams<DFEVar> MinRAM2_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MinRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(i2_bgs_newMin)
+                        .withWriteEnable(MinRAM_WEnable);
+
+        RamPortParams<DFEVar> MinRAM2_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MinRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> MinRAM2 = mem.ramDualPort(size_MinRAM, RamWriteMode.READ_FIRST, MinRAM2_inputPort, MinRAM2_outputPort);
+        DFEVar MinRAM2_RValue = MinRAM2.getOutputB();
+
+        //MinRAM3
+        RamPortParams<DFEVar> MinRAM3_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MinRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(i3_bgs_newMin)
+                        .withWriteEnable(MinRAM_WEnable);
+
+        RamPortParams<DFEVar> MinRAM3_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MinRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> MinRAM3 = mem.ramDualPort(size_MinRAM, RamWriteMode.READ_FIRST, MinRAM3_inputPort, MinRAM3_outputPort);
+        DFEVar MinRAM3_RValue = MinRAM3.getOutputB();
+
+        //MinRAM4
+        RamPortParams<DFEVar> MinRAM4_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MinRAM_WAddr, type_fix0)//FLOAT_32)
+                        .withDataIn(i4_bgs_newMin)
+                        .withWriteEnable(MinRAM_WEnable);
+
+        RamPortParams<DFEVar> MinRAM4_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MinRAM_RAddr, type_fix0);//FLOAT_32);
+
+        DualPortMemOutputs<DFEVar> MinRAM4 = mem.ramDualPort(size_MinRAM, RamWriteMode.READ_FIRST, MinRAM4_inputPort, MinRAM4_outputPort);
+        DFEVar MinRAM4_RValue = MinRAM4.getOutputB();
+
+        //Max RAM
+        DFEVar MaxRAM_WAddr = constant.var(0).cast(dfeUInt(MathUtils.bitsToAddress(2))); //write addr 
+        DFEVar MaxRAM_RAddr = constant.var(0).cast(dfeUInt(MathUtils.bitsToAddress(2))); //read addr
+        DFEVar MaxRAM_WEnable = (y_count.eq(size_y-1) & x_count.eq(0)); //write enalbe
+
+        //MaxRAM1
+        RamPortParams<DFEVar> MaxRAM1_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MaxRAM_WAddr, type_fix0)
+                        .withDataIn(i1_bgs_newMax)
+                        .withWriteEnable(MaxRAM_WEnable);
+
+        RamPortParams<DFEVar> MaxRAM1_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MaxRAM_RAddr, type_fix0);
+
+        DualPortMemOutputs<DFEVar> MaxRAM1 = mem.ramDualPort(size_MaxRAM, RamWriteMode.READ_FIRST, MaxRAM1_inputPort, MaxRAM1_outputPort);
+        DFEVar MaxRAM1_RValue = MaxRAM1.getOutputB();
+
+        //MaxRAM2
+        RamPortParams<DFEVar> MaxRAM2_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MaxRAM_WAddr, type_fix0)
+                        .withDataIn(i2_bgs_newMax)
+                        .withWriteEnable(MaxRAM_WEnable);
+
+        RamPortParams<DFEVar> MaxRAM2_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MaxRAM_RAddr, type_fix0);
+
+        DualPortMemOutputs<DFEVar> MaxRAM2 = mem.ramDualPort(size_MaxRAM, RamWriteMode.READ_FIRST, MaxRAM2_inputPort, MaxRAM2_outputPort);
+        DFEVar MaxRAM2_RValue = MaxRAM2.getOutputB();
+
+        //MaxRAM3
+        RamPortParams<DFEVar> MaxRAM3_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MaxRAM_WAddr, type_fix0)
+                        .withDataIn(i3_bgs_newMax)
+                        .withWriteEnable(MaxRAM_WEnable);
+
+        RamPortParams<DFEVar> MaxRAM3_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MaxRAM_RAddr, type_fix0);
+
+        DualPortMemOutputs<DFEVar> MaxRAM3 = mem.ramDualPort(size_MaxRAM, RamWriteMode.READ_FIRST, MaxRAM3_inputPort, MaxRAM3_outputPort);
+        DFEVar MaxRAM3_RValue = MaxRAM3.getOutputB();
+
+        //MaxRAM4
+        RamPortParams<DFEVar> MaxRAM4_inputPort =
+                        mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MaxRAM_WAddr, type_fix0)
+                        .withDataIn(i4_bgs_newMax)
+                        .withWriteEnable(MaxRAM_WEnable);
+
+        RamPortParams<DFEVar> MaxRAM4_outputPort =
+                        mem.makeRamPortParams(RamPortMode.READ_ONLY, MaxRAM_RAddr, type_fix0);
+
+        DualPortMemOutputs<DFEVar> MaxRAM4 = mem.ramDualPort(size_MaxRAM, RamWriteMode.READ_FIRST, MaxRAM4_inputPort, MaxRAM4_outputPort);
+        DFEVar MaxRAM4_RValue = MaxRAM4.getOutputB();
+
+  ////subtract min from ix_bgs
+        DFEVar i1_bgs_offset = stream.offset(i1_bgs.cast(INT_16), - (size_x * size_y) );
+        //DFEVar i1_pos = i1_bgs_offset - MinRAM1_RValue;  
+        DFEVar i1_norm = (i1_bgs_offset.cast(type_fix0) - MinRAM1_RValue) / (MaxRAM1_RValue - MinRAM1_RValue);
+
+        DFEVar i2_bgs_offset = stream.offset(i2_bgs.cast(INT_16), - (size_x * size_y) );
+        //DFEVar i2_pos = i2_bgs_offset - MinRAM2_RValue;
+        DFEVar i2_norm = (i2_bgs_offset.cast(type_fix0) - MinRAM2_RValue) / (MaxRAM2_RValue - MinRAM2_RValue);
+
+        DFEVar i3_bgs_offset = stream.offset(i3_bgs.cast(INT_16), - (size_x * size_y) );
+        //DFEVar i3_pos = i3_bgs_offset - MinRAM3_RValue;
+        DFEVar i3_norm = (i3_bgs_offset.cast(type_fix0) - MinRAM3_RValue) / (MaxRAM3_RValue - MinRAM3_RValue);
+
+        DFEVar i4_bgs_offset = stream.offset(i4_bgs.cast(INT_16), - (size_x * size_y) );
+        //DFEVar i4_pos = i4_bgs_offset - MinRAM4_RValue;
+        DFEVar i4_norm = (i4_bgs_offset.cast(type_fix0) - MinRAM4_RValue) / (MaxRAM4_RValue - MinRAM4_RValue);
+
+        //debug.printf("im = %d, x = %d, y = %d, i1_norm = %f, i2_norm = %f, i3_norm = %f, i4_norm = %f\n", img_num, x_count, y_count, i1_norm, i2_norm, i3_norm, i4_norm);
+  
+   //i5/6/7/8 generation
+  DFEVar i5_pre = (i3_norm - i4_norm).cast(type_fix1);
+  DFEVar i6_pre = (i1_norm - i2_norm).cast(type_fix1);
+  DFEVar i7_pre = (i3_norm + i4_norm).cast(type_fix1);
+  DFEVar i8_pre = (i1_norm + i2_norm).cast(type_fix1);
+  //debug.printf("im = %d, x = %d, y = %d, i5_pre = %f, i6_pre = %f, i7_pre = %f, i8_pre = %f\n", img_num, x_count, y_count, i5_pre, i6_pre, i7_pre, i8_pre);
+
+/////////////get i5, i6 positive/////////
+  DFEVar i5_pre_carriedMin = type_fix1.newInstance(this);
+  DFEVar i6_pre_carriedMin = type_fix1.newInstance(this);
+  
+  optimization.pushPipeliningFactor(0);
+
+  //minimum finder
+  //i6_pre
+  DFEVar i5_pre_min_temp = (y_count.eq(0) & x_count.eq(1)) ? 1 : i5_pre_carriedMin;
+  DFEVar i5_pre_newMin = (i5_pre < i5_pre_min_temp) ? i5_pre : i5_pre_min_temp;
+  i5_pre_carriedMin <== stream.offset(i5_pre_newMin, -1);
+
+  DFEVar i6_pre_min_temp = (y_count.eq(0) & x_count.eq(1)) ? 1 : i6_pre_carriedMin;
+  DFEVar i6_pre_newMin = (i6_pre < i6_pre_min_temp) ? i6_pre : i6_pre_min_temp;
+  i6_pre_carriedMin <== stream.offset(i6_pre_newMin, -1);
+  
+  optimization.pushPipeliningFactor(1);
+  
+  //store min to MinRAM
+  //for i5
+  RamPortParams<DFEVar> MinRAM5_inputPort =
+                   mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MinRAM_WAddr, type_fix1)
+                   .withDataIn(i5_pre_newMin)
+                   .withWriteEnable(MinRAM_WEnable);
+  RamPortParams<DFEVar> MinRAM5_outputPort =
+                   mem.makeRamPortParams(RamPortMode.READ_ONLY, MinRAM_RAddr, type_fix1);
+
+  DualPortMemOutputs<DFEVar> MinRAM5 = mem.ramDualPort(size_MinRAM, RamWriteMode.READ_FIRST, MinRAM5_inputPort, MinRAM5_outputPort);
+  DFEVar MinRAM5_RValue = MinRAM5.getOutputB();
+
+  //for i6
+  RamPortParams<DFEVar> MinRAM6_inputPort =
+                   mem.makeRamPortParams(RamPortMode.WRITE_ONLY, MinRAM_WAddr,type_fix1)
+                   .withDataIn(i6_pre_newMin)
+                   .withWriteEnable(MinRAM_WEnable);
+  RamPortParams<DFEVar> MinRAM6_outputPort =
+                   mem.makeRamPortParams(RamPortMode.READ_ONLY, MinRAM_RAddr, type_fix1);
+
+  DualPortMemOutputs<DFEVar> MinRAM6 = mem.ramDualPort(size_MinRAM, RamWriteMode.READ_FIRST, MinRAM6_inputPort, MinRAM6_outputPort);
+  DFEVar MinRAM6_RValue = MinRAM6.getOutputB();
+
+  //subtract min from ix_pre
+  DFEVar i5_pre_offset = stream.offset(i5_pre, -(size_x * size_y));
+  DFEVar i5 = i5_pre_offset - MinRAM5_RValue;
+  DFEVar i6_pre_offset = stream.offset(i6_pre, -(size_x * size_y));
+  DFEVar i6 = i6_pre_offset - MinRAM6_RValue;
+  DFEVar i7 = stream.offset(i7_pre, -(size_x * size_y));
+  DFEVar i8 = stream.offset(i8_pre, -(size_x * size_y));
+  //debug.printf("im = %d, x = %d, y = %d, i5 = %f, i6 = %f, i7 = %f, i8 = %f\n", img_num, x_count, y_count, i5.cast(FLOAT_32), i6.cast(FLOAT_32), i7.cast(FLOAT_32), i8.cast(FLOAT_32));
+
+  //debug.printf("im = %d, x = %d, y = %d, i5 = %f, i6 = %f, i7 = %f, i8 = %f\n", img_num, x_count, y_count, i5_pre, i6_pre, i7_pre, i8_pre);
+  ////Step 1.4 theta and dphi matrix calculation
+  DFEVar theta_x = NA / i7.cast(FLOAT_32) * i5.cast(FLOAT_32);
+  DFEVar theta_y = NA / i8.cast(FLOAT_32) * i6.cast(FLOAT_32);
+
+  DFEVar dphi_x = 2 * PI / lambda * theta_x;
+  DFEVar dphi_y = 2 * PI / lambda * theta_y;
+  //debug.printf("im = %d, x = %d, y = %d,  theta_x = %f, theta_y = %f, dphi_x = %f, dphi_y = %f\n", img_num, x_count, y_count, theta_x, theta_y, dphi_x, dphi_y);
+
+  DFEComplex G = Comp_Type.newInstance(this);
+  G.setReal(dphi_x);
+  G.setImaginary(dphi_y);
+
+  //debug.printf("all_count = %d\n", all_count);
+  //debug.printf("im = %d, x = %d, y = %d, G = %f + i %f\n", img_num, x_count, y_count, G.getReal(), G.getImaginary()); 
+  DFEVar Next_Enable = all_count > 131327;
+
+////////////////////////////////output streams/////////////////////////////////////////////////////
+        
+        //io.output("mean1", stream.offset(ColumnMean1, 1), FLOAT_32, y_count.eq(constant.var(size_y) - 1));
+        //io.output("mean2", stream.offset(ColumnMean2, 1), FLOAT_32, y_count.eq(constant.var(size_y) - 1));
+        //io.output("mean3", stream.offset(ColumnMean3, 1), FLOAT_32, y_count.eq(constant.var(size_y) - 1));
+        //io.output("mean4", stream.offset(ColumnMean4, 1), FLOAT_32, y_count.eq(constant.var(size_y) - 1));
+        //io.output("i1_bgs", i1_bgs, FLOAT_32, (img_num === 0 & x_count>0) | (x_count === 0 & img_num === 1));
+        //io.output("i1_bgs_newMin", i1_bgs_newMin, FLOAT_32, img_num === 1 & y_count >= size_y-4 & y_count<=size_y-1);
+        //io.output("i1_bgs_positive", i1_pos, FLOAT_32, (img_num === 1 & x_count > 0 ) | (img_num === 2 & x_count === 0));
+        //io.output("i1_pos_newMax", i1_pos_newMax, FLOAT_32, img_num === 2 & y_count >= size_y-4 & y_count<=size_y-1);
+        //io.output("i1_norm", i1_norm, FLOAT_32, (img_num === 1 & x_count > 0) | (img_num === 2 & x_count === 0));
+ 
+        //io.output("i2_bgs_positive", i2_pos, FLOAT_32, (img_num === 1 & x_count > 0 ) | (img_num === 2 & x_count === 0));
+        //io.output("i2_norm", i2_norm, FLOAT_32, (img_num === 1 & x_count > 0) | (img_num === 2 & x_count === 0));
+
+        //io.output("i6", i5.cast(FLOAT_32), FLOAT_32, (img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0));
+        //io.output("i8", i7.cast(FLOAT_32), FLOAT_32, (img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0));
+        //io.output("theta_y", theta_y, FLOAT_32, ((img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0))); 
+        //io.output("dphi_y", dphi_y, FLOAT_32, ((img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0)));
+
+        //io.output("i3_bgs_positive", i3_pos, FLOAT_32, (img_num === 1 & x_count > 0 ) | (img_num === 2 & x_count === 0));
+        //io.output("i3_norm", i3_norm, FLOAT_32, (img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0));
+
+        //io.output("i4_bgs_positive", i4_pos, FLOAT_32, (img_num === 1 & x_count > 0 ) | (img_num === 2 & x_count === 0));
+        //io.output("i4_norm", i4_norm, FLOAT_32, (img_num === 2 & x_count > 0) | (img_num === 3 & x_count === 0));
+        
+        
+        io.output("G", G * constant.var(50 * 0.000001), Comp_Type);
+        io.output("Next_Enable", Next_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+        
+        //io.output("phi", dphi_x, FLOAT_32, Next_Enable);
+    }
+}

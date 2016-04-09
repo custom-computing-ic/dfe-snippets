@@ -1,0 +1,188 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplexType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplex;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Reductions;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode;
+
+
+class RotatorKernel extends Kernel {
+
+    protected RotatorKernel(KernelParameters parameters, int Rotator_Num, int FFTorIFFT) {
+        super(parameters);
+          
+          DFEType FLOAT_32 = dfeFloat(8,24);
+          DFEType type_fix0 = dfeFix(30, 15, SignMode.TWOSCOMPLEMENT);
+          //complex stream
+          DFEComplexType Comp_Type_FLOAT = new DFEComplexType (FLOAT_32);
+          DFEComplexType Comp_Type = new DFEComplexType(type_fix0);
+
+          //complex input stream
+          DFEComplex DIN = io.input("DIN", Comp_Type);
+          DFEVar Rotator_Enable = io.input("Rotator_Enable", dfeFix(1, 0, SignMode.UNSIGNED));
+
+          //optimization DSP
+          optimization.pushDSPFactor(1);
+
+
+          //overall counter
+          Count.Params all_param = control.count.makeParams(32)
+                                                .withEnable(Rotator_Enable);
+          DFEVar all_count = control.count.makeCounter(all_param).getCount();
+
+          Count.Params addrw_param = control.count.makeParams(8)
+                                  .withMax(256)
+                                  .withInc(1)
+                                  .withEnable(Rotator_Enable);
+          Counter addrw_counter = control.count.makeCounter(addrw_param);
+          DFEVar addrw = addrw_counter.getCount();
+          
+          //Twiddle Factor ROM
+          double twiddle_cos[] = new double[256];
+          double twiddle_sin[] = new double[256];
+          int ROM_index = 0;
+          if (FFTorIFFT == 1) {
+            for (int m = 0; m < 16; m++)
+            {
+              for (int n = 0; n < 16; n++)
+              {
+                  twiddle_cos[ROM_index] = Math.cos(Math.PI*n*m/128);
+                  twiddle_sin[ROM_index] = -Math.sin(Math.PI*n*m/128);
+                  ROM_index++;
+              }
+            }
+          }
+          else if (FFTorIFFT == 0) {
+            for (int m = 0; m < 16; m++)
+            {
+              for (int n = 0; n < 16; n++)
+              {
+                  twiddle_cos[ROM_index] = Math.cos(Math.PI*n*m/128);
+                  twiddle_sin[ROM_index] = Math.sin(Math.PI*n*m/128);
+                  ROM_index++;
+              }
+            }
+  
+          }  
+          //
+          Memory<DFEVar> TwiddleCosROM = mem.alloc(FLOAT_32, 256);
+          Memory<DFEVar> TwiddleSinROM = mem.alloc(FLOAT_32, 256);
+          
+          TwiddleCosROM.setContents(twiddle_cos);
+          TwiddleSinROM.setContents(twiddle_sin);
+          DFEVar TwiddleCosR = TwiddleCosROM.read(addrw);
+          DFEVar TwiddleSinR = TwiddleSinROM.read(addrw);
+
+          /*
+          if(Rotator_Num == 2) {
+          debug.printf("********************* Rotator 2 ************************\n");
+          debug.printf("Rotator Count = %d\n", all_count);
+          debug.printf("Rotator_Enable in Rotator Kernel = %d\n", Rotator_Enable);
+          debug.printf("indata = %f + i %f\n", DIN.getReal(), DIN.getImaginary());
+          debug.printf("addr = %d, Cos = %f, Sin = %f\n", addrw, TwiddleCosR, TwiddleSinR);
+          }
+          */
+
+          DFEVar drd = stream.offset(DIN.getReal(), -1);          
+          DFEVar did = stream.offset(DIN.getImaginary(), -1);
+          DFEVar wrd = stream.offset(TwiddleCosR, -1).cast(type_fix0);
+          DFEVar wid = stream.offset(TwiddleSinR, -1).cast(type_fix0);
+
+          DFEVar drri = drd * wrd;
+          DFEVar diri = did * wrd;
+          DFEVar drii = drd * wid;
+          DFEVar diii = did * wid;
+         
+          DFEVar drr = stream.offset(drri, -1); 
+          DFEVar dri = stream.offset(drii, -1);
+          DFEVar dir = stream.offset(diri, -1);
+          DFEVar dii = stream.offset(diii, -1);
+          DFEVar dwr = stream.offset(drr - dii, -1);
+          DFEVar dwi = stream.offset(dri + dir, -1);
+          
+          DFEComplex DO = Comp_Type.newInstance(this);
+          DO.setReal(dwr);
+          DO.setImaginary(dwi);
+           
+          DFEVar FFT_Stage2_Enable = all_count >= 3;
+          optimization.popDSPFactor();
+
+          if (Rotator_Num ==1) {
+            //DFEVar FFT_Stage2_Enable = all_count >= 289; 
+            ///////////////////////////////////output////////////////////////////////////////
+            io.output("DO", DO, Comp_Type);
+            io.output("FFT_Stage2_Enable", FFT_Stage2_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+            //io.output("phi", DO.getReal().cast(FLOAT_32), FLOAT_32, FFT_Stage2_Enable);
+
+            
+            /*
+            debug.printf("-------------------Rotator1-------------------\n");
+            debug.printf("Rotator Count = %d\n", all_count);
+            debug.printf("Rotator_Enable in Rotator Kernel = %d\n", Rotator_Enable);
+            debug.printf("indata = %f + i %f\n", DIN.getReal(), DIN.getImaginary());
+            debug.printf("addr = %d, Cos = %f, Sin = %f\n", addrw, TwiddleCosR, TwiddleSinR);
+            debug.printf("FFT_Stage2_Enable = %d\n", FFT_Stage2_Enable);
+            debug.printf("DO = %f + i %f\n", DO.getReal(), DO.getImaginary());
+            */
+            //debug.printf("----------------------------------------------\n");
+
+          }
+
+          if (Rotator_Num == 2) {
+            //DFEVar FFT_Stage2_Enable = all_count >= 66656;
+            io.output("DO", DO, Comp_Type);
+            io.output("FFT_Stage2_Enable", FFT_Stage2_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+            /* 
+            debug.printf("-------------------Rotator2-------------------\n");
+            debug.printf("Rotator Count = %d\n", all_count);
+            debug.printf("Rotator_Enable in Rotator Kernel = %d\n", Rotator_Enable);
+            debug.printf("indata = %f + i %f\n", DIN.getReal(), DIN.getImaginary());
+            debug.printf("addr = %d, Cos = %f, Sin = %f\n", addrw, TwiddleCosR, TwiddleSinR);
+            debug.printf("FFT_Stage2_Enable = %d\n", FFT_Stage2_Enable);
+            debug.printf("DO = %f + i %f\n", DO.getReal(), DO.getImaginary());
+            */
+          }
+
+          if (Rotator_Num == 3) {
+            //DFEVar FFT_Stage2_Enable = all_count >= 66656;
+            io.output("DO", DO, Comp_Type);
+            io.output("FFT_Stage2_Enable", FFT_Stage2_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+            /* 
+            debug.printf("-------------------Rotator3-------------------\n");
+            debug.printf("Rotator Count = %d\n", all_count);
+            debug.printf("Rotator_Enable in Rotator Kernel = %d\n", Rotator_Enable);
+            debug.printf("indata = %f + i %f\n", DIN.getReal(), DIN.getImaginary());
+            debug.printf("addr = %d, Cos = %f, Sin = %f\n", addrw, TwiddleCosR, TwiddleSinR);
+            debug.printf("FFT_Stage2_Enable = %d\n", FFT_Stage2_Enable);
+            debug.printf("DO = %f + i %f\n", DO.getReal(), DO.getImaginary());
+            */
+          }
+          
+          if (Rotator_Num == 4) {
+            //DFEVar FFT_Stage2_Enable = all_count >= 66656;
+            io.output("DO", DO, Comp_Type);
+            io.output("FFT_Stage2_Enable", FFT_Stage2_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+            /*
+            debug.printf("-------------------Rotator4-------------------\n");
+            debug.printf("Rotator Count = %d\n", all_count);
+            debug.printf("Rotator_Enable in Rotator Kernel = %d\n", Rotator_Enable);
+            debug.printf("indata = %f + i %f\n", DIN.getReal(), DIN.getImaginary());
+            debug.printf("addr = %d, Cos = %f, Sin = %f\n", addrw, TwiddleCosR, TwiddleSinR);
+            debug.printf("FFT_Stage2_Enable = %d\n", FFT_Stage2_Enable);
+            debug.printf("DO = %f + i %f\n", DO.getReal(), DO.getImaginary());
+            */
+          }
+         
+    }
+}
+

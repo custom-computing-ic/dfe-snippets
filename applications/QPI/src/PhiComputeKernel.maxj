@@ -1,0 +1,95 @@
+/**
+    Phi Compute Kernel by Xie Junyi
+*/
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.KernelMath;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.Memory;
+import com.maxeler.maxcompiler.v2.utils.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Mem.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplexType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEComplex;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEFix.SignMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Reductions;
+
+class PhiComputeKernel extends Kernel {
+
+    protected PhiComputeKernel(KernelParameters parameters) {
+        super(parameters);
+
+          DFEType FLOAT_32 = dfeFloat(8,24);
+          DFEType type_fix0 = dfeFix(30, 15, SignMode.TWOSCOMPLEMENT);
+          //complex stream
+          DFEComplexType Comp_Type_FLOAT = new DFEComplexType (FLOAT_32);
+          DFEComplexType Comp_Type = new DFEComplexType(type_fix0);
+          
+          DFEType INT_32 = dfeInt(32);
+          //complex stream
+          DFEComplex DI = io.input("original", Comp_Type);
+          DFEVar Phi_Compute_Enable = io.input("Phi_Compute_Enable", dfeFix(1, 0, SignMode.UNSIGNED));
+          //DFEVar Phi_Compute_Enable = constant.var(dfeUInt(1), 1); 
+          
+          //debug.printf("//////////////// Phi Kernel /////////////////\n"); 
+          //debug.printf("DI = %f + I %f\n", DI.getReal(), DI.getImaginary());
+
+          //overall counter
+          Count.Params all_param = control.count.makeParams(32)
+                                                .withEnable(Phi_Compute_Enable);
+          DFEVar all_count = control.count.makeCounter(all_param).getCount();
+          //debug.printf("all_count in Phi = %d\n", all_count);
+
+         
+          //Coefficient Counter         
+          //Real_Part
+          Count.Params Real_Part_Param = control.count.makeParams(8)
+                                                .withEnable(Phi_Compute_Enable)
+                                                .withMax(256)
+                                                .withInitValue(128)
+                                                .withInc(1);
+          Counter Real_Part_counter = control.count.makeCounter(Real_Part_Param);
+          DFEVar Real_Part_pre = Real_Part_counter.getCount();
+          DFEVar Real_Part = Real_Part_pre.cast(dfeInt(32)) - 128;
+          //debug.printf("Real_Part_Count = %d\n", Real_Part);
+          
+          //IMG_Part
+          Count.Params IMG_Assis_Param = control.count.makeParams(8)
+                                                .withEnable(Phi_Compute_Enable)
+                                                .withMax(256)
+                                                .withInc(1);
+          Counter IMG_Assis_counter = control.count.makeCounter(IMG_Assis_Param);
+
+          Count.Params IMG_Part_Param = control.count.makeParams(8)
+                                                .withEnable(IMG_Assis_counter.getWrap())
+                                                .withMax(256)
+                                                .withInitValue(128)
+                                                .withInc(1);
+          Counter IMG_Part_counter = control.count.makeCounter(IMG_Part_Param);
+          DFEVar IMG_Part_pre = IMG_Part_counter.getCount();
+          DFEVar IMG_Part = 128 - IMG_Part_pre.cast(dfeInt(32));
+          //debug.printf("IMG_Part_Count = %d\n", IMG_Part);
+          DFEComplex k = Comp_Type.newInstance(this);
+          k.setReal(Real_Part.cast(type_fix0));
+          k.setImaginary(IMG_Part.cast(type_fix0));
+          //debug.printf("k = %f + I %f\n", k.getReal(), k.getImaginary());
+          
+          DFEComplex Phi = DI / (k * 2 * Math.PI);
+          //debug.printf("Phi = %f + I %f\n", Phi.getReal(), Phi.getImaginary());
+          
+          DFEVar Next_Enable = Phi_Compute_Enable; 
+          //debug.printf("Next_Enable = %d\n\n", Next_Enable);
+          io.output("DOUT", Phi, Comp_Type);
+          io.output("Next_Enable", Next_Enable, dfeFix(1, 0, SignMode.UNSIGNED));
+          //io.output("phi", Phi.getReal().cast(FLOAT_32), FLOAT_32, Next_Enable);
+
+          //debug.printf("half_count = %d, addr_RAW = %d\n", half_count, addr_RAW);
+          //debug.printf("write value = REAL%f + IMG%f\n", DI.getReal(), DI.getImaginary());
+          //debug.printf("read value = REAL%f + IMG%f\n", Read_Value.getReal(), Read_Value.getImaginary());
+           
+        }
+}
