@@ -1,0 +1,135 @@
+/* EmManger.maxj ----- James Arram 2014 */
+
+/*
+ * Em manager file
+ */
+
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig.Effort;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.*;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.*;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.*;
+
+class EmManager extends CustomManager {
+
+    private static final int N_KRNL = 5;
+
+    EmManager(EngineParameters engineParameters) {
+	super(engineParameters);
+	
+	// configure memory controller
+	MemoryControllerConfig memConfig = new MemoryControllerConfig();
+	memConfig.setDataReadFIFOExtraPipelineRegInFabric(true);
+	memConfig.setDataFIFOExtraPipelineRegInFabric(true);
+	memConfig.setEnableParityMode(true, true, 72, false);
+        memConfig.setMAX4qMode(true);
+	memConfig.setCMDQSize(127);
+	config.setMemoryControllerConfig(memConfig);
+
+	// build configuration
+	BuildConfig buildConfig = new BuildConfig(BuildConfig.Level.FULL_BUILD);
+        buildConfig.setBuildEffort(Effort.HIGH);
+        buildConfig.setEnableTimingAnalysis(true);
+        buildConfig.setMPPRCostTableSearchRange(1, 16);
+        buildConfig.setMPPRParallelism(8);
+        setBuildConfig(buildConfig);
+	config.setDefaultStreamClockFrequency(150);
+	config.setOnCardMemoryFrequency(LMemFrequency.MAX4MAIA_800);
+
+	// instantiate memory controllers
+	LMemInterface[] iface = new  LMemInterface[N_KRNL];
+	for (int i = 0; i < N_KRNL; i++) {
+	    iface[i] = addLMemInterface("ctrl" + i, 1);
+	}
+
+	// instantiate kernels and connect streams	    
+	for (int i = 0; i < N_KRNL; i++) {
+
+	    KernelBlock kEm = addKernel(new EmKernel(makeKernelParameters("EmKernel" + i)));
+	    KernelBlock kCmd = addKernel(new CmdKernel(makeKernelParameters("CmdKernel" + i)));
+    
+	    DFELink readIn = addStreamFromCPU("readIn" + i);
+	    kEm.getInput("readIn") <== readIn;
+	    
+	    DFELink alignOut = addStreamToCPU("alignOut" + i);
+	    alignOut <== kEm.getOutput("alignOut");
+	    
+	    kCmd.getInput("memCmd") <== kEm.getOutput("memCmd");
+	    kCmd.getInput("flushTrig") <== kEm.getOutput("flushTrig");
+  
+	    DFELink lowIndex = iface[i].addStreamFromLMem("lowIndex" + i, kCmd.getOutput("lowCmd"));
+	    DFELink highIndex = iface[i].addStreamFromLMem("highIndex" + i, kCmd.getOutput("highCmd"));
+	    kEm.getInput("lowIndex") <== lowIndex;
+	    kEm.getInput("highIndex") <== highIndex;
+	}
+
+	// index to LMem
+	DFELink indexToMger = addStreamFromCPU("indexToMger");
+	Fanout fan = fanout("fan");
+	fan.getInput() <== indexToMger;
+	for (int i = 0; i < N_KRNL; i++) {
+	    DFELink fanOut = fan.addOutput("fanOut" + i);
+	    DFELink fanToLMem = iface[i].addStreamToLMem("indexToLMem" + i, 
+							 LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
+	    fanToLMem <== fanOut;
+	}
+    }
+
+    // write engine interface
+    private static EngineInterface interfaceWrite(String name) {
+	EngineInterface ei = new EngineInterface(name);
+	
+	InterfaceParam nBytes  = ei.addParam("nBytes", CPUTypes.UINT64);
+	InterfaceParam offset = ei.addParam("offset", CPUTypes.UINT64);
+
+	ei.setStream("indexToMger", CPUTypes.UINT64, nBytes);
+	for (int i = 0; i < N_KRNL; i++) {
+	    ei.setLMemLinear("ctrl" + i, "indexToLMem" + i, offset, nBytes);
+	}	
+
+	String routeString = "";	
+	for (int i = 0; i < N_KRNL; i++) {
+	    String tmp = String.format("fan -> fanOut%d", i);
+	    if (i < N_KRNL-1)
+		tmp += ", ";
+	    routeString += tmp;
+	}
+
+	ei.route(routeString);
+	ei.ignoreAll(Direction.IN_OUT);
+	
+	return ei;
+    }
+    
+    // align engine interface
+    private static EngineInterface interfaceAlign(String name) {
+	EngineInterface ei = new EngineInterface(name);
+
+	InterfaceParam offset = ei.addParam("offset", CPUTypes.UINT32);
+	InterfaceParam highInit = ei.addParam("highInit", CPUTypes.UINT32);
+	InterfaceParamArray nBytesInput = ei.addParamArray("nBytesInput", CPUTypes.UINT64);
+	InterfaceParamArray nBytesOutput = ei.addParamArray("nBytesOutput", CPUTypes.UINT64);
+	
+	for (int i = 0; i < N_KRNL; i++) {	    
+	    ei.setScalar("EmKernel" + i, "highInit", highInit);
+	    ei.setScalar("EmKernel" + i, "offset", offset);
+	    ei.setStream("readIn" + i, CPUTypes.UINT64, nBytesInput.get(i));
+	    ei.setStream("alignOut" + i, CPUTypes.UINT64, nBytesOutput.get(i));
+	}
+	ei.ignoreAll(Direction.IN_OUT);
+	
+	return ei;
+    }
+    
+    public static void main(String[] args) {
+	EmManager m = new EmManager(new EngineParameters(args));
+	m.createSLiCinterface(interfaceAlign("Align"));
+	m.createSLiCinterface(interfaceWrite("Write"));
+	m.suppressDefaultInterface();
+	m.build();
+    }    
+}

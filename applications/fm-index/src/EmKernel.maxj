@@ -1,0 +1,206 @@
+/* EmKernel.maxj ----- James Arram 2016 */
+
+/*
+ * Notes:
+ * 1) Bucket size is 128 symbols
+ * 2) Number of steps for FM-index is 1
+ * 3) Burst size is 64 bytes
+ */
+
+import static com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStructType.sft;
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.RoundingMode;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStruct;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStructType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+import com.maxeler.maxcompiler.v2.utils.Bits;
+
+class EmKernel extends Kernel {
+
+    private static final int BUCKET_SIZE = 128;
+
+    private static final int MAX_READ_LENGTH = 168;
+
+    EmKernel(KernelParameters parameters) {
+	super(parameters);
+
+	optimization.pushRoundingMode(RoundingMode.TRUNCATE);
+
+	// read symbols
+	DFEVectorType<DFEVar> sym_t = new DFEVectorType<DFEVar>(dfeUInt(2), MAX_READ_LENGTH);
+	
+	// read input
+	DFEStructType in_t = new DFEStructType(
+					       sft("id", dfeUInt(32)),
+					       sft("sym", sym_t),
+					       sft("len", dfeUInt(8)),
+					       sft("isPad", dfeUInt(8)));
+	
+	// alignment output
+	DFEStructType out_t = new DFEStructType(
+						sft("id", dfeUInt(32)),
+						sft("low", dfeUInt(32)),
+						sft("high", dfeUInt(32)),
+						sft("pad", dfeUInt(32)));
+	
+	// memory command
+	DFEStructType memCmd_t = new DFEStructType(
+						   sft("lowAddr", dfeUInt(32)),
+						   sft("highAddr", dfeUInt(32)),
+						   sft("highCtrl", dfeBool()),
+						   sft("valid", dfeBool()));
+	
+
+	// kernel control counters
+	DFEVar offset = io.scalarInput("offset", dfeInt(32));
+	DFEVar tickCount = control.count.simpleCounter(32, offset.cast(dfeUInt(32)));
+	DFEVar tickInit = control.count.pulse(1, tickCount === offset.cast(dfeUInt(32)) - 1);
+
+	// input stream control
+	DFEVar inputCtrlHead = dfeBool().newInstance(this);
+	DFEVar inputCtrl = tickInit === 1 ? constant.var(true) : inputCtrlHead;
+	DFEVar memCtrlHead = dfeBool().newInstance(this);
+	DFEVar memCtrl = inputCtrl === true ? constant.var(false) : memCtrlHead;
+	
+	// kernel input
+	DFEStruct readIn = io.input("readIn", in_t, inputCtrl === true);
+	DFEVar lowIndex = io.input("lowIndex", dfeRawBits(512), inputCtrl === false);
+	DFEVar highIndex = io.input("highIndex", dfeRawBits(512), memCtrl === true);
+	DFEVar highInit = io.scalarInput("highInit", dfeUInt(32));	
+	flush.whenInputFinished("readIn");
+
+	// set up streams
+	DFEVar idIn = readIn.get("id");
+	DFEVar idHead = dfeUInt(32).newInstance(this);
+	DFEVar id = inputCtrl === true ? idIn : idHead;	
+
+	DFEVector<DFEVar> symIn = readIn.get("sym");
+	DFEVector<DFEVar> symHead = sym_t.newInstance(this);
+	DFEVector<DFEVar> sym = inputCtrl === true ? symIn : symHead;
+	
+	DFEVar lenIn = readIn.get("len");
+	DFEVar lenHead = dfeUInt(8).newInstance(this);
+	DFEVar len = inputCtrl === true ? lenIn : lenHead;
+
+	DFEVar isPadIn = readIn.get("isPad");
+	DFEVar isPadHead = dfeUInt(8).newInstance(this);
+	DFEVar isPad = inputCtrl === true ? isPadIn : isPadHead;
+
+	DFEVar low = dfeUInt(32).newInstance(this);
+	DFEVar high = dfeUInt(32).newInstance(this);
+
+	DFEVar idxHead = dfeUInt(8).newInstance(this);
+	DFEVar idx = inputCtrl === true ? constant.var(dfeUInt(8), 0) : idxHead;
+
+	// get read symbol
+	DFEVar symVal = sym[0];
+	
+	// update SA interval
+	DFEVar lowTmp = low === 0 ? low : low - 1;
+	DFEVar lowCounter = getCounter(symVal, lowIndex);
+	DFEVar highCounter = memCtrl === true ? getCounter(symVal, highIndex) : lowCounter;
+	DFEVar lowIdx = lowTmp & 0x7F;
+	DFEVar highIdx = high & 0x7F;
+	DFEVar lowCount = getCount(symVal, lowIndex, lowIdx);
+	DFEVar highCount = memCtrl === true ? getCount(symVal, highIndex, highIdx) :
+	    getCount(symVal, lowIndex, highIdx); 
+	DFEVar lowUp = low === 0 ? lowCounter : 
+	    lowCounter + lowCount.cast(dfeUInt(32));
+	DFEVar highUp = highCounter + highCount.cast(dfeUInt(32)) - 1;
+
+	// update alignment state
+	DFEVar lowNew = inputCtrl === true ? constant.var(dfeUInt(32), 0) : lowUp;
+	DFEVar highNew = inputCtrl === true ? highInit : highUp;
+	DFEVar isAlign = lowNew <= highNew ? constant.var(true) : constant.var(false);
+	DFEVar idxNew = inputCtrl === true ? idx : idx + 1;
+	DFEVar shift = inputCtrl === true ? 0 : constant.var(dfeUInt(8), 1);
+	DFEVector<DFEVar> symNew = sym.shiftElementsRight(shift);
+	DFEVar inputCtrlNew = ((idxNew === len) | (isAlign === false)) & (isPad === 0) ? 
+	    constant.var(true) : constant.var(false);
+
+	// generate new memory command
+	DFEVar lowNewTmp = lowNew === 0 ? lowNew : lowNew - 1;
+	DFEVar lowNewAddr = lowNewTmp>>7;
+	DFEVar highNewAddr = highNew>>7;
+	DFEVar memCtrlNew = (lowNewAddr !== highNewAddr) & inputCtrlNew === false ?
+	    constant.var(true) : constant.var(false);
+	DFEStruct memCmd = memCmd_t.newInstance(this);
+	memCmd.set("lowAddr", lowNewAddr);
+	memCmd.set("highAddr", highNewAddr);
+	memCmd.set("highCtrl", memCtrlNew);
+	memCmd.set("valid", inputCtrlNew === false);
+	io.output("memCmd", memCmd, memCmd_t);
+	io.output("flushTrig", isPad === 2, dfeBool());
+	flush.allowOutputBeforeFlush("memCmd");
+	flush.allowOutputBeforeFlush("flushTrig");
+	
+	// connect streams
+	idHead <== stream.offset(id, -offset, -200, -50);
+	symHead <== stream.offset(symNew, -offset, -200, -50);
+	isPadHead <== stream.offset(isPad, -offset, -200, -50);
+	lenHead <== stream.offset(len, -offset, -200, -50);
+	idxHead <== stream.offset(idxNew, -offset, -200, -50);
+	inputCtrlHead <== stream.offset(inputCtrlNew, -offset, -200, -50);
+	memCtrlHead <== stream.offset(memCtrlNew, -offset, -200, -50);
+	low <== stream.offset(lowNew, -offset, -200, -50);
+	high <== stream.offset(highNew, -offset, -200, -50);
+
+	// kernel output
+	DFEStruct out = out_t.newInstance(this);
+	out.set("id", id);
+	out.set("low", lowNew);
+	out.set("high", highNew);
+	out.set("pad", constant.var(dfeUInt(32), 0));
+	io.output("alignOut", out, out_t, inputCtrlNew === true);
+    }
+    
+    // get counter
+    private DFEVar getCounter(DFEVar sym, DFEVar x) {
+	DFEVectorType<DFEVar> counters_t = new DFEVectorType<DFEVar>(dfeUInt(32), 4);
+	DFEVector<DFEVar> counters = counters_t.unpack(x.slice(0, 128));
+	
+	return control.mux(sym, counters.getElementsAsList());
+    }
+    
+    // get count
+    private DFEVar getCount(DFEVar sym, DFEVar x, DFEVar idx) {
+	DFEVectorType<DFEVar> count_t = new DFEVectorType<DFEVar>(dfeUInt(1), BUCKET_SIZE);
+	DFEVector<DFEVar> count = count_t.newInstance(this);
+	
+	DFEVectorType<DFEVar> bwt_t = new DFEVectorType<DFEVar>(dfeUInt(3), BUCKET_SIZE);
+	DFEVector<DFEVar> bwt = bwt_t.unpack(x.slice(128, 384));
+
+	for (int i = 0; i < BUCKET_SIZE; i++) {
+	    count[i] <== (i <= idx) & (sym.cast(dfeUInt(3)) === bwt[i]) ? 
+		constant.var(dfeUInt(1), 1) : constant.var(dfeUInt(1), 0);
+	}
+
+	DFEVar[] res = new DFEVar[2];
+	for (int i = 0; i < 2; i++) {
+	    res[i] = popCount(count.pack().slice(i*64, 64).cast(dfeUInt(64)));
+	}
+	return res[0] + res[1];
+    }
+
+    // pop count
+    private DFEVar popCount(DFEVar x) {
+	Bits m1Bits = new Bits(64, "5555555555555555");
+	Bits m2Bits = new Bits(64, "3333333333333333");
+	Bits m4Bits = new Bits(64, "0f0f0f0f0f0f0f0f");
+
+	DFEVar m1 = constant.var(dfeUInt(64), m1Bits);
+	DFEVar m2 = constant.var(dfeUInt(64), m2Bits);
+	DFEVar m4 = constant.var(dfeUInt(64), m4Bits);
+
+	x -= (x >> 1) & m1;
+	x = (x & m2) + ((x >> 2) & m2);
+	x = (x + (x >> 4)) & m4;
+	x += x >>  8;
+	x += x >> 16;
+	x += x >> 32;
+	return x & 0x7f;
+    }
+}

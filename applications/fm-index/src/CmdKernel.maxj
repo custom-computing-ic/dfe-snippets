@@ -1,0 +1,55 @@
+/* CmdKernel.maxj ----- James Arram 2015 */
+
+import static com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStructType.sft;
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.LMemCommandStream;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStruct;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStructType;
+
+class CmdKernel extends Kernel {
+
+    CmdKernel(KernelParameters parameters) {
+	super(parameters);
+
+	// memory command
+	DFEStructType memCmd_t = new DFEStructType(
+						   sft("lowAddr", dfeUInt(32)),
+						   sft("highAddr", dfeUInt(32)),
+						   sft("highCtrl", dfeBool()),
+						   sft("valid", dfeBool()));
+	
+	// kernel input
+	io.pushInputRegistering(false); 
+	DFEVar trigger = io.input("flushTrig", dfeBool());
+	io.popInputRegistering();
+	DFEStruct memCmd = io.input("memCmd", memCmd_t);	
+	flush.onTrigger(trigger);
+
+	// get command values
+	DFEVar lowAddr = memCmd.get("lowAddr");
+	DFEVar highAddr = memCmd.get("highAddr");
+	DFEVar highCtrl = memCmd.get("highCtrl");
+	DFEVar valid = memCmd.get("valid");
+
+	// generate memory command
+	LMemCommandStream.makeKernelOutput("lowCmd",
+					   valid === true,
+					   lowAddr,
+					   constant.var(dfeUInt(8), 1),
+					   constant.var(dfeUInt(1), 0),
+					   constant.var(dfeUInt(1), 0),
+					   constant.var(false));
+
+	// generate memory command
+	LMemCommandStream.makeKernelOutput("highCmd",
+					   valid === true & highCtrl === true,
+					   highAddr,
+					   constant.var(dfeUInt(8), 1),
+					   constant.var(dfeUInt(1), 0),
+					   constant.var(dfeUInt(1), 0),
+					   constant.var(false));
+
+    }
+}
