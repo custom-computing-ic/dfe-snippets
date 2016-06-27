@@ -35,7 +35,7 @@ double measuredInifibandBandwidth(long sizeInBytes, double runtimeS) {
 
 int check(long got, long expected, int i, int streamNo) {
     if (got != expected) {
-        printf("Output from DFE did not match CPU (stream: %d): %d : %d != %d\n",
+        printf("Output from DFE did not match CPU (stream: %d): %d : %ld != %ld\n",
                streamNo, i, got, expected);
         return 1;
     }
