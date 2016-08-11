@@ -1,6 +1,3 @@
 [submodule "lib/spmv-commons-cpu"]
 	path = lib/spmv-commons-cpu
 	url = https://github.com/custom-computing-ic/spmv-commons-cpu.git
-[submodule "lib/lib-reductions"]
-	path = lib/lib-reductions
-	url = https://github.com/custom-computing-ic/lib-reductions.git
