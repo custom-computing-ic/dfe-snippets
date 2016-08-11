@@ -9,6 +9,9 @@
 # 3. Ignore other compiled objects
 *.class
 *.o
+debug_*
+*.so
+*.so.*
 
 # 4. Ignore vim temporary files
 *~
@@ -18,4 +21,5 @@
 *.dot
 *.png
 
-build/
+# CMake build dir
+/build
