@@ -3,7 +3,7 @@
 
 #include <chrono>
 #include <iostream>
-#include <dfesnippets/timing/Timing.hpp>
+#include <dfesnippets/Timing.hpp>
 
 namespace dfesnippets {
   namespace formatting {

@@ -21,21 +21,21 @@ public class BitonicSortingKernel extends Kernel {
     public BitonicSortingKernel(KernelParameters parameters, int width) {
         super(parameters);
 
-        DFEArrayType<DFEVar> arrayType = new DFEArrayType(realType, width);
-        DFEArray<DFEVar> inArray = io.input("in_array", arrayType);
+        DFEVectorType<DFEVar> arrayType = new DFEVectorType(realType, width);
+        DFEVector<DFEVar> inArray = io.input("in_array", arrayType);
 
         for (int size = 2; size <= width; size *= 2) {
-            DFEArray<DFEVar> outNext = arrayType.newInstance(this);
+            DFEVector<DFEVar> outNext = arrayType.newInstance(this);
 
             for (int start = 0; start < width; start += size) {
                 boolean sortAsc =  (start / size) % 2 == 0;
-                DFEArrayType<DFEVar> arrayType2 = new DFEArrayType(realType, size);
-                DFEArray<DFEVar> in = arrayType2.newInstance(this);
+                DFEVectorType<DFEVar> arrayType2 = new DFEVectorType(realType, size);
+                DFEVector<DFEVar> in = arrayType2.newInstance(this);
                 for (int i = 0; i < size; i++) {
                     in[i] <== inArray[start + i];
                 }
 
-                DFEArray<DFEVar> out = null;
+                DFEVector<DFEVar> out = null;
                 for (int size2 = size; size2 >= 2; size2 /= 2) {
                     out = arrayType2.newInstance(this);
                     for (int start2 = 0; start2 < size; start2 += size2 ) {

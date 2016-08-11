@@ -115,17 +115,17 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
     COMMAND make -C ../test/LinearAlgebra/DenseMatrixVectorMultiply/build run)
 
   add_fpga_build(LinearAlgebra AdjustedCSRSpMV SpmvBase fpgaNaiveManager)
-  add_fpga_build(LinearAlgebra CsrDecoder CsrDecoder CsrDecoderManager)
-  add_fpga_build(LinearAlgebra ParallelCsrDecoder ParallelCsrDecoder ParallelCsrDecoderManager)
+  # add_fpga_build(LinearAlgebra CsrDecoder CsrDecoder CsrDecoderManager)
+  # add_fpga_build(LinearAlgebra ParallelCsrDecoder ParallelCsrDecoder ParallelCsrDecoderManager)
   add_fpga_build(Tests DramAccumulator DramAccumulator DramAccumulatorManager)
 
   # --- Tests
   add_fpga_test(LinearAlgebra DenseMatrixVectorMultiply)
   add_fpga_test(LinearAlgebra SparseDotProduct)
   add_fpga_test(LinearAlgebra DenseLowerTriangularSolve)
-  add_fpga_test(LinearAlgebra Jacobi)
+  # add_fpga_test(LinearAlgebra Jacobi)
   add_fpga_test(LinearAlgebra NaiveMatrixMultiply)
-  add_fpga_test(LinearAlgebra LUSolver)
+  # add_fpga_test(LinearAlgebra LUSolver)
   add_fpga_test(Sorting BitonicSorting)
   add_fpga_test(Sorting ParallelBitonicSort)
   add_fpga_test(Summation FullSummationBalancedTree)
@@ -152,7 +152,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   add_fpga_test(Infrastructure LinearMemoryControl)
   add_fpga_test3(Infrastructure LinkingThirdPartyLibrary external_cpp)
   add_fpga_test3(Infrastructure LinkingThirdPartyLibrary external_c)
-  add_fpga_test(Infrastructure MaxRingMulticast)
+  # add_fpga_test(Infrastructure MaxRingMulticast)
   add_fpga_test(Infrastructure ParallelMovingAverage)
   add_fpga_test(DataStructures CircularBuffer)
   add_fpga_test(DataStructures DFEsmFifo)
@@ -188,5 +188,5 @@ else()
 endif()
 
 
-add_subdirectory(
-  test/LinearAlgebra/AdjustedCSRSpMV)
+# add_subdirectory(
+#   test/LinearAlgebra/AdjustedCSRSpMV)

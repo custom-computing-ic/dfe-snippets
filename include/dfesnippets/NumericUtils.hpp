@@ -1,6 +1,8 @@
 #ifndef NUMERICUTILS_HPP_GRRJP3JZ
 #define NUMERICUTILS_HPP_GRRJP3JZ
 
+#include <cmath>
+
 namespace dfesnippets {
   namespace numeric_utils {
 

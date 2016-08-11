@@ -11,13 +11,13 @@
  cycle:                   0,1,2,3,4,5,6,7,8,9, 10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32
  sparseIndex   (8 items): 0,1,8,            15,                  19,         21,   25,         32
  count times:               1,7,7,7,7,7,7,7, 7, 7, 7, 7, 7, 7, 7, 4, 4, 4, 4, 2, 2, 4, 4, 4, 4, 7, 7, 7, 7, 7, 7, 7
- innerCounter (32 items):   0,0,1,2,3,4,5,6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6 
- outerCounter (32 items):   0,1,1,1,1,1,1,1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6 
+ innerCounter (32 items):   0,0,1,2,3,4,5,6, 0, 1, 2, 3, 4, 5, 6, 0, 1, 2, 3, 0, 1, 0, 1, 2, 3, 0, 1, 2, 3, 4, 5, 6
+ outerCounter (32 items):   0,1,1,1,1,1,1,1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6
 
 
- Implementation strategy: io.input has it's own latency, so we cannot 
- put simple feedback loop to control the input. Here, we buffer the 
- input with a FIFO shift register to hide input latency. Each value read 
+ Implementation strategy: io.input has it's own latency, so we cannot
+ put simple feedback loop to control the input. Here, we buffer the
+ input with a FIFO shift register to hide input latency. Each value read
  from a buffer sets up a counter counting up to a difference between
  that and previous value (interpret this difference as a number of cycles to
  hold for the next data retrieval). The wrap point of a counter triggers
@@ -28,14 +28,9 @@
 */
 import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
 import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEArray;
-import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEArrayType;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Params;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.WrapMode;
-import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
-import com.maxeler.maxcompiler.v2.utils.MathUtils;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
 
 class InputDependentCounterIterateUntilKernel extends Kernel
 {
@@ -104,7 +99,7 @@ class InputDependentCounterIterateUntilKernel extends Kernel
     */
     private DFEVar fifoBufferPushPop(DFEVar enable, DFEVar input, int bufferSize, DFEType dataType)
     {
-        DFEArray<DFEVar> fifoBuffer = new DFEArrayType<DFEVar> (dataType, bufferSize).newInstance(this);
+        DFEVector<DFEVar> fifoBuffer = new DFEVectorType<DFEVar> (dataType, bufferSize).newInstance(this);
         DFEVar stored = dataType.newInstance(this);
 
         optimization.pushPipeliningFactor(0.0);

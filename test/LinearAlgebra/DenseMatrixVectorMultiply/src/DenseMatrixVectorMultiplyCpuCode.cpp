@@ -12,7 +12,7 @@
 #endif
 
 #include <dfesnippets/blas/Blas.hpp>
-#include <dfesnippets/timing/Timing.hpp>
+#include <dfesnippets/Timing.hpp>
 #include <dfesnippets/VectorUtils.hpp>
 #include <dfesnippets/FormatterUtils.hpp>
 
