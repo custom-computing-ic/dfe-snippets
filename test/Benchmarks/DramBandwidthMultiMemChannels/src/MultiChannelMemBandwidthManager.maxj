@@ -1,0 +1,129 @@
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig.Effort;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.*;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.*;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.*;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.*;
+
+class PassthroughManager extends CustomManager{
+
+  private static final int BPC = 3; // bursts per memory command
+  private static final int N_CHANNEL = 4; // number of memory channels
+
+  PassthroughManager(EngineParameters ep) {
+    super(ep);
+
+    // configure memory controller
+    MemoryControllerConfig memConfig = new MemoryControllerConfig();
+    memConfig.setEnableParityMode(true, true, 72, false);
+    memConfig.setMAX4qMode(true);
+    config.setMemoryControllerConfig(memConfig);
+
+    // build configuration
+    BuildConfig buildConfig = new BuildConfig(BuildConfig.Level.FULL_BUILD);
+    buildConfig.setBuildEffort(Effort.HIGH);
+    buildConfig.setEnableTimingAnalysis(true);
+    buildConfig.setMPPRCostTableSearchRange(1, 16);
+    buildConfig.setMPPRParallelism(8);
+    setBuildConfig(buildConfig);
+    config.setDefaultStreamClockFrequency(200);
+    config.setOnCardMemoryFrequency(LMemFrequency.MAX4MAIA_800);
+
+    // instantiate memory channels
+    LMemInterface[] iface = new  LMemInterface[N_CHANNEL];
+    for (int i = 0; i < N_CHANNEL; i++) {
+      iface[i] = addLMemInterface("ctrl" + i, 1);
+    }
+
+    // instantiate kernels and connect streams
+    for (int i = 0; i < N_CHANNEL; i++) {
+
+      KernelBlock kPt = addKernel(new MultiChannelMemBandwidthKernel(makeKernelParameters("PtKernel" + i),
+            BPC));
+      KernelBlock kCmd = addKernel(new CmdKernel(makeKernelParameters("CmdKernel" + i),
+            BPC));
+
+      DFELink addrIn = addStreamFromCPU("addr" + i);
+      kCmd.getInput("addr") <== addrIn;
+
+      DFELink kernelOut = addStreamToCPU("k_out" + i);
+      kernelOut <== kPt.getOutput("k_out");
+
+      DFELink lmem = iface[i].addStreamFromLMem("lmem" + i, kCmd.getOutput("memCmd"));
+      kPt.getInput("k_in") <== lmem;
+    }
+
+    // host to lmem
+    DFELink hostToMger = addStreamFromCPU("hostToMger");
+    Fanout fan = fanout("fan");
+    fan.getInput() <== hostToMger;
+    for (int i = 0; i < N_CHANNEL; i++) {
+      DFELink fanOut = fan.addOutput("fanOut" + i);
+      DFELink fanToLMem = iface[i].addStreamToLMem("mgerToLMem" + i,
+          LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
+      fanToLMem <== fanOut;
+    }
+  }
+
+  // write data to LMem
+  private static EngineInterface interfaceWrite(String name) {
+    EngineInterface ei = new EngineInterface(name);
+
+    InterfaceParam zero = ei.addConstant(0l);
+    InterfaceParam nBytes = ei.addParam("nBytes", CPUTypes.UINT64);
+
+    ei.setStream("hostToMger", CPUTypes.UINT64, nBytes);
+    for (int i = 0; i < N_CHANNEL; i++) {
+      ei.setLMemLinear("ctrl" + i, "mgerToLMem" + i, zero, nBytes);
+    }
+
+    String routeString = "";
+    for (int i = 0; i < N_CHANNEL; i++) {
+      String tmp = String.format("fan -> fanOut%d", i);
+      if (i < N_CHANNEL-1)
+        tmp += ", ";
+      routeString += tmp;
+    }
+
+    ei.route(routeString);
+    ei.ignoreAll(Direction.IN_OUT);
+
+    return ei;
+  }
+
+  // run pass through kernel
+  private static EngineInterface interfaceExec(String name) {
+    EngineInterface ei = new EngineInterface(name);
+    CPUTypes type = CPUTypes.UINT32;
+    int size = type.sizeInBytes();
+
+    InterfaceParam ticks = ei.addParam("ticks", CPUTypes.UINT32);
+
+    for (int i = 0; i < N_CHANNEL; i++) {
+      ei.setTicks("PtKernel" + i, ticks*BPC);
+      ei.setTicks("CmdKernel" + i, ticks);
+      ei.setScalar("PtKernel" + i, "ticks", ticks);
+      ei.setStream("addr" + i, type, ticks*size);
+      ei.setStream("k_out" + i, type, 4*size);
+    }
+
+    ei.ignoreAll(Direction.IN_OUT);
+
+    return ei;
+  }
+
+
+  public static void main(String[] args) {
+
+    PassthroughManager manager = new PassthroughManager(new EngineParameters(args));
+
+    manager.createSLiCinterface(interfaceWrite("Write"));
+    manager.createSLiCinterface(interfaceExec("Exec"));
+    manager.suppressDefaultInterface();
+
+    manager.build();
+  }
+}

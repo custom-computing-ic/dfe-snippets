@@ -160,6 +160,9 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
   add_fpga_test(DataStructures FifoAsShiftRegister)
   #  add_fpga_test(Tests TerminationCondition)
 
+  add_fpga_test(Benchmarks DramBandwidthBenchmarkDefaultMemCtrl)
+  add_fpga_test(Benchmarks DramBandwidthMultiMemChannels)
+
   # TODO
   #add_test(
     #NAME test_csrspmv_fpga_sim

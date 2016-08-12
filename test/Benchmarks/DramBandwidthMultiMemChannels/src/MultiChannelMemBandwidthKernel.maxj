@@ -1,0 +1,39 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.Counter;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.Reductions;
+
+class MultiChannelMemBandwidthKernel extends Kernel {
+
+  MultiChannelMemBandwidthKernel(KernelParameters parameters, int bpc) {
+    super(parameters);
+
+    // kernel counter
+    DFEVar ticks = io.scalarInput("ticks", dfeUInt(32));
+
+    // Counters
+    Count.Params paramsOne = control.count.makeParams(32)
+      .withMax(bpc);
+    Counter counterOne = control.count.makeCounter(paramsOne);
+    DFEVar countOne = counterOne.getCount();
+
+    Count.Params paramsTwo = control.count.makeParams(32)
+      .withEnable(counterOne.getWrap());
+    Counter counterTwo = control.count.makeCounter(paramsTwo);
+    DFEVar countTwo = counterTwo.getCount();
+
+    // kernel input
+    DFEVar in = io.input("k_in", dfeRawBits(512));
+
+    // get val
+    DFEVar val = in.slice(0, 32).cast(dfeUInt(32));
+    DFEVar valHold = Reductions.streamHold(val, countOne === 0);
+
+    // kernel output
+    io.output("k_out", valHold.cast(dfeUInt(128)), dfeUInt(128),
+        countTwo === (ticks - 1));
+  }
+
+}

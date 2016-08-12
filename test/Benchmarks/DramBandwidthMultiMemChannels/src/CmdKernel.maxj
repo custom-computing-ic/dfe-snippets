@@ -1,0 +1,23 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.LMemCommandStream;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+
+class CmdKernel extends Kernel {
+
+  CmdKernel(KernelParameters parameters, int bpc) {
+    super(parameters);
+
+    // kernel input
+    DFEVar addr = io.input("addr", dfeUInt(32));
+
+    // generate memory command
+    LMemCommandStream.makeKernelOutput("memCmd",
+        constant.var(true),
+        addr*bpc,
+        constant.var(dfeUInt(8), bpc),
+        constant.var(dfeUInt(1), 1),
+        constant.var(dfeUInt(1), 0),
+        constant.var(false));
+  }
+}
