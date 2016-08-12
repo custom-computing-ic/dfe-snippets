@@ -1,28 +1,27 @@
-/*
-    
-*/
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <stdio.h>
 
+#include <iostream>
+
 
 #include "Maxfiles.h"
 #include "MaxSLiCInterface.h"
 
-
-void iffree(void * p)
+int main(int argc, char **argv)
 {
-    if (p != NULL) free(p);
-}
+    if (argc != 3) {
+      std::cout << "Usage " << argv[0] << " <data size in GB (int)> <numRepeats" << std::endl;
+      return -1;
+    }
 
-int main(void)
-{
-    const int repeatTimes = 50;
+    const int repeatTimes = atoi(argv[2]);
+    const int sizeGb = atoi(argv[1]);
 
     // size in bytes: 24GB, split into 2 streams
-    const uint64_t vectorSize = 24*(uint64_t)1024*1024*1024;
+    const uint64_t vectorSize = sizeGb * (uint64_t)1024*1024*1024;
     const double datasetGB = vectorSize/(1024.0*1024.0*1024.0);
     // how many ticks the kernel should run: kernel reads 384 bytes per cycle
     const uint64_t ticksToRun = vectorSize/384;
@@ -40,7 +39,7 @@ int main(void)
 
     printf("\ntiming very short DFE run (what's the latency of running an action):");
     gettimeofday(&t1, NULL);
-        DramBandwidthBenchmarkDefaultMemCtrl(384, outstream_sum);
+    DramBandwidthBenchmarkDefaultMemCtrl(384, outstream_sum);
     gettimeofday(&t2, NULL);
 
     double short_microSeconds = (t2.tv_sec - t1.tv_sec) * 1000 * 1000 + (t2.tv_usec - t1.tv_usec);
@@ -62,8 +61,6 @@ int main(void)
     double dfe_bandwidth = datasetGB/dfe_seconds;
     printf("\ndone on DFE in %.2f seconds (%.2f microsec) per try in avg, in %d tries, bandwidth %.2f GB/s \n", dfe_seconds, dfe_microSeconds, repeatTimes, dfe_bandwidth);
     fflush(stdout);
-
-    iffree(outstream_sum);
 
     return 0;
 }
