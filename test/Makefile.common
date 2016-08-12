@@ -150,7 +150,7 @@ $(PRJ)_sim: $(PRJ)_sim.o $(PRJ)_simc.o
 
 runsim: $(PRJ)_sim
 	$(MAXCOMPILERSIM) -n $(USER)a -c$(DEVICENUM) -d$(NUMDEVICES) restart > /dev/null
-	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXOS_SIM) ./$(PRJ)_sim $(USER)a0:$(USER)a
+	SLIC_CONF+="use_simulation=$(USER)a" LD_PRELOAD=$(MAXOS_SIM) ./$(PRJ)_sim # $(USER)a0:$(USER)a
 	make stopsim
 
 stopsim:

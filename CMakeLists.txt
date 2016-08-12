@@ -162,6 +162,7 @@ if (DEFINED ENV{MAXCOMPILERDIR} AND DEFINED ENV{MAXELEROSDIR})
 
   add_fpga_test(Benchmarks DramBandwidthBenchmarkDefaultMemCtrl)
   add_fpga_test(Benchmarks DramBandwidthMultiMemChannels)
+  add_fpga_test(Benchmarks InfinibandBenchmark)
 
   # TODO
   #add_test(

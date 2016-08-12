@@ -1,7 +1,7 @@
 /***
  * Infiniband maximum achievable bandwidth test.
+ * Usage ./main <data size in GB (must be a multiple of 3)>
  */
-
 #include <stdio.h>
 
 #include <vector>
@@ -42,12 +42,16 @@ int check(long got, long expected, int i, int streamNo) {
     return 0;
 }
 
+int main(int argc, char** argv) {
 
-int main(void) {
+    // small size input for simulation
+    long inSize = 3000;
+    if (argc == 2) {
+      // size in GB from command line
+      inSize = atoi(argv[1]) * 1E9;
+    }
 
-    const long inSize = 4 * 384 * 1E5;
-    const long dataSizeBytes = 8 * inSize * sizeof(long);
-
+    const long dataSizeBytes = inSize * sizeof(long);
     vector<long> a(inSize), b(inSize), c(inSize), d(inSize), expected(inSize);
     vector<long> out1(inSize, 0), out2(inSize, 0), out3(inSize, 0), out4(inSize, 0);
 
