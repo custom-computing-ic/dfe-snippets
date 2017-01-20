@@ -25,6 +25,20 @@ test/             ---> Test projects, benchmarks, etc.
 applications      ---> Application Benchmarks
 ```
 
+## Citing
+
+If you find this work useful, please consider reading and citing our paper on
+[dfe-snippets](https://www.doc.ic.ac.uk/~pg1709/docs/pg17arc.pdf):
+
+```
+@inproceedings{grigoras2017dfesnippets,
+	author = {Grigoras, P. and Burovskiy, P. and Arram, J. and Xinyu Niu and Cheung, K. and Xie, J. and Luk, W.},
+	booktitle = {13th International Symposium on Applied Reconfigurable Computing},
+	title = {{dfesnippets:An Open-Source Library for Dataflow Acceleration on FPGAs}},
+	year = {2017}
+}
+```
+
 ## Requirements
 
 1. MaxCompiler 2013+
