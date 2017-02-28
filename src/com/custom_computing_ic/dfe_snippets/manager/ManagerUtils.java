@@ -1,8 +1,7 @@
 
 package com.custom_computing_ic.dfe_snippets.manager;
 
-import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControllerConfig;
-import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.*;
 import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
@@ -11,7 +10,6 @@ import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
 import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
 import com.maxeler.maxcompiler.v2.managers.DFEModel;
 import com.maxeler.maxcompiler.v2.managers.BuildConfig;
-import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControlGroup;
 import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 
 import static com.maxeler.maxcompiler.v2.managers.custom.CustomManager.LMemFrequency.*;
@@ -75,6 +73,7 @@ public class ManagerUtils {
     return ei;
   }
 
+  @Deprecated
   public static EngineInterface dramWrite(CustomManager m) {
     m.addStreamToOnCardMemory("cpu2lmem", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== m.addStreamFromCPU("fromcpu");
     EngineInterface ei = new EngineInterface("dramWrite");
@@ -87,6 +86,18 @@ public class ManagerUtils {
     return ei;
   }
 
+  public static EngineInterface dramWrite(CustomManager m, LMemInterface iface) {
+    iface.addStreamToLMem("cpu2lmem", LMemCommandGroup.MemoryAccessPattern.LINEAR_1D)
+      <== m.addStreamFromCPU("fromcpu");
+    EngineInterface ei = new EngineInterface("dramWrite");
+    CPUTypes TYPE = CPUTypes.INT;
+    InterfaceParam size = ei.addParam("size_bytes", TYPE);
+    InterfaceParam start = ei.addParam("start_bytes", TYPE);
+    ei.setStream("fromcpu", CPUTypes.UINT8, size);
+    ei.setLMemLinear("cpu2lmem", start, size);
+    ei.ignoreAll(Direction.IN_OUT);
+    return ei;
+  }
 
   // A generic DRAM read interface
   public static EngineInterface interfaceRead(String name, String toCpuStream, String lmem2cpuStream) {
@@ -100,8 +111,21 @@ public class ManagerUtils {
     return ei;
   }
 
+  @Deprecated
   public static EngineInterface dramRead(CustomManager m) {
     m.addStreamToCPU("tocpu") <== m.addStreamFromOnCardMemory("lmem2cpu", MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
+    EngineInterface ei = new EngineInterface("dramRead");
+    CPUTypes TYPE = CPUTypes.INT;
+    InterfaceParam size = ei.addParam("size_bytes", TYPE);
+    InterfaceParam start = ei.addParam("start_bytes", TYPE);
+    ei.setStream("tocpu", CPUTypes.UINT8, size);
+    ei.setLMemLinear("lmem2cpu", start, size);
+    ei.ignoreAll(Direction.IN_OUT);
+    return ei;
+  }
+
+  public static EngineInterface dramRead(CustomManager m, LMemInterface iface) {
+    m.addStreamToCPU("tocpu") <== iface.addStreamFromLMem("lmem2cpu", LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
     EngineInterface ei = new EngineInterface("dramRead");
     CPUTypes TYPE = CPUTypes.INT;
     InterfaceParam size = ei.addParam("size_bytes", TYPE);
@@ -135,17 +159,37 @@ public class ManagerUtils {
     setFullBuild(m, BuildConfig.Effort.HIGH, numCostTables, numThreads);
   }
 
+  @Deprecated
   public static void addLinearStreamFromLmemToKernel(CustomManager m, KernelBlock kernel, String name) {
     kernel.getInput(name) <== m.addStreamFromOnCardMemory(
         name,
         MemoryControlGroup.MemoryAccessPattern.LINEAR_1D);
   }
 
+  public static void addLinearStreamFromLMemToKernel(LMemInterface iface, KernelBlock kernel, String name) {
+    kernel.getInput(name) <== iface.addStreamFromLMem(
+        name,
+        LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
+  }
+
+  @Deprecated
   public static void addLinearStreamFromKernelToLmem(CustomManager m, KernelBlock kernel, String name) {
     m.addStreamToOnCardMemory(
         name,
         MemoryControlGroup.MemoryAccessPattern.LINEAR_1D) <== kernel.getOutput(name);
   }
 
+  public static void addLinearStreamFromKernelToLMem(LMemInterface iface, KernelBlock kernel, String name) {
+    iface.addStreamToLMem(
+        name,
+        LMemCommandGroup.MemoryAccessPattern.LINEAR_1D) <== kernel.getOutput(name);
+  }
+
+  public static void ignoreLMemStreams(EngineInterface ei) {
+    ei.ignoreLMem("cpu2lmem");
+    ei.ignoreStream("fromcpu");
+    ei.ignoreStream("tocpu");
+    ei.ignoreLMem("lmem2cpu");
+  }
 }
 
