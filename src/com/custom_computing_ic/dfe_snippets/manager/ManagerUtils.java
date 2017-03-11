@@ -14,8 +14,6 @@ import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 
 import static com.maxeler.maxcompiler.v2.managers.custom.CustomManager.LMemFrequency.*;
 
-import java.util.HashMap;
-
 public class ManagerUtils {
 
   public static void setDRAMMaxDeviceFrequency(CustomManager manager, EngineParameters ep) {
