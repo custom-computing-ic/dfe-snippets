@@ -28,36 +28,34 @@ public class ManagerUtils {
 
   public static void setDRAMFreq(CustomManager manager, EngineParameters ep, int freq) {
     MemoryControllerConfig memCfg = new MemoryControllerConfig();
-
-    HashMap<Integer, CustomManager.LMemFrequency> intToFreq =
-                new HashMap<Integer, CustomManager.LMemFrequency>();
-
+    CustomManager.LMemFrequency devFreq;
     if (ep.getDFEModel()==DFEModel.MAIA){
         memCfg.setEnableParityMode(true, true, 72, false);
-        memCfg.setMAX4qMode(true);
-        memCfg.setDataReadFIFOExtraPipelineRegInFabric(true);  // for easier meeting LMem timing
-
-        intToFreq.put(400, MAX4MAIA_400);
-        intToFreq.put(533, MAX4MAIA_533);
-        intToFreq.put(666, MAX4MAIA_666);
-        intToFreq.put(733, MAX4MAIA_733);
-        intToFreq.put(800, MAX4MAIA_800);
-    }
-    else
-    {
-        intToFreq.put(300, MAX3_300);
-        intToFreq.put(333, MAX3_333);
-        intToFreq.put(350, MAX3_350);
-        intToFreq.put(400, MAX3_400);
-    }
-
-    CustomManager.LMemFrequency frequency = intToFreq.get(freq);
-    if (frequency != null) {
-      manager.config.setOnCardMemoryFrequency(intToFreq.get(freq));
+        if (freq > 400) {
+            // higher frequencies require parity mode, quarter rate mode and additional pipelining
+            memCfg.setMAX4qMode(true);
+            memCfg.setDataReadFIFOExtraPipelineRegInFabric(true);
+        }
+        switch (freq) {
+          case 400: devFreq = MAX4MAIA_400; break;
+          case 533: devFreq = MAX4MAIA_533; break;
+          case 666: devFreq = MAX4MAIA_666; break;
+          case 733: devFreq = MAX4MAIA_733; break;
+          case 800: devFreq = MAX4MAIA_800; break;
+          default:
+            throw new RuntimeException("Unsupported memory frequency " + freq + " for device mode " + ep.getDFEModel());
+       }
     } else {
-      throw new RuntimeException("Unsupported memory frequency " + freq + " for device mode " + ep.getDFEModel());
+        switch (freq) {
+          case 300: devFreq = MAX3_300; break;
+          case 333: devFreq = MAX3_333; break;
+          case 350: devFreq = MAX3_350; break;
+          case 400: devFreq = MAX3_400; break;
+          default:
+            throw new RuntimeException("Unsupported memory frequency " + freq + " for device mode " + ep.getDFEModel());
+        }
     }
-
+    manager.config.setOnCardMemoryFrequency(devFreq);
     manager.config.setMemoryControllerConfig(memCfg);
   }
 
