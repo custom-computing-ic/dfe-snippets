@@ -168,6 +168,12 @@ public class ManagerUtils {
         LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
   }
 
+  public static void addLinearStreamFromLMemToKernel(LMemInterface iface, KernelBlock kernel, String src, String dst) {
+    kernel.getInput(dst) <== iface.addStreamFromLMem(
+        src,
+        LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
+  }
+
   @Deprecated
   public static void addLinearStreamFromKernelToLmem(CustomManager m, KernelBlock kernel, String name) {
     m.addStreamToOnCardMemory(
@@ -179,6 +185,12 @@ public class ManagerUtils {
     iface.addStreamToLMem(
         name,
         LMemCommandGroup.MemoryAccessPattern.LINEAR_1D) <== kernel.getOutput(name);
+  }
+
+  public static void addLinearStreamFromKernelToLMem(LMemInterface iface, KernelBlock kernel, String src, String dst) {
+    iface.addStreamToLMem(
+        dst,
+        LMemCommandGroup.MemoryAccessPattern.LINEAR_1D) <== kernel.getOutput(src);
   }
 
   public static void ignoreLMemStreams(EngineInterface ei) {
