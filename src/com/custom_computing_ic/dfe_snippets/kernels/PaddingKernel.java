@@ -27,7 +27,7 @@ public class PaddingKernel extends Kernel {
    * @param bitWidth number of bits to be processed in each cycle
    * @param dbg flag to decide whether to output debug information
    */
-  protected PaddingKernel(KernelParameters parameters, boolean dbg) {
+  public PaddingKernel(KernelParameters parameters, int bitWidth, boolean dbg) {
     super(parameters);
 
     DFEVar nInputs = io.scalarInput(SCALAR_NUM_INP, dfeUInt(32));

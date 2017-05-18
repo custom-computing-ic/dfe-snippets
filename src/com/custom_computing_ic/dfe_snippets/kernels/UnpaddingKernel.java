@@ -29,7 +29,7 @@ public class UnpaddingKernel extends Kernel {
    * @param bitWidth number of bits to be processed in each cycle
    * @param dbg flag to decide whether to output debug information
    */
-  public UnpaddingKernel(KernelParameters parameters, int bitWidth boolean dbg) {
+  public UnpaddingKernel(KernelParameters parameters, int bitWidth, boolean dbg) {
     super(parameters);
 
     DFEVar nInputs = io.scalarInput(SCALAR_NUM_INP, dfeUInt(32));
