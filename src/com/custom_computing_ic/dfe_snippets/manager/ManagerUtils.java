@@ -168,6 +168,10 @@ public class ManagerUtils {
         LMemCommandGroup.MemoryAccessPattern.LINEAR_1D);
   }
 
+  public static void addLinearStreamFromLMemToKernel(LMemCommandGroup group, KernelBlock kernel, String name) {
+    kernel.getInput(name) <== group.addStreamFromLMem(name);
+  }
+
   public static void addLinearStreamFromLMemToKernel(LMemInterface iface, KernelBlock kernel, String src, String dst) {
     kernel.getInput(dst) <== iface.addStreamFromLMem(
         src,
@@ -185,6 +189,10 @@ public class ManagerUtils {
     iface.addStreamToLMem(
         name,
         LMemCommandGroup.MemoryAccessPattern.LINEAR_1D) <== kernel.getOutput(name);
+  }
+
+  public static void addLinearStreamFromKernelToLMem(LMemCommandGroup group, KernelBlock kernel, String name) {
+    group.addStreamToLMem(name) <== kernel.getOutput(name);
   }
 
   public static void addLinearStreamFromKernelToLMem(LMemInterface iface, KernelBlock kernel, String src, String dst) {
