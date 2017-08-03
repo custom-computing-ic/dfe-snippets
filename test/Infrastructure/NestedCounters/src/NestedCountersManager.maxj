@@ -1,0 +1,29 @@
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+
+public class NestedCountersManager extends CustomManager{
+
+    private static final String s_kernelName  = "NestedCountersKernel";
+
+    NestedCountersManager(EngineParameters ep) {
+        super(ep);
+
+        KernelBlock k = addKernel(new NestedCountersKernel(makeKernelParameters(s_kernelName)));
+        addStreamToCPU("output") <== k.getOutput("output");
+    }
+
+    private static EngineInterface interfaceDefault() {
+        EngineInterface engine_interface = new EngineInterface();
+        return engine_interface;
+    }
+
+    public static void main(String[] args) {
+        NestedCountersManager manager = new NestedCountersManager(new EngineParameters(args));
+        manager.createSLiCinterface(interfaceDefault());
+        manager.build();
+    }
+}

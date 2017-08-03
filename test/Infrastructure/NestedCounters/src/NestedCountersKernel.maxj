@@ -1,0 +1,39 @@
+/**
+ * Two nested counters, in a triangular iteration space i.e.:
+ * row: 0, 1, 1, 2, 2, 2, 3, 3, 3, 3, etc.
+ * col: 0, 0, 1, 0, 1, 2, 0, 1, 2, 3, etc.
+*/
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+
+class NestedCountersKernel extends Kernel {
+
+    protected NestedCountersKernel(KernelParameters parameters) {
+        super(parameters);
+
+        DFEVar cycleCounter = control.count.simpleCounter(32); // know which cycle we are on
+
+        optimization.pushPipeliningFactor(0f);
+
+        DFEVar maxCarried = dfeUInt(32).newInstance(this);  // value of max from previous cycle
+        DFEVar currentCarried = dfeUInt(32).newInstance(this); // value of current from previous cycle
+
+        DFEVar max = cycleCounter === 0 ? 0 : maxCarried;  // value of max on this cycle
+        DFEVar current = cycleCounter === 0 ? 0 : currentCarried; // value of current on this cycle
+
+        DFEVar resetCurrent = current === max; // reset when current is max
+
+        currentCarried <== stream.offset(resetCurrent ? 0 : current + 1, -1); // value of current on next cycle
+        maxCarried <== stream.offset(resetCurrent ? max + 1 : max, -1); // value of max on next cycle
+
+        optimization.popPipeliningFactor();
+
+        debug.simPrintf("max %d current %d, maxCarried %d currentCarried %d\n",
+            max, current, maxCarried, currentCarried);
+
+        io.output("output", current.cast(dfeUInt(32)), dfeUInt(32));
+    }
+}
