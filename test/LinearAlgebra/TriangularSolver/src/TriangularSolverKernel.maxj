@@ -1,0 +1,131 @@
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.core.Count.*;
+import com.maxeler.maxcompiler.v2.kernelcompiler.stdlib.memory.*;
+import com.custom_computing_ic.dfe_snippets.reductions.LogAddReduce;
+
+/***
+ * Solve a triangular system of the form:
+ * A * x = b
+ *
+ * a(00)                x0      b0
+ * a(10) a(11)       X  x1  =   b1
+ * a(20) a(21) a(2)     x2      b2
+ *
+ *
+ * The general formula for x(k) is:
+ *
+ *  x(k) = ( b(k) - sum(A(kj) * x(j)) ) /  a(kk)
+ *
+ *
+ * The design works in the following states:
+ *
+ * 1. COMPUTE - we compute x(k)
+ * 2. WAIT - we wait for WAIT_DELAY cycles for the results to be available
+ */
+
+class TriangularSolverKernel extends Kernel {
+
+  // states of the solver
+  private static final int COMPUTE = 0; // computing the sum(a(kj) * x(j)) for all j < k
+  private static final int WAIT = 1; // waiting for reduction value to be available
+
+  private static final int COUNTER_WIDTH = 32;
+  // latency of multiply + reduction + division + subtraction + multiplexer + C-slowed adder
+  private static final int WAIT_DELAY = 11 + 48 + 28 + 12 + 1 + 12 + 5;
+
+
+  protected TriangularSolverKernel(KernelParameters parameters) {
+    super(parameters);
+
+    final DFEVar waitDelay = constant.var(dfeUInt(32), WAIT_DELAY);
+
+    // ---- Control logic
+    DFEVar cycleCounter = control.count.simpleCounter(COUNTER_WIDTH); // know which cycle we are on
+    //
+    // --- State update for max and current (determining on-chip memory access pattern)
+    optimization.pushPipeliningFactor(0f);
+    DFEVar stateCarried = dfeUInt(32).newInstance(this);
+    DFEVar state =  cycleCounter === 0 ? COMPUTE : stateCarried;
+    DFEVar maxCarried = dfeUInt(32).newInstance(this);  // value of max from previous cycle
+    DFEVar currentCarried = dfeUInt(32).newInstance(this); // value of current from previous cycle
+    DFEVar max = cycleCounter === 0 ? 0 : maxCarried;  // value of max on this cycle
+    DFEVar current = cycleCounter === 0 ? 0 : currentCarried; // value of current on this cycle
+    DFEVar resetCurrent = current === max; // reset when current is max
+    // NB: we don't update current and max during the WAIT state
+    currentCarried <== state === WAIT ?
+      stream.offset(current, -1) :
+      stream.offset(resetCurrent ? 0 : current + 1, -1); // value of current on next cycle
+    maxCarried <== state === WAIT ?
+      stream.offset(max, -1) :
+      stream.offset(resetCurrent ? max + 1 : max, -1); // value of max on next cycle
+
+    // --- Logic for WAIT state
+    Count.Params paramsWaitCounter = control.count.makeParams(COUNTER_WIDTH)
+      .withEnable(state === WAIT) // counter is enabled as long as we are in the wait state
+      .withMax(waitDelay);
+    Counter waitCounter = control.count.makeCounter(paramsWaitCounter);
+    DFEVar waitCounterValue = waitCounter.getCount() + state; // this ensures that waitCounter jumps to 1, when state becomes WAIT
+
+    // --- Design state update
+    DFEVar stateCheck = (current === max) & (waitCounterValue < waitDelay);
+    DFEVar newState = stateCheck ? constant.var(dfeUInt(32), WAIT): constant.var(dfeUInt(32), COMPUTE);
+    stateCarried <== stream.offset(newState, -1);
+    optimization.popPipeliningFactor();
+
+    // --- On-chip memory for the result
+    Memory<DFEVar> m = mem.alloc(dfeFloat(8, 24), 1024);
+
+    // high on the cycle when we finish processing the current row
+    DFEVar rowFinished = (max === current) & (waitCounterValue === 0);
+
+    DFEVar address = current.cast(dfeUInt(10));
+
+    // only read inputs when we are not waiting
+    DFEVar a = io.input("a", dfeFloat(8, 24), state === COMPUTE); // read a, when we're in COMPUTE state
+    DFEVar b = io.input("b", dfeFloat(8, 24), rowFinished); // read b, when
+
+    DFEVar x_prev = cycleCounter < 1  ? 1 : m.read(address);
+
+    // Reduction Circuit: a feedback C-slowed addder + a PCBT reduction circuit
+    // the former required to reduce streams longer than 16 values
+    // the latter required to reduce streams shorter that 16 values
+    DFEVar carriedSum = dfeFloat(11, 53).newInstance(this);
+    DFEVar newSum = (x_prev * a).cast(dfeFloat(11, 53)) + (current < 16 ? 0 : carriedSum); // result + (cycleCounter < fpL ? 0 : carriedSum);
+    carriedSum <== stream.offset(newSum, -16);
+
+    DFEVar firstValidPartialSum = max > 15  ?  (max - 15) : 0;
+    DFEVar enableLogReduce = (waitCounterValue === 0) & (current >= firstValidPartialSum);
+
+    LogAddReduce r = new LogAddReduce(this,
+        enableLogReduce,  // enable inputs to the reduction circuit as long as we're in compute state
+        waitCounterValue === 1,  // output the result of the reduction when processing last entry on the current row
+        newSum.cast(dfeFloat(8 ,24)),              // implements sum += a(kj) * x(j)
+        dfeFloat(8, 24),
+        16);
+    DFEVar accumulatedResult = r.getOutput();
+
+    DFEVar finalX = cycleCounter === 0 ? accumulatedResult / a : (b - accumulatedResult) / a; // TODO subtract b - ()
+    DFEVar toWrite = stream.offset(finalX, -WAIT_DELAY);
+    DFEVar addressToWrite = stream.offset(address, -WAIT_DELAY);
+    DFEVar enableToWrite = stream.offset(rowFinished, -WAIT_DELAY);
+    m.write(addressToWrite,
+        toWrite,
+        enableToWrite);
+
+    io.output("output", finalX, dfeFloat(8, 24), rowFinished);
+
+    // --- Debugging
+    // debug.simPrintf("(%d,%d,%d) waitCounterValue: %d enableLogReduce %d",
+    //      max, current, state, waitCounterValue, enableLogReduce);
+    //// debug.simPrintf("bA: %d, bV: %f, bE: %d accumulatedResult: %f ",
+    ////     addressToWrite, toWrite,enableToWrite, accumulatedResult);
+    //debug.simPrintf("newSum %f, accumulatedresult %f",
+        //newSum, accumulatedResult);
+    //debug.simPrintf(", a: %f, b:%f finalX: %f, x_prev: %f, address: %d rowFinished: %d",
+         //a, b, finalX, x_prev, address, rowFinished);
+    // debug.simPrintf("\n");
+  }
+}
