@@ -66,7 +66,7 @@ int main(void) {
       if (val > 10)
         val = 1;
     }
-    std::cout << endl;
+    // std::cout << endl;
     b.push_back(i + 1);
   }
 
