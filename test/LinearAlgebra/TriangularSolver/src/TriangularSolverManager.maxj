@@ -5,6 +5,8 @@ import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
 import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
 import com.maxeler.maxcompiler.v2.build.EngineParameters;
 
+import com.custom_computing_ic.dfe_snippets.manager.ManagerUtils;
+
 public class TriangularSolverManager extends CustomManager{
 
     private static final String s_kernelName  = "TriangularSolverKernel";
@@ -26,6 +28,7 @@ public class TriangularSolverManager extends CustomManager{
     public static void main(String[] args) {
         TriangularSolverManager manager = new TriangularSolverManager(new EngineParameters(args));
         manager.createSLiCinterface(interfaceDefault());
+        ManagerUtils.setFullBuild(manager, 1, 1);
         manager.build();
     }
 }

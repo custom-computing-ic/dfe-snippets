@@ -34,8 +34,13 @@ class TriangularSolverKernel extends Kernel {
 
   private static final int COUNTER_WIDTH = 32;
   // latency of multiply + reduction + division + subtraction + multiplexer + C-slowed adder
-  private static final int WAIT_DELAY = 11 + 48 + 28 + 12 + 1 + 12 + 5;
 
+  private static final int MAX4_ADJUST = 20;
+  // NB This is a bit silly, but for max4 we can manually adjust the latency to
+  // include the extra 20 cycles; A more portable solution would be to use
+  // stream.measureDistance() which would also work better if we had to adjust
+  // pipelining factors.
+  private static final int WAIT_DELAY = 11 + 48 + 28 + 12 + 1 + 12 + 5 + MAX4_ADJUST;
 
   protected TriangularSolverKernel(KernelParameters parameters) {
     super(parameters);

@@ -29,7 +29,8 @@ void print(const vector<T>& t) {
 }
 
 int64_t countCycles(const system_t& s) {
-  const int latency = 11 + 48 + 28 + 12 + 1 + 12 + 5;
+  const int max4Adjust = 20; // see TriangularSovlerKernel.maxj
+  const int latency = 11 + 48 + 28 + 12 + 1 + 12 + 5 + max4Adjust;
   return s.nums.size() + s.n * latency;
 }
 
