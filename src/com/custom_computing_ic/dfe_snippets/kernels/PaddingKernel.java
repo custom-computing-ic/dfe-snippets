@@ -42,7 +42,7 @@ public class PaddingKernel extends Kernel {
     io.output(OUT_NAME, out, dfeRawBits(bitWidth));
 
     if (dbg) {
-      debug.simPrintf("PADDING: %d (%d) nInputs %d\n", cycles, totalCycles, nInputs);
+      debug.simPrintf("PADDING: %x %d (%d) nInputs %d\n", input.cast(dfeInt(bitWidth)), cycles, totalCycles, nInputs);
     }
   }
 }
